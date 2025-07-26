@@ -1,0 +1,102 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Contact Us</title>
+    <link rel="stylesheet" href="style.css">
+    <script src="script.js" defer></script>
+</head>
+<body>
+    <!-- <header>
+        <nav>
+            <ul>
+                <li><a href="../index.html">Home</a></li>
+                <li><a href="about.html">About</a></li>
+                <li><a href="contect.html">Contact</a></li>
+            </ul>
+        </nav>
+    </header> -->
+    <nav class="navbar">
+        <a href="../../index.html" class="logo">
+            <img src="/psk/finallogo.png" alt="Nivesh Path logo">
+            <span class="logo-text"></span>
+        </a>
+        <div class="nav-links">
+            <!-- <a href="signup.html">Signup</a> -->
+            <a href="/public/index.html">Stocks</a>
+            <a href="about.html" class="active-link">About</a>
+            <a href="products.html">Products</a>
+            <a href="pricing.html">Pricing</a>
+            <a href="support.html">Support</a>
+            <a href="login.html" id="login-link">Login</a>
+            <a href="user-dashboard.html" id="dashboard-link" style="display: none;">
+                <i class="fas fa-user-circle"></i>
+            </a>
+        </div>
+    </nav>
+
+
+    <section class="contact-section">
+        <div class="contact-info">
+            <h2>Contact Information</h2>
+            <br><br>
+            <p>Say something to start a live chat!</p>
+            <ul>
+                <br><br><br>
+                <!-- Phone Number with Icon -->
+                <li><img src="phon.png" alt="Phone Icon" class="icon"> phone : +1012 3456 789</li>
+                <br><br><br>
+                <!-- Email with Icon -->
+                <li><img src="mail.jpg" alt="Email Icon" class="icon"> email : demo@gmail.com</li>
+                <br><br><br>
+                <!-- Address with Icon -->
+                <li><img src="address.jpg" alt="Location Icon" class="icon"> location : 132 Dartmouth Street, Boston, MA 02156, USA</li>
+            </ul>
+            <br><br>
+
+            <!-- Social Media Icons with Images -->
+            <div class="social-icons">
+                <a href="https://www.github.com/" target="_blank"><img src="git2.png" alt="GitHub"></a><br><br><br><br>
+                <a href="https://www.instagram.com/" target="_blank"><img src="Instagram_logo_2022.svg.png" alt="Instagram"></a><br><br><br><br>
+                <a href="https://www.linkedin.com/in/" target="_blank"><img src="linkdin .png" alt= "LinkedIn"></a><br><br><br><br>
+                <a href="https://wa.me/" target="_blank"><img src="WhatsApp.svg.png" alt="WhatsApp"></a>
+            </div>
+        </div>
+
+        <div class="contact-form">
+            <h2>Contact Us</h2>
+            <p>Any questions or remarks? Just write us a message!</p>
+            <form action="#" method="post">
+                <div class="form-group">
+                    <input type="text" name="first_name" placeholder="First Name" required>
+                    <input type="text" name="last_name" placeholder="Last Name" required>
+                </div>
+                <div class="form-group">
+                    <input type="email" name="email" placeholder="Email" required>
+                    <input type="tel" name="phone" placeholder="Phone Number">
+                </div>
+                <div class="form-group">
+                    <label>Select Subject:</label>
+                    <div class="radio-options"><br>
+                        <label><input type="radio" name="subject" value="General Inquiry" checked> General Inquiry</label><br>
+                        <label><input type="radio" name="subject" value="Support"> Support</label><br>
+                        <label><input type="radio" name="subject" value="Feedback"> Feedback</label><br>
+                    </div>
+                </div>
+                
+                <div class="form-group">
+                    <textarea name="message" placeholder="Write your message..." rows="5" required></textarea>
+                </div>
+                <button type="submit">Send Message</button>
+            </form>
+        </div>
+    </section>
+
+
+    <footer>
+        <!-- <p>&copy; 2024 Contact Us Page</p> -->
+    </footer>
+    <script src="../js/main.js"></script>
+</body>
+</html>

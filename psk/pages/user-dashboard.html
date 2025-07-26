@@ -1,0 +1,261 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>User Dashboard - Nivesh Path</title>
+    <link rel="stylesheet" href="../css/style.css">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
+</head>
+<body>
+    <div class="app-container">
+        <!-- Sidebar -->
+        <div class="sidebar">
+            <a href="/psk/index.html" class="main-logo">
+                <img src="/psk/finallogo.png" alt="Nivesh Path">
+                <span class="logo-text"></span>
+            </a>
+            
+            <nav class="nav-menu">
+                <a href="/public/search.html" class="nav-item">
+                    <i class="fas fa-home"></i>
+                    <span>Home</span>
+                </a>
+                <a href="#" class="nav-item">
+                    <i class="fas fa-exchange-alt"></i>
+                    <span>Transactions</span>
+                </a>
+                <a href="#" class="nav-item">
+                    <i class="fas fa-chart-line"></i>
+                    <span>Portfolio</span>
+                </a>
+                <a href="#" class="nav-item">
+                    <i class="fas fa-wallet"></i>
+                    <span>Wallet</span>
+                </a>
+                <a href="#" class="nav-item">
+                    <i class="fas fa-cog"></i>
+                    <span>Settings</span>
+                </a>
+            </nav>
+
+            <div class="sidebar-footer">
+                <a href="#" class="nav-item">
+                    <i class="fas fa-question-circle"></i>
+                    <span>Help</span>
+                </a>
+                <a href="#" class="nav-item" id="logout-btn">
+                    <i class="fas fa-sign-out-alt"></i>
+                    <span>Log Out</span>
+                </a>
+            </div>
+        </div>
+
+        <!-- Main Content -->
+        <div class="main-content">
+            <!-- Top Bar -->
+            <div class="top-bar">
+                <div class="search-bar">
+                    <i class="fas fa-search"></i>
+                    <input type="text" placeholder="Search..." class="search-input">
+                </div>
+                <div class="user-menu">
+                    <div class="notification-icon">
+                        <i class="fas fa-bell"></i>
+                    </div>
+                    <div class="user-profile">
+                        <img src="https://images.unsplash.com/photo-1573496359142-b8d87734a5a2?ixlib=rb-1.2.1&auto=format&fit=crop&w=200&q=80" 
+                             alt="Profile" 
+                             id="profile-image">
+                    </div>
+                </div>
+            </div>
+
+            <!-- Profile Content -->
+            <div class="profile-section">
+                <div class="profile-picture-container">
+                    <div class="profile-picture">
+                        <img src="https://images.unsplash.com/photo-1573496359142-b8d87734a5a2?ixlib=rb-1.2.1&auto=format&fit=crop&w=200&q=80" 
+                             alt="Profile" 
+                             id="profile-image">
+                    </div>
+                    <label class="edit-profile-button" for="profile-image-input">
+                        <i class="fas fa-edit"></i>
+                        <input type="file" id="profile-image-input" accept="image/*" style="display: none;">
+                    </label>
+                </div>
+                <h1 class="profile-name" id="profile-name">Puerto Rico</h1>
+                <p class="profile-contact" id="profile-contact">youremail@domain.com | +01 234 567 89</p>
+            </div>
+
+            <!-- Settings Section -->
+            <div class="settings-container">
+                <div class="settings-card">
+                    <div class="settings-item" id="edit-profile-btn">
+                        <div class="settings-item-left">
+                            <i class="fas fa-user-edit"></i>
+                            <span data-translate="editProfile">Edit profile information</span>
+                        </div>
+                        <i class="fas fa-chevron-right"></i>
+                    </div>
+                    
+                    <div class="settings-item" id="notification-toggle">
+                        <div class="settings-item-left">
+                            <i class="fas fa-bell"></i>
+                            <span data-translate="notifications">Notifications</span>
+                        </div>
+                        <div class="toggle-container">
+                            <span class="settings-value on" id="notification-status" data-translate="on">ON</span>
+                            <div class="toggle-switch active">
+                                <div class="toggle-switch-handle"></div>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div class="settings-item" id="language-selector">
+                        <div class="settings-item-left">
+                            <i class="fas fa-globe"></i>
+                            <span data-translate="language">Language</span>
+                        </div>
+                        <div class="settings-value-container">
+                            <span class="settings-value" id="selected-language">English</span>
+                            <i class="fas fa-chevron-right"></i>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="settings-card">
+                    <div class="settings-item">
+                        <div class="settings-item-left">
+                            <i class="fas fa-shield-alt"></i>
+                            <span data-translate="security">Security</span>
+                        </div>
+                        <i class="fas fa-chevron-right"></i>
+                    </div>
+                    
+                    <div class="settings-item" id="theme-toggle">
+                        <div class="settings-item-left">
+                            <i class="fas fa-moon"></i>
+                            <span data-translate="theme">Theme</span>
+                        </div>
+                        <div class="toggle-container">
+                            <span class="settings-value" id="theme-status" data-translate="lightMode">Light mode</span>
+                            <div class="toggle-switch">
+                                <div class="toggle-switch-handle"></div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="settings-card">
+                    <div class="settings-item">
+                        <div class="settings-item-left">
+                            <i class="fas fa-question-circle"></i>
+                            <span data-translate="helpSupport">Help & Support</span>
+                        </div>
+                        <i class="fas fa-chevron-right"></i>
+                    </div>
+                    
+                    <div class="settings-item">
+                        <div class="settings-item-left">
+                            <i class="fas fa-envelope"></i>
+                            <span data-translate="contactUs">Contact us</span>
+                        </div>
+                        <i class="fas fa-chevron-right"></i>
+                    </div>
+                    
+                    <div class="settings-item">
+                        <div class="settings-item-left">
+                            <i class="fas fa-lock"></i>
+                            <span data-translate="privacyPolicy">Privacy policy</span>
+                        </div>
+                        <i class="fas fa-chevron-right"></i>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Edit Profile Modal -->
+    <div class="modal" id="edit-profile-modal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h2 data-translate="editProfileTitle">Edit Profile</h2>
+                <button class="close-modal">&times;</button>
+            </div>
+            <div class="modal-body">
+                <div class="form-group">
+                    <label for="edit-name" data-translate="name">Name</label>
+                    <input type="text" id="edit-name">
+                </div>
+                <div class="form-group">
+                    <label for="edit-nickname" data-translate="nickname">Nickname</label>
+                    <input type="text" id="edit-nickname">
+                </div>
+                <div class="form-group">
+                    <label for="edit-email" data-translate="email">Email</label>
+                    <input type="email" id="edit-email">
+                </div>
+                <div class="form-group">
+                    <label for="edit-phone" data-translate="phone">Phone</label>
+                    <input type="tel" id="edit-phone">
+                </div>
+                <div class="form-group">
+                    <label for="edit-country" data-translate="country">Country</label>
+                    <input type="text" id="edit-country">
+                </div>
+                <div class="form-group">
+                    <label for="edit-city" data-translate="city">City</label>
+                    <input type="text" id="edit-city">
+                </div>
+                <div class="form-group">
+                    <label for="edit-address" data-translate="address">Address</label>
+                    <input type="text" id="edit-address">
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button class="cancel-btn" data-translate="cancel">Cancel</button>
+                <button class="save-btn" data-translate="save">Save</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Language Selection Modal -->
+    <div class="modal" id="language-modal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h2 data-translate="selectLanguage">Select Language</h2>
+                <button class="close-modal">&times;</button>
+            </div>
+            <div class="modal-body">
+                <div class="language-options">
+                    <div class="language-option selected" data-language="English">
+                        <span>English</span>
+                        <div class="language-selected-indicator"></div>
+                    </div>
+                    <div class="language-option" data-language="Hindi">
+                        <span>Hindi</span>
+                    </div>
+                    <div class="language-option" data-language="Spanish">
+                        <span>Spanish</span>
+                    </div>
+                    <div class="language-option" data-language="French">
+                        <span>French</span>
+                    </div>
+                    <div class="language-option" data-language="German">
+                        <span>German</span>
+                    </div>
+                    <div class="language-option" data-language="Chinese">
+                        <span>Chinese</span>
+                    </div>
+                    <div class="language-option" data-language="Japanese">
+                        <span>Japanese</span>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script src="../js/dashboard.js"></script>
+</body>
+</html>

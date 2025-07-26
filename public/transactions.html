@@ -1,0 +1,99 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Document</title>
+    <link rel="stylesheet" href="transactions.css">
+</head>
+<body>
+
+        <!-- Navigation Bar -->
+        <nav class="navbar">
+            <a href="psk/index.html" class="logo">
+                <img src="/psk/finallogo.png" alt="Nivesh Path logo">
+                <span class="logo-text"></span>
+            </a>
+            <div class="nav-links">
+                <a href="index.html">Stocks</a>
+                <a href="psk/pages/about.html">About</a>
+                <a href="psk/pages/products.html">Products</a>
+                <a href="psk/pages/pricing.html">Pricing</a>
+                <a href="psk/pages/support.html">Support</a>
+                <a href="psk/pages/login.html" id="login-link">Login</a>
+                <a href="psk/pages/user-dashboard.html" id="dashboard-link" style="display: none;">
+                    <i class="fas fa-user-circle"></i>
+                </a>
+            </div>
+        </nav>
+
+    <div class="main">
+
+        <div class="nav1">
+            <!-- <div class="img1">
+                <img src="img/logo.png" alt="">
+                <h2>NiveshPath</h2>
+            </div> -->
+            <div class="sidebar">
+                <!-- <div class="logo">
+                  <img src="img/logo.png" alt="" style="height: 150px; width: 200px;">
+                </div> -->
+          
+                <div class="nav-menu">
+                  <a href="search.html" class="nav-item active">
+                    <i class="fas fa-home"></i>
+                    <span>Home</span>
+                  </a>
+                  <a href="psk/pages/user-dashboard.html" class="nav-item">
+                    <i class="fas fa-user-circle"></i>
+                    <span>Account</span>
+                  </a>
+                  <a href="transactions.html" class="nav-item">
+                    <i class="fas fa-wallet"></i>
+                    <span>Transaction</span>
+                  </a>
+                  <a href="dashboard1.html" class="nav-item">
+                    <i class="fas fa-sliders-h"></i>
+                    <span>Dashboard</span>
+                  </a>
+                  <a href="psk/pages/contect.html" class="nav-item">
+                    <i class="fas fa-comment-dots"></i>
+                    <span>Contact Us</span>
+                  </a>
+                  <a href="index.html" class="nav-item">
+                    <i class="fas fa-chart-line"></i>
+                    <span>Insights</span>
+                  </a>
+                  <a href="psk/pages/about.html" class="nav-item">
+                    <i class="fas fa-life-ring"></i>
+                    <span>About Us</span>
+                  </a>
+                </div>
+           </div>
+        </div>
+        <div class="wallet" id="wallet" style="text-align:center; background:green; color:white; padding:20px; font-size:24px;">
+            <strong>Wallet Balance</strong>
+            <div id="walletBalance">100000.00</div>
+        </div>
+        
+        
+        <table border="1">
+            <thead>
+                <tr>
+                    <th>Name</th>
+                    <th>Price</th>
+                    <th>Quantity</th>
+                    <th>Total</th>
+                    <th>Transaction Type</th>
+                    <th>Timestamp</th>
+                </tr>
+            </thead>
+            <tbody id="transactionTable">
+                <!-- Data will be inserted here -->
+            </tbody>
+        </table>
+    </div>
+        <script src="transactions.js"></script>
+        <script src="psk/js/main.js"></script>
+    </body>
+    </html>

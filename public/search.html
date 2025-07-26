@@ -1,0 +1,640 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Document</title>
+    <link rel="stylesheet" href="search.css">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <script src="https://kit.fontawesome.com/97a405ce23.js" crossorigin="anonymous"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Poppins:ital,wght@0,100;0,200;0,300;0,400;0,500;0,600;0,700;0,800;0,900;1,100;1,200;1,300;1,400;1,500;1,600;1,700;1,800;1,900&display=swap" rel="stylesheet">
+</head>
+<body>
+
+<!-- Navigation Bar -->
+<nav class="navbar">
+    <a href="psk/index.html" class="logo">
+        <img src="/psk/finallogo.png" alt="Nivesh Path logo">
+        <span class="logo-text"></span>
+    </a>
+    <div class="nav-links">
+        <a href="index.html">Stocks</a>
+        <a href="psk/pages/about.html">About</a>
+        <a href="psk/pages/products.html">Products</a>
+        <a href="psk/pages/pricing.html">Pricing</a>
+        <a href="psk/pages/support.html">Support</a>
+        <a href="psk/pages/login.html" id="login-link">Login</a>
+        <a href="psk/pages/user-dashboard.html" id="dashboard-link" style="display: none;">
+            <i class="fas fa-user-circle"></i>
+        </a>
+    </div>
+</nav>
+
+    <div class="main">
+       
+        
+        <div class="nav">
+            <!-- <div class="img">
+                <h2>NivesPath</h2>
+            </div> -->
+            <div class="sidebar">
+                <!-- <div class="logo">
+                  <img src="img/logo.png" alt="" style="height: 150px; width: 200px;">
+                </div> -->
+          
+                <div class="nav-menu">
+                  <a href="search.html" class="nav-item active">
+                    <i class="fas fa-home"></i>
+                    <span>Home</span>
+                  </a>
+                  <a href="psk/pages/user-dashboard.html" class="nav-item">
+                    <i class="fas fa-user-circle"></i>
+                    <span>Account</span>
+                  </a>
+                  <a href="transactions.html" class="nav-item">
+                    <i class="fas fa-wallet"></i>
+                    <span>Transaction</span>
+                  </a>
+                  <a href="dashboard1.html" class="nav-item">
+                    <i class="fas fa-sliders-h"></i>
+                    <span>Dashboard</span>
+                  </a>
+                  <a href="psk/pages/contect.html" class="nav-item">
+                    <i class="fas fa-comment-dots"></i>
+                    <span>Contact Us</span>
+                  </a>
+                  <a href="index.html" class="nav-item">
+                    <i class="fas fa-chart-line"></i>
+                    <span>Insights</span>
+                  </a>
+                  <a href="psk/pages/about.html" class="nav-item">
+                    <i class="fas fa-life-ring"></i>
+                    <span>About Us</span>
+                  </a>
+                </div>
+           </div>
+        </div>
+        <div class="search">
+            <div class="row">
+                <form id="search-form" onsubmit="event.preventDefault(); search();">
+                    <input type="text" id="box" placeholder="search anything" autocomplete="off" onkeyup="search()">
+                    <button><i class="fa-solid fa-magnifying-glass"></i></button>
+                </form>
+            </div>
+            <div class="result" id="result-box"></div>
+            <!-- <div class="profile">
+                <div class="avatar">
+                    <img src="img/WhatsApp Image 2024-09-08 at 21.33.36_fa653a0a.jpg" alt="">
+                </div>
+                <div class="info">
+                    <p class="name">Dhrumil</p>
+                    <p class="username">@Dhrumil777</p>
+                </div>
+                <div class="dropdown">
+                    <i class="fa-solid fa-chevron-down"></i>
+                </div>
+            </div> -->
+            
+            <!-- FontAwesome (for dropdown icon) -->
+            <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.2/css/all.min.css">
+            <div class="line">
+                <!-- <hr> -->
+            </div>
+        </div>
+        <div class="stock">
+            <div class="cont"></div>
+            <div class="cont1"></div>
+            <div class="cont2"></div>
+        </div>
+        
+        <div class="stock1">
+            <div class="cont3"></div>
+            <div class="cont4"></div>
+            <div class="cont5"></div>
+        </div>
+        
+        <script src="tradingview-widgets.js"></script>
+        
+        <div class="graph">
+           <!-- TradingView Widget BEGIN -->
+           <div id="tradingview-widget-container"></div>
+           <script src="search.js"></script>
+           
+  <!-- TradingView Widget END -->
+        </div>
+
+    <div class="str">
+        <div class="mark">
+            <h2>Live Market</h2>
+        </div>
+        <div class="all">
+        <a href="index.html">
+            <div class="slow" id="result" onclick="myfunction()">
+                <div class="change">
+                    <img src="img/Apple-Logo-PNG1.png" alt="">
+                </div>
+                <div class="info1">
+                    <p class="name1">Apple</p>
+                    <h4><p class="username1">Apple Inc</p></h4>
+                </div>
+                <div class="char">
+                    <div class="chg">
+                        <p class="name2">Changes</p>
+                        <p class="clark1"><span id="price-change-aapl">Loading...</span></p>   
+                    </div>
+                    <div class="price">
+                        <p class="name3">Price</p>
+                        <p class="clark2"><span id="current-price-aapl">Loading...</span></p>
+                    </div>
+                    <div class="price">
+                        <p class="name3">Open</p>
+                        <p class="clark2"><span id="open-price-aapl">Loading...</span></p>
+                    </div>
+                    <div class="price">
+                        <p class="name3">upper Circuit</p>
+                        <p class="clark2"><span id="upper-circuit-aapl">Loading...</span></p>
+                    </div>
+                    <div class="price">
+                        <p class="name3">lower Circuit</p>
+                        <p class="clark2"><span id="lower-circuit-aapl">Loading...</span></p>
+                    </div>
+                </div>
+            
+                <!-- <div class="chart">
+                    <canvas id="myChart"></canvas>
+                </div> -->
+            </div>
+        </a>
+        <a href="Nvidia.html">
+            <div class="slow">
+                <div class="change">
+                <img src="img/nvidia.png" alt="">
+            </div>
+            <div class="info1">
+                <p class="name1">Nvidia</p>
+                <p class="username1">Nvidia corpc</p>
+            </div>
+            <div class="char">
+                <div class="chg">
+                    <p class="name2">Changes</p>
+                    <p class="clark1"><span id="price-change-nvda">Loading...</span></p>   
+                </div>
+                <div class="price">
+                    <p class="name3">Price</p>
+                    <p class="clark2"><span id="current-price-nvda">Loading...</span></p>
+                </div>
+                <div class="price">
+                    <p class="name3">Open</p>
+                    <p class="clark2"><span id="open-price-nvda">Loading...</span></p>
+                </div>
+                <div class="price">
+                    <p class="name3">upper Circuit</p>
+                    <p class="clark2"><span id="upper-circuit-nvda">Loading...</span></p>
+                </div>
+                <div class="price">
+                    <p class="name3">lower Circuit</p>
+                    <p class="clark2"><span id="lower-circuit-nvda">Loading...</span></p>
+                </div>
+            </div>
+            <!-- <div class="chart">
+                <canvas id="myChart1"></canvas>
+            </div> -->
+            
+        </div>
+    </a>
+        <a href="Tesla.html">
+            <div class="slow">
+                <div class="change">
+                    <img src="img/icons8-tesla-48.png" alt="">
+                </div>
+            <div class="info1">
+                <p class="name1">TESLA</p>
+                <p class="username1">TESLA INC</p>
+            </div>
+            <div class="char">
+                <div class="chg">
+                    <p class="name2">Changes</p>
+                    <p class="clark1"><span id="price-change-tsla">Loading...</span></p>   
+                </div>
+                <div class="price">
+                    <p class="name3">Price</p>
+                    <p class="clark2"><span id="current-price-tsla">Loading...</span></p>
+                </div>
+                <div class="price">
+                    <p class="name3">Open</p>
+                    <p class="clark2"><span id="open-price-tsla">Loading...</span></p>
+                </div>
+                <div class="price">
+                    <p class="name3">upper Circuit</p>
+                    <p class="clark2"><span id="upper-circuit-tsla">Loading...</span></p>
+                </div>
+                <div class="price">
+                    <p class="name3">lower Circuit</p>
+                    <p class="clark2"><span id="lower-circuit-tsla">Loading...</span></p>
+                </div>
+            </div>
+            <!-- <div class="chart">
+                <canvas id="myChart2"></canvas>
+            </div> -->
+            
+        </div>
+    </a>
+        <a href="Microsoft.html">
+            <div class="slow">
+                <div class="change">
+                    <img src="img/microsoft-logo-png-2395.png" alt="">
+                </div>
+                <div class="info1">
+                    <p class="name1">Microsoft</p>
+                    <p class="username1">Microsoft corp</p>
+                </div>
+                <div class="char">
+                    <div class="chg">
+                        <p class="name2">Changes</p>
+                        <p class="clark1"><span id="price-change-msft">Loading...</span></p>   
+                    </div>
+                    <div class="price">
+                        <p class="name3">Price</p>
+                        <p class="clark2"><span id="current-price-msft">Loading...</span></p>
+                    </div>
+                    <div class="price">
+                        <p class="name3">Open</p>
+                        <p class="clark2"><span id="open-price-msft">Loading...</span></p>
+                    </div>
+                    <div class="price">
+                        <p class="name3">upper Circuit</p>
+                        <p class="clark2"><span id="upper-circuit-msft">Loading...</span></p>
+                    </div>
+                    <div class="price">
+                    <p class="name3">lower Circuit</p>
+                    <p class="clark2"><span id="lower-circuit-msft">Loading...</span></p>
+                </div>
+            </div>
+            
+            <!-- <div class="chart">
+                <canvas id="myChart2"></canvas>
+            </div> -->
+            
+        </div>
+    </a>
+        <a href="Amazone.html">
+            <div class="slow">
+                <div class="change">
+                    <img src="img/1688364728amazon-icon-black.png" alt="">
+                </div>
+                <div class="info1">
+                    <p class="name1">Amzone</p>
+                    <p class="username1">Amzone.com INC</p>
+                </div>
+                <div class="char">
+                    <div class="chg">
+                        <p class="name2">Changes</p>
+                        <p class="clark1"><span id="price-change-amzn">Loading...</span></p>   
+                    </div>
+                    <div class="price">
+                        <p class="name3">Price</p>
+                        <p class="clark2"><span id="current-price-amzn">Loading...</span></p>
+                    </div>
+                    <div class="price">
+                        <p class="name3">Open</p>
+                        <p class="clark2"><span id="open-price-amzn">Loading...</span></p>
+                    </div>
+                    <div class="price">
+                    <p class="name3">upper Circuit</p>
+                    <p class="clark2"><span id="upper-circuit-amzn">Loading...</span></p>
+                </div>
+                <div class="price">
+                    <p class="name3">lower Circuit</p>
+                    <p class="clark2"><span id="lower-circuit-amzn">Loading...</span></p>
+                </div>
+            </div>
+            <!-- <div class="chart">
+                <canvas id="myChart2"></canvas>
+            </div> -->
+            
+        </div>
+    </a>
+        <a href="Walmart.html">
+            <div class="slow">
+                <div class="change" style="background-color: rgb(16, 152, 231);">
+                    <img src="img/Walmart-Logo-PNG-Image.png" alt="">
+                </div>
+                <div class="info1">
+                    <p class="name1">Walmart</p>
+                    <p class="username1">Walmart INC</p>
+            </div>
+            <div class="char">
+                <div class="chg">
+                    <p class="name2">Changes</p>
+                    <p class="clark1"><span id="price-change-wmt">Loading...</span></p>   
+                </div>
+                <div class="price">
+                    <p class="name3">Price</p>
+                    <p class="clark2"><span id="current-price-wmt">Loading...</span></p>
+                </div>
+                <div class="price">
+                    <p class="name3">Open</p>
+                    <p class="clark2"><span id="open-price-wmt">Loading...</span></p>
+                </div>
+                <div class="price">
+                    <p class="name3">upper Circuit</p>
+                    <p class="clark2"><span id="upper-circuit-wmt">Loading...</span></p>
+                </div>
+                <div class="price">
+                    <p class="name3">lower Circuit</p>
+                    <p class="clark2"><span id="lower-circuit-wmt">Loading...</span></p>
+                </div>
+            </div>
+            <!-- <div class="chart">
+                <canvas id="myChart2"></canvas>
+            </div> -->
+            
+        </div>
+    </a>
+        <a href="index.html">
+            <div class="slow">
+                <div class="change" style="background-color: aliceblue;">
+                <img src="img/pngimg.com - nike_PNG18.png" alt="">
+            </div>
+            <div class="info1">
+                <p class="name1">Nike</p>
+                <p class="username1">NIKE INC</p>
+            </div>
+            <div class="char">
+                <div class="chg">
+                    <p class="name2">Changes</p>
+                    <p class="clark1"><span id="price-change-nke">Loading...</span></p>   
+                </div>
+                <div class="price">
+                    <p class="name3">Price</p>
+                    <p class="clark2"><span id="current-price-nke">Loading...</span></p>
+                </div>
+                <div class="price">
+                    <p class="name3">Open</p>
+                    <p class="clark2"><span id="open-price-nke">Loading...</span></p>
+                </div>
+                <div class="price">
+                    <p class="name3">upper Circuit</p>
+                    <p class="clark2"><span id="upper-circuit-nke">Loading...</span></p>
+                </div>
+                <div class="price">
+                    <p class="name3">lower Circuit</p>
+                    <p class="clark2"><span id="lower-circuit-nke">Loading...</span></p>
+                </div>
+            </div>
+            <!-- <div class="chart">
+                <canvas id="myChart2"></canvas>
+            </div> -->
+            
+        </div>
+    </a>
+        <a href="index.html">
+            <div class="slow">
+                <div class="change" style="background-color: aliceblue;">
+                    <img src="img/1659777758uber-app-icon.png" alt="">
+                </div>
+                <div class="info1">
+                    <p class="name1">Uber</p>
+                    <p class="username1">Uber Technologies, Inc</p>
+                </div>
+                <div class="char">
+                    <div class="chg">
+                        <p class="name2">Changes</p>
+                        <p class="clark1"><span id="price-change-uber">Loading...</span></p>   
+                    </div>
+                    <div class="price">
+                    <p class="name3">Price</p>
+                    <p class="clark2"><span id="current-price-uber">Loading...</span></p>
+                </div>
+                <div class="price">
+                    <p class="name3">Open</p>
+                    <p class="clark2"><span id="open-price-uber">Loading...</span></p>
+                </div>
+                <div class="price">
+                    <p class="name3">upper Circuit</p>
+                    <p class="clark2"><span id="upper-circuit-uber">Loading...</span></p>
+                </div>
+                <div class="price">
+                    <p class="name3">lower Circuit</p>
+                    <p class="clark2"><span id="lower-circuit-uber">Loading...</span></p>
+                </div>
+            </div>
+            <!-- <div class="chart">
+                <canvas id="myChart2"></canvas>
+            </div> -->
+            
+        </div>
+    </a>
+        <a href="index.html">
+            <div class="slow">
+              <div class="change" style="background-color: aliceblue;">
+                  <img src="img/Starbucks-Logo-PNG4.png" alt="">
+                </div>
+                <div class="info1">
+                    <p class="name1">StarBucks</p>
+                    <p class="username1">Starbucks Corporation</p>
+                </div>
+                <div class="char">
+                    <div class="chg">
+                        <p class="name2">Changes</p>
+                        <p class="clark1"><span id="price-change-sbux">Loading...</span></p>   
+                    </div>
+                    <div class="price">
+                        <p class="name3">Price</p>
+                        <p class="clark2"><span id="current-price-sbux">Loading...</span></p>
+                    </div>
+                    <div class="price">
+                        <p class="name3">Open</p>
+                        <p class="clark2"><span id="open-price-sbux">Loading...</span></p>
+                    </div>
+                    <div class="price">
+                        <p class="name3">upper Circuit</p>
+                        <p class="clark2"><span id="upper-circuit-sbux">Loading...</span></p>
+                    </div>
+                    <div class="price">
+                        <p class="name3">lower Circuit</p>
+                        <p class="clark2"><span id="lower-circuit-sbux">Loading...</span></p>
+                    </div>
+                </div>
+            </div>
+        </a>
+        <a href="index.html">
+            <div class="slow">
+              <div class="change" style="background-color: black;">
+                  <img src="img/pngimg.com - netflix_PNG10.png" alt="">
+                </div>
+                <div class="info1">
+                    <p class="name1">Netflix</p>
+                    <p class="username1">Netflix, Inc.</p>
+                </div>
+                <div class="char">
+                    <div class="chg">
+                        <p class="name2">Changes</p>
+                        <p class="clark1"><span id="price-change-nflx">Loading...</span></p>   
+                    </div>
+                    <div class="price">
+                        <p class="name3">Price</p>
+                        <p class="clark2"><span id="current-price-nflx">Loading...</span></p>
+                    </div>
+                    <div class="price">
+                        <p class="name3">Open</p>
+                        <p class="clark2"><span id="open-price-nflx">Loading...</span></p>
+                    </div>
+                    <div class="price">
+                        <p class="name3">upper Circuit</p>
+                        <p class="clark2"><span id="upper-circuit-nflx">Loading...</span></p>
+                    </div>
+                    <div class="price">
+                        <p class="name3">lower Circuit</p>
+                        <p class="clark2"><span id="lower-circuit-nflx">Loading...</span></p>
+                    </div>
+                </div>
+                
+            </div>
+        </a>
+        <a href="index.html">
+            <div class="slow">
+              <div class="change" style="background-color:rgb(131, 177, 223)">
+                  <img src="img/goldman-sachs-new-2022-seeklogo.svg" alt="">
+                </div>
+                <div class="info1">
+                    <p class="name1">Goldman Sachs</p>
+                    <p class="username1">Goldman Sachs Group.</p>
+                </div>
+                <div class="char">
+                    <div class="chg">
+                        <p class="name2">Changes</p>
+                        <p class="clark1"><span id="price-change-gs">Loading...</span></p>   
+                    </div>
+                    <div class="price">
+                        <p class="name3">Price</p>
+                        <p class="clark2"><span id="current-price-gs">Loading...</span></p>
+                    </div>
+                    <div class="price">
+                        <p class="name3">Open</p>
+                        <p class="clark2"><span id="open-price-gs">Loading...</span></p>
+                    </div>
+                    <div class="price">
+                        <p class="name3">upper Circuit</p>
+                        <p class="clark2"><span id="upper-circuit-gs">Loading...</span></p>
+                    </div>
+                    <div class="price">
+                        <p class="name3">lower Circuit</p>
+                        <p class="clark2"><span id="lower-circuit-gs">Loading...</span></p>
+                    </div>
+                </div>
+            </div>
+        </a>
+        <a href="index.html">
+            <div class="slow">
+              <div class="change" style="background-color:white">
+                  <img src="img/image_processing20210620-25815-3aus89.png" alt="">
+                </div>
+                <div class="info1">
+                    <p class="name1">Oracle</p>
+                    <p class="username1">Oracle Corporation</p>
+                </div>
+                <div class="char">
+                    <div class="chg">
+                        <p class="name2">Changes</p>
+                        <p class="clark1"><span id="price-change-orcl">Loading...</span></p>   
+                    </div>
+                    <div class="price">
+                        <p class="name3">Price</p>
+                        <p class="clark2"><span id="current-price-orcl">Loading...</span></p>
+                    </div>
+                    <div class="price">
+                        <p class="name3">Open</p>
+                        <p class="clark2"><span id="open-price-orcl">Loading...</span></p>
+                    </div>
+                    <div class="price">
+                        <p class="name3">upper Circuit</p>
+                        <p class="clark2"><span id="upper-circuit-orcl">Loading...</span></p>
+                    </div>
+                    <div class="price">
+                        <p class="name3">lower Circuit</p>
+                        <p class="clark2"><span id="lower-circuit-orcl">Loading...</span></p>
+                    </div>
+                </div>
+            </div>
+        </a>
+    </div>
+    </div>
+    <footer class="footer">
+        <div class="container">
+            <div class="footer-content">
+                <!-- Company Info -->
+                <div class="footer-section">
+                  <img src="img/logo.png" alt="">
+                    <!-- <p class="footer-text">
+                        Vaishnavi Tech Park, South Tower, 3rd Floor<br/>
+                        Sarjapur Main Road, Bellandur<br/>
+                        Bengaluru – 560103, Karnataka<br/>
+                        <a class="footer-link" href="#">Contact Us</a>
+                    </p> -->
+  
+                    
+                    <div class="social-icons">
+                        <a href="#"><i class="fab fa-facebook-f"></i></a>
+                        <a href="#"><i class="fa-brands fa-linkedin-in"></i></a>
+                        <a href="#"><i class="fab fa-youtube"></i></a>
+                        <a href="#"><i class="fab fa-instagram"></i></a>
+                        <a href="#"><i class="fab fa-telegram"></i></a>
+                    </div>
+                </div>
+                <!-- Products -->
+                <div class="footer-section">
+                    <h3>PRODUCTS</h3>
+                    <ul>
+                        <li><a href="#">Stocks</a></li>
+                        <li><a href="#">Futures & Options</a></li>
+                        <li><a href="#">MTF</a></li>
+                        <li><a href="#">IPO</a></li>
+                        <li><a href="#">Mutual Funds</a></li>
+                        <li><a href="#">NFO</a></li>
+                        <li><a href="#" class="highlight">ETF</a></li>
+                        <li><a href="#">Credit</a></li>
+                        <li><a href="#">Bill Payments</a></li>
+                    </ul>
+                </div>
+                <!-- Groww Info -->
+                <div class="footer-section">
+                    <h3>GROWW</h3>
+                    <ul>
+                        <li><a href="#">About Us</a></li>
+                        <li><a href="#">Pricing</a></li>
+                        <li><a href="#">Blog</a></li>
+                        <li><a href="#">Media & Press</a></li>
+                        <li><a href="#">Careers</a></li>
+                        <li><a href="#">Help & Support</a></li>
+                        <li><a href="#">Trust & Safety</a></li>
+                    </ul>
+                </div>
+                <!-- Quick Links -->
+                <div class="footer-section">
+                    <h3>QUICK LINKS</h3>
+                    <ul>
+                        <li><a href="#">AMC Mutual Funds</a></li>
+                        <li><a href="#">Calculators</a></li>
+                        <li><a href="#">Glossary</a></li>
+                        <li><a href="#">Open Demat Account</a></li>
+                        <li><a href="#">Groww Digest</a></li>
+                        <li><a href="#">Sitemap</a></li>
+                    </ul>
+                </div>
+            </div>
+            <div class="footer-bottom">
+                <p>© 2016-2025 Groww. All rights reserved. Dhrumil <span class="heart"></span></p>
+            </div>
+        </div>
+      </footer>
+    </div>
+    <script src="./search.js"></script>
+    <script src="../psk/js/main.js"></script>
+    
+    <!-- <script src="../psk/js/main.js"></script> -->
+    
+</body>
+</html>

@@ -1,0 +1,359 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Nivesh Dashboard</title>
+    <link
+      rel="stylesheet"
+      href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.2/css/all.min.css"
+    />
+    <link rel="stylesheet" href="dashboard1.css" />
+  </head>
+  <body>
+    <!-- Sidebar -->
+    <div class="sidebar">
+      <div class="logo">
+        <img src="img/logo.png" alt="" style="height: 150px; width: 200px;">
+      </div>
+
+      <div class="nav-menu">
+        <a href="search.html" class="nav-item active">
+          <i class="fas fa-home"></i>
+          <span>Home</span>
+        </a>
+        <a href="psk/pages/user-dashboard.html" class="nav-item">
+          <i class="fas fa-user-circle"></i>
+          <span>Account</span>
+        </a>
+        <a href="transactions.html" class="nav-item">
+          <i class="fas fa-wallet"></i>
+          <span>Transaction</span>
+        </a>
+        <a href="psk/pages/about.html" class="nav-item">
+          <i class="fas fa-sliders-h"></i>
+          <span>About Us</span>
+        </a>
+        <a href="psk/pages/contect.html" class="nav-item">
+          <i class="fas fa-comment-dots"></i>
+          <span>Contact Us</span>
+        </a>
+        <a href="index.html" class="nav-item">
+          <i class="fas fa-chart-line"></i>
+          <span>Insights</span>
+        </a>
+        <!-- <a href="#" class="nav-item">
+          <i class="fas fa-life-ring"></i>
+          <span>Help Center</span>
+        </a> -->
+      </div>
+
+      <!-- <div class="premium-box">
+        <h3>Upgrade to Elite Plan</h3>
+        <button class="premium-btn">Try Free</button>
+      </div> -->
+    </div>
+
+    <!-- Main Content -->
+    <div class="main-content">
+      <!-- Header -->
+      <div class="header">
+        <div class="welcome-section">
+          <p class="greeting">Welcome</p>
+          <h1 class="welcome-title">Your Trading Dashboard</h1>
+        </div>
+
+        <div class="header-right">
+          <div class="notification-bell">
+            <i class="fas fa-bell"></i>
+            <div class="notification-indicator"></div>
+          </div>
+          <a href="psk/pages/user-dashboard.html">
+
+            <div class="user-profile">
+              <i class="fas fa-user-circle"></i>
+            </div>
+          </a>
+
+          <div class="search-bar">
+            <i class="fas fa-search"></i>
+            <input type="text" placeholder="Find transactions..." />
+          </div>
+        </div>
+      </div>
+
+      <!-- Dashboard Container -->
+      <div class="dashboard-container">
+        <!-- Main Dashboard Content -->
+        <div class="dashboard-main">
+          <!-- Transfer Cards -->
+          <div class="transfer-cards" id="transfer-cards">
+            <div class="transfer-card" id="latest-stock">
+              <div class="card-icon">
+                <i class="fas fa-credit-card"></i>
+              </div>
+              <p class="card-title" id="stock-name">Apple</p> <!-- Placeholder for name -->
+              <h2 class="card-amount" id="stock-price">$212.5</h2> <!-- Placeholder for price -->
+              <p class="card-quantity" id="stock-quantity">Quantity: 1</p> <!-- Placeholder for quantity -->
+            </div>
+          </div>
+          <!-- Promo Card -->
+          <div class="promo-card">
+            <div class="promo-info">
+              <h2 class="promo-title">Smart money management</h2>
+              <p class="promo-desc">
+                We are now accepting Master card!
+                  Enjoy seamless payments with your American Express card on our website.
+              </p>
+              <a href="https://www.mastercard.co.in/en-in.html">
+
+                <button class="promo-btn">Explore Features</button>
+              </a>
+            </div>
+            <div class="credit-card">
+              <div class="card-overlay"></div>
+              <div class="card-brand">
+                <div class="card-type">Master Card</div>
+                <div class="card-logo">
+                  <div class="card-logo-circle"></div>
+                  <div class="card-logo-circle"></div>
+                </div>
+              </div>
+              <div class="card-number">**** **** **** 0005</div>
+              <div class="card-details">
+                <div class="card-holder">
+                  <div class="card-holder-label">Benifits</div>
+                  <div class="card-holder-name">Fast Transacton</div>
+                </div>
+                <!-- <div class="card-expiry">
+                  <div class="card-expiry-label">EXPIRES</div>
+                  <div class="card-expiry-date">09/27</div>
+                </div> -->
+              </div>
+            </div>
+          </div>
+
+          <!-- Transaction & Transfer Sections -->
+          <div class="transaction-section">
+            <div class="transaction-card">
+              <h3 class="section-title">Best Stocks</h3>
+
+              <div class="transaction-item">
+                <div class="transaction-icon">
+                  <i class="fas fa-hamburger"></i>
+                </div>
+                <div class="transaction-content">
+                  <div class="transaction-title">Apple</div>
+                  <!-- <div class="transaction-time">
+                    <i class="far fa-clock"></i> Today, 14:45
+                  </div> -->
+                </div>
+                <div class="transaction-amount negative">-$212</div>
+              </div>
+
+              <div class="transaction-item">
+                <div class="transaction-icon">
+                  <i class="fas fa-tshirt"></i>
+                </div>
+                <div class="transaction-content">
+                  <div class="transaction-title">Nvidia</div>
+                  <!-- <div class="transaction-time">
+                    <i class="far fa-clock"></i> Yesterday, 16:08
+                  </div> -->
+                </div>
+                <div class="transaction-amount negative">-$108</div>
+              </div>
+            </div>
+
+            <div class="transaction-card">
+              <h3 class="section-title">Your Connections</h3>
+
+              <div class="transaction-item">
+                <div class="transaction-icon">
+                  <img
+                    src="https://i.pravatar.cc/100?img=12"
+                    alt="Lisa Johnson"
+                  />
+                </div>
+                <div class="transaction-content">
+                  <div class="transaction-title">Dhrumil Patel</div>
+                  <div class="transaction-time">
+                    <i class="far fa-clock"></i> Today, 09:35
+                  </div>
+                </div>
+                <!-- <div class="transaction-amount positive">+$85</div> -->
+              </div>
+
+              <div class="transaction-item">
+                <div class="transaction-icon">
+                  <img
+                    src="https://i.pravatar.cc/100?img=11"
+                    alt="Michael Torres"
+                  />
+                </div>
+                <div class="transaction-content">
+                  <div class="transaction-title">Viraj Parmar</div>
+                  <div class="transaction-time">
+                    <i class="far fa-clock"></i> Monday, 17:45
+                  </div>
+                </div>
+                <!-- <div class="transaction-amount negative">-$42</div> -->
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Dashboard Sidebar -->
+        <div class="dashboard-sidebar">
+          <div class="savings-card">
+<!-- TradingView Widget BEGIN -->
+<div class="tradingview-widget-container">
+  <div class="tradingview-widget-container__widget"></div>
+  <div class="tradingview-widget-copyright"><a href="https://www.tradingview.com/" rel="noopener nofollow" target="_blank"><span class="blue-text"></span></a></div>
+  <script type="text/javascript" src="https://s3.tradingview.com/external-embedding/embed-widget-symbol-overview.js" async>
+  {
+  "symbols": [
+    [
+      "Apple",
+      "AAPL|1D"
+    ],
+    [
+      "Microsoft",
+      "MSFT|1D"
+    ],
+    [
+      "NASDAQ:AMZN|1D"
+    ]
+  ],
+  "chartOnly": false,
+  "width": "100%",
+  "height": "100%",
+  "locale": "en",
+  "colorTheme": "light",
+  "autosize": true,
+  "showVolume": false,
+  "showMA": false,
+  "hideDateRanges": false,
+  "hideMarketStatus": false,
+  "hideSymbolLogo": false,
+  "scalePosition": "right",
+  "scaleMode": "Normal",
+  "fontFamily": "-apple-system, BlinkMacSystemFont, Trebuchet MS, Roboto, Ubuntu, sans-serif",
+  "fontSize": "10",
+  "noTimeScale": false,
+  "valuesTracking": "1",
+  "changeMode": "price-and-percent",
+  "chartType": "area",
+  "maLineColor": "#2962FF",
+  "maLineWidth": 1,
+  "maLength": 9,
+  "headerFontSize": "medium",
+  "lineWidth": 2,
+  "lineType": 0,
+  "dateRanges": [
+    "1d|1",
+    "1m|30",
+    "3m|60",
+    "12m|1D",
+    "60m|1W",
+    "all|1M"
+  ]
+}
+  </script>
+</div>
+<!-- TradingView Widget END -->
+          </div>
+
+          <div class="plan-card">
+            <div class="plan-info">
+              <div class="plan-title">Wallet Balance</div>
+              <div class="plan-status" id="wallet-balance">$0.00</div>
+            </div>
+          
+            <div class="plan-progress">
+              <div class="plan-percentage" id="wallet-status-text">Loading...</div>
+            </div>
+          </div>
+          
+        </div>
+      </div>
+    </div>
+  </body>
+          
+  <script>
+    fetch('http://localhost:3000/transactions')
+      .then(res => res.json())
+      .then(data => {
+        // Sort the data by timestamp in descending order (latest first)
+        data.sort((a, b) => new Date(b.timestamp) - new Date(a.timestamp));
+  
+        // Get the latest stock (first in sorted array)
+        const latestStock = data[0];
+        document.getElementById('stock-name').textContent = latestStock.name;
+        document.getElementById('stock-price').textContent = `$${latestStock.price}`;
+        document.getElementById('stock-quantity').textContent = `Quantity: ${latestStock.quantity}`;
+  
+        // Get the container for other stocks
+        const dashboardContainer = document.getElementById('transfer-cards');
+  
+        // Loop through the remaining stocks and add them next to the latest stock
+        data.slice(1).forEach(stock => {
+          const stockDiv = document.createElement('div');
+          stockDiv.className = 'transfer-card';
+  
+          stockDiv.innerHTML = `
+            <div class="card-icon">
+              <i class="fas fa-credit-card"></i>
+            </div>
+            <p class="card-title">${stock.name}</p>
+            <h2 class="card-amount">$${stock.price}</h2>
+            <p class="card-quantity">Quantity: ${stock.quantity}</p>
+          `;
+  
+          dashboardContainer.appendChild(stockDiv);
+        });
+      });
+      
+const exchangeRate = 0.012;  // Example: 1 INR = 0.012 USD, update as per current exchange rate
+
+fetch('http://localhost:3000/transactions')
+  .then(res => res.json())
+  .then(data => {
+    let balance = 93067.75;  // Starting balance in USD
+
+    console.log("Initial Balance (in USD): ", balance);
+
+    // Iterate over the transactions and update the balance
+    data.forEach(txn => {
+      console.log(`Processing transaction: ${txn.transactionType}, Price (in INR): ${txn.price}, Quantity: ${txn.quantity}`);
+
+      // Convert transaction amount to USD using the exchange rate
+      let amountInUSD = txn.price * txn.quantity * exchangeRate;
+
+      console.log(`Converted Amount in USD: ${amountInUSD.toFixed(2)}`);
+
+      if (txn.transactionType === 'buy') {
+        balance -= amountInUSD;  // Subtract for buy transaction
+        console.log(`Buy Transaction: Subtracted ${amountInUSD.toFixed(2)}, New Balance = ${balance.toFixed(2)}`);
+      } else if (txn.transactionType === 'sell') {
+        balance += amountInUSD;  // Add for sell transaction
+        console.log(`Sell Transaction: Added ${amountInUSD.toFixed(2)}, New Balance = ${balance.toFixed(2)}`);
+      }
+    });
+
+    // Final balance after all transactions
+    console.log("Final Balance (USD): ", balance.toFixed(2));
+
+    // Update the UI with the calculated balance
+    document.getElementById('wallet-balance').textContent = `$${balance.toFixed(2)}`;
+    document.getElementById('wallet-status-text').textContent = 'Wallet Balance';
+  })
+  .catch(err => {
+    // Handle errors
+    document.getElementById('wallet-balance').textContent = 'Error';
+    document.getElementById('wallet-status-text').textContent = 'Fetch Failed';
+    console.error(err);
+  });
+  </script>
+  <script src="/psk/js/main.js"></script>
+</html>
