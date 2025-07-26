@@ -1,0 +1,266 @@
+/* General Reset */
+* {
+    margin: 0;
+    padding: 0;
+    box-sizing: border-box;
+}
+
+body{
+    font-family: 'Lucida Sans', 'Lucida Sans Regular', 'Lucida Grande', 'Lucida Sans Unicode', Geneva, Verdana, sans-serif;
+}
+
+
+body.dark-mode{
+  background-color: #121212;
+  color: #e0e0e0;
+}
+.navbar {
+    position: fixed; /* Makes the navbar stay at the top */
+    top: 0;
+    left: 0;
+    width: 100%;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 20px 5px;
+    background: #fff;
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+    transition: background-color 0.3s, box-shadow 0.3s;
+    z-index: 1000; /* Ensures navbar stays on top */
+}
+
+/* Dark Mode Support */
+body.dark-mode .navbar {
+    background: #1e1e1e;
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.3);
+}
+
+/* Logo Styling */
+.logo {
+    display: flex;
+    align-items: center;
+    text-decoration: none;
+}
+
+.logo img {
+    height: 70px;
+    margin-left: 80px;
+}
+
+.logo-text {
+    font-size: 30px;
+    font-weight: bold;
+    color: #1e8449;
+}
+
+/* Navigation Links */
+.nav-links {
+    display: flex;
+    align-items: center;
+}
+
+.nav-links a {
+    font-size: 18px;
+    margin: 0 15px;
+    text-decoration: none;
+    color: #424242;
+    transition: color 0.3s ease;
+}
+
+body.dark-mode .nav-links a {
+    color: #e0e0e0;
+}
+
+.nav-links a:hover {
+    color: #1e8449;
+}
+
+.nav-links a.active-link {
+    color: #1e8449;
+    font-weight: bold;
+}
+
+/* Add padding to body to prevent content from hiding under the navbar */
+body {
+    padding-top: 80px;
+}
+
+header {
+    background-color: #006D77; /* Soft teal */
+    padding: 10px 0;
+    box-shadow: 0px 2px 5px rgba(0, 0, 0, 0.1);
+}
+
+nav ul {
+    list-style-type: none;
+    text-align: right;
+    padding-right: 30px;
+}
+
+nav ul li {
+    display: inline-block;
+    margin-left: 30px;
+}
+
+nav ul li a {
+    text-decoration: none;
+    color: white;
+    font-weight: bold;
+    font-size: 18px;
+}
+
+nav ul li a:hover {
+    color: #FFDDD2; /* Soft pink for hover */
+}
+
+/* Contact Section */
+.contact-section {
+    display: flex;
+    justify-content: space-between;
+    padding: 50px;
+    max-width: 1200px;
+    margin: 50px auto;
+}
+
+.contact-info {
+    background-color: #22223B; /* Dark Grayish */
+    color: white;
+    padding: 40px;
+    border-radius: 10px;
+    width: 45%;
+}
+
+.contact-info h2 {
+    margin-bottom: 20px;
+    color: #FFDDD2; /* Soft Pink */
+}
+
+.contact-info ul {
+    list-style-type: none;
+    margin-bottom: 30px;
+}
+
+.contact-info ul li {
+    margin-bottom: 15px;
+    font-size: 18px;
+    display: flex;          /* Flexbox to align icon and text */
+    align-items: center;
+}
+
+.contact-info ul li img.icon {
+    width: 24px;            /* Set the size of the icons */
+    height: 24px;
+    margin-right: 10px;      /* Space between icon and text */
+}
+
+
+.contact-info ul li i {
+    margin-right: 10px;
+}
+
+/* Social Media Icons */
+.social-icons {
+    display: flex;
+    gap: 22px;
+    margin-top: 20px;
+}
+
+.social-icons a img {
+    width: 30px;
+    height: 30px;
+    transition: transform 0.3s ease;
+}
+
+.social-icons a:hover img {
+    transform: scale(1.5); /* Hover effect */
+}
+
+/* Form */
+.contact-form {
+    background-color: white;
+    padding: 40px;
+    border-radius: 10px;
+    width: 45%;
+    box-shadow: 0px 2px 10px rgba(0, 0, 0, 0.1);
+}
+
+.contact-form h2 {
+    margin-bottom: 20px;
+    color: #006D77; /* Soft teal */
+}
+
+.contact-form p {
+    margin-bottom: 5px;
+    font-size: 16px;
+}
+
+.form-group {
+    display: flex;
+    justify-content: space-between;
+    margin-bottom: 50px;
+}
+
+.form-group input,
+.form-group textarea {
+    width: 48%;
+    padding: 10px;
+    border: 1px solid #ccc;
+    border-radius: 5px;
+}
+
+.form-group textarea {
+    width: 100%;
+    resize: none;
+}
+/* Adjusted radio button size and positioning */
+.radio-options {
+    display: flex;               /* Flexbox layout for horizontal alignment */
+    gap: 20px;                   /* Add space between each button */
+    margin-top: 30px;
+}
+
+.radio-options label {
+    display: flex;
+    align-items: center;         /* Vertically center the text with radio buttons */
+    font-size: 14px;             /* Adjust text size */
+}
+
+.radio-options input[type="radio"] {
+    margin-right: 5px;           /* Space between the button and label text */
+    transform: scale(1.9);       /* Make radio buttons slightly smaller */
+}
+
+.form-group label {
+    display: block;
+    margin-bottom: 5px;
+    font-weight: bold;
+}
+
+button {
+    width: 100%;
+    padding: 15px;
+    background-color: #006D77; /* Soft teal */
+    color: white;
+    border: none;
+    border-radius: 5px;
+    cursor: pointer;
+    font-size: 18px;
+}
+
+button:hover {
+    background-color: #005555; /* Darker teal */
+}
+
+footer {
+    text-align: center;
+    padding: 20px;
+    background-color: #f1f1f1;
+    margin-top: 50px;
+}
+
+footer p {
+    color: #333;
+}
+
+
+

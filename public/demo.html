@@ -1,0 +1,53 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Stock Price Bar</title>
+  <link href="demo.css" rel="stylesheet">
+</head>
+<body>
+<h1 class="title">NivesPath Stock Market Bar</h1>
+<div class="info">
+  <span class="float-left">Day Low: <span id="dayLow">0</span></span>
+  <span class="float-right">Day High: <span id="dayHigh">0</span></span>
+</div>
+<div class="stock-bar">
+  <div class="bar-line"></div> <!-- Line Bar -->
+  <div class="ticker" id="ticker"></div> <!-- Moving Ticker -->
+  <div class="open-marker" id="openMarker"></div> <!-- Open Price Marker -->
+</div>
+<!-- <div class="stock-bar">
+  <div class="ticker" id="ticker"></div>
+  <div class="open-marker" id="openMarker">▲ Open</div>   
+</div> -->
+
+<div class="live-price">
+  Live Price: <span id="livePrice">0</span>
+</div>
+  <div>Open: <span id="open"></span></div>
+  <div>Prev. Close: <span id="prevClose"></span></div>
+  <div>Volume: <span id="volume"></span></div>
+
+  <div>Upper Circuit: <span id="upperCircuit"></span></div>
+  <div>Lower Circuit: <span id="lowerCircuit"></span></div>
+
+  <!-- <div class="line-container">
+    <div class="triangle"></div>
+    <div class="line"></div>
+  </div>
+  <div class="bar">
+    <canvas id="myChart"></canvas>
+  </div> -->
+  
+  <h2>Stock Market Dashboard</h2>
+  <div id="stock-wrapper" class="stock-container"></div>
+
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>  
+<script src="client.js"></script>
+
+
+<script src="https://cdn.botpress.cloud/webchat/v2.2/inject.js"></script>
+<script src="https://files.bpcontent.cloud/2025/02/04/15/20250204154653-UENMRGXR.js"></script>
+</body>
+</html>
