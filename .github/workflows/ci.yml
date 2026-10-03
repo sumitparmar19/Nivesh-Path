@@ -1,0 +1,72 @@
+# CI: test both services on every push/PR, build Docker images, and publish them to GHCR from main.
+name: CI
+
+on:
+  push:
+    branches: [main, "claude/**"]
+  pull_request:
+
+permissions:
+  contents: read
+
+jobs:
+  backend:
+    name: Backend tests (Node)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+      - run: npm ci
+      - run: npm test
+
+  ai-service:
+    name: AI service tests (pytest)
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: ai-service
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+          cache: pip
+          cache-dependency-path: ai-service/requirements*.txt
+      - run: pip install -r requirements-dev.txt
+      - run: pytest -q
+
+  docker:
+    name: Build Docker images
+    needs: [backend, ai-service]
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      packages: write
+    steps:
+      - uses: actions/checkout@v4
+      - uses: docker/setup-buildx-action@v3
+      - name: Log in to GHCR
+        if: github.ref == 'refs/heads/main' && github.event_name == 'push'
+        uses: docker/login-action@v3
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+      - name: Compute image names
+        id: names
+        run: echo "owner=$(echo '${{ github.repository_owner }}' | tr '[:upper:]' '[:lower:]')" >> "$GITHUB_OUTPUT"
+      - name: Backend image
+        uses: docker/build-push-action@v6
+        with:
+          context: .
+          push: ${{ github.ref == 'refs/heads/main' && github.event_name == 'push' }}
+          tags: ghcr.io/${{ steps.names.outputs.owner }}/nivesh-path-backend:latest
+      - name: AI service image
+        uses: docker/build-push-action@v6
+        with:
+          context: ./ai-service
+          push: ${{ github.ref == 'refs/heads/main' && github.event_name == 'push' }}
+          tags: ghcr.io/${{ steps.names.outputs.owner }}/nivesh-path-ai:latest
