@@ -1,0 +1,75 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>AI Portfolio Advisor | Nivesh-Path</title>
+  <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
+  <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;500;600;700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="advisor.css">
+</head>
+<body>
+  <header class="topbar">
+    <a href="index.html" class="brand"><i class="fas fa-seedling"></i> Nivesh-Path</a>
+    <nav>
+      <a href="index.html">Stocks</a>
+      <a href="transactions.html">Transactions</a>
+      <a href="advisor.html" class="active">AI Advisor</a>
+    </nav>
+  </header>
+
+  <main class="wrap">
+    <section class="hero">
+      <div>
+        <p class="eyebrow"><i class="fas fa-wand-magic-sparkles"></i> Powered by Claude</p>
+        <h1>AI Portfolio Advisor</h1>
+        <p class="lede">Get a plain-English read on your portfolio: risk, diversification and next steps, grounded in your own transaction history.</p>
+      </div>
+    </section>
+
+    <section class="grid">
+      <form id="advisorForm" class="card" novalidate>
+        <div class="card-head">
+          <h2>Your holdings</h2>
+          <button type="button" class="link-btn" id="reloadBtn" title="Load holdings from your transactions">
+            <i class="fas fa-rotate"></i> Load from transactions
+          </button>
+        </div>
+        <table class="holdings">
+          <thead><tr><th>Symbol</th><th>Qty</th><th>Avg price ($)</th><th></th></tr></thead>
+          <tbody id="holdingsBody"></tbody>
+        </table>
+        <button type="button" class="ghost-btn" id="addRowBtn"><i class="fas fa-plus"></i> Add holding</button>
+
+        <label class="field">
+          <span>Risk profile</span>
+          <select id="riskProfile">
+            <option value="conservative">Conservative</option>
+            <option value="moderate" selected>Moderate</option>
+            <option value="aggressive">Aggressive</option>
+          </select>
+        </label>
+
+        <label class="field">
+          <span>Ask a question <em>(optional)</em></span>
+          <textarea id="question" rows="3" maxlength="1000" placeholder="e.g. Am I too concentrated in tech?"></textarea>
+        </label>
+
+        <button type="submit" class="primary-btn" id="analyzeBtn">
+          <i class="fas fa-brain"></i> <span>Analyze my portfolio</span>
+        </button>
+        <p class="form-error" id="formError" role="alert"></p>
+      </form>
+
+      <section class="card results" id="results" aria-live="polite">
+        <div class="empty" id="emptyState">
+          <i class="fas fa-chart-pie"></i>
+          <p>Your analysis will appear here.</p>
+        </div>
+      </section>
+    </section>
+  </main>
+
+  <script src="advisor.js"></script>
+</body>
+</html>

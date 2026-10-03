@@ -63,7 +63,7 @@ document.addEventListener('DOMContentLoaded', function() {
             
             try {
                 // Send login request to your MongoDB server
-                const response = await fetch('http://localhost:3000/api/login', {
+                const response = await fetch('/api/login', {
                     method: 'POST',
                     headers: {
                         'Content-Type': 'application/json'
@@ -81,6 +81,7 @@ document.addEventListener('DOMContentLoaded', function() {
                     localStorage.setItem('niveshPathUser', JSON.stringify({
                         mobile: data.mobile,
                         isLoggedIn: true,
+                        token: data.token,
                         name: data.name,
                         email: data.email,
                         phone: data.mobile,
@@ -267,7 +268,7 @@ if (localStorage.getItem("darkMode") === "enabled") {
 //             }
             
 //             try {
-//                 const response = await fetch('http://localhost:3000/api/login', {
+//                 const response = await fetch('/api/login', {
 //                     method: 'POST',
 //                     headers: {
 //                         'Content-Type': 'application/json'
