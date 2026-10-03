@@ -66,7 +66,7 @@ window.addEventListener("storage", function(event) {
 
   async function fetchStockData(symbol) {
     try {
-      const response = await fetch(`http://localhost:3000/stock/${symbol}`);
+      const response = await fetch(`/stock/${symbol}`);
       const data = await response.json();
       console.log("Stock Data:", data); // Debugging
   
@@ -125,7 +125,7 @@ window.addEventListener("storage", function(event) {
   
   async function fetchAppleStock() {
     const finnhubApiKey = await fetchAPIKey(); // Finnhub API Key
-    const yahooUrl = 'http://localhost:3000/yahoo'; // Proxy Server Yahoo API
+    const yahooUrl = '/yahoo'; // Proxy Server Yahoo API
     const symbol = "WMT";
   
     if (!finnhubApiKey) {
@@ -135,7 +135,7 @@ window.addEventListener("storage", function(event) {
   
     try {
       // Fetch Finnhub API
-      const finnhubUrl = `https://finnhub.io/api/v1/quote?symbol=${symbol}&token=${finnhubApiKey}`;
+      const finnhubUrl = `/stock/${symbol}`;
       const finnhubResponse = await fetch(finnhubUrl);
       const finnhubData = await finnhubResponse.json();
   
@@ -340,7 +340,7 @@ window.addEventListener("storage", function(event) {
   
   async function handlePayment(amount) {
     try {
-        const response = await fetch("http://localhost:3000/create-checkout-session-goldman", {
+        const response = await fetch("/create-checkout-session-goldman", {
             method: "POST",
             headers: { "Content-Type": "application/json" },
             body: JSON.stringify({ amount })
@@ -405,7 +405,7 @@ window.addEventListener("storage", function(event) {
   // }
   // const handlePaymentSuccess = async (price, quantity, total) => {
   //   try {
-  //       const response = await fetch("http://localhost:3000/store-purchase", {
+  //       const response = await fetch("/store-purchase", {
   //           method: "POST",
   //           headers: {
   //               "Content-Type": "application/json",
@@ -419,7 +419,7 @@ window.addEventListener("storage", function(event) {
   //       console.error("Error storing purchase:", error);
   //   }
   // };
-  // fetch("http://localhost:3000/api/store-purchase", {
+  // fetch("/api/store-purchase", {
   //   method: "POST",
   //   headers: {
   //       "Content-Type": "application/json",
@@ -447,7 +447,7 @@ window.addEventListener("storage", function(event) {
   //       }
   
   //       // Send data to the backend
-  //       const response = await fetch("http://localhost:3000/store-purchase", {
+  //       const response = await fetch("/store-purchase", {
   //           method: "POST",
   //           headers: { "Content-Type": "application/json" },
   //           body: JSON.stringify({ price, quantity, total ,transactionType}),
@@ -477,7 +477,7 @@ window.addEventListener("storage", function(event) {
   //       console.log("Sending Data:", { price, quantity, total, transactionType }); // Debugging
   
   //       // Send data to the backend
-  //       const response = await fetch("http://localhost:3000/store-purchase", {
+  //       const response = await fetch("/store-purchase", {
   //           method: "POST",
   //           headers: { "Content-Type": "application/json" },
   //           body: JSON.stringify({ price, quantity, total, transactionType }),
@@ -513,7 +513,7 @@ window.addEventListener("storage", function(event) {
         }
   
         // Send purchase data to backend
-        const response = await fetch("http://localhost:3000/store-purchase", {
+        const response = await fetch("/store-purchase", {
             method: "POST",
             headers: { "Content-Type": "application/json" },
             body: JSON.stringify({name, price, quantity, total, transactionType }), // Ensure transactionType is sent

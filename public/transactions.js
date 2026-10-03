@@ -1,6 +1,6 @@
 async function fetchTransactions() {
     try {
-        const response = await fetch("http://localhost:3000/transactions");
+        const response = await fetch("/transactions");
         const data = await response.json();
 
         const tableBody = document.getElementById("transactionTable");

@@ -65,7 +65,7 @@ window.addEventListener("storage", function(event) {
 
 // async function fetchStockData(symbol) {
 //   try {
-//     const response = await fetch(`http://localhost:3000/stock/${symbol}`);
+//     const response = await fetch(`/stock/${symbol}`);
 //     const data = await response.json();
 //     console.log(data); // Debugging
 
@@ -100,7 +100,7 @@ window.addEventListener("storage", function(event) {
 
 // async function fetchStockData(symbol) {
 //   try {
-//     const response = await fetch(`http://localhost:3000/stock/${symbol}`);
+//     const response = await fetch(`/stock/${symbol}`);
 //     const data = await response.json();
 //     console.log("Stock Data:", data); // Debugging
 
@@ -141,7 +141,7 @@ window.addEventListener("storage", function(event) {
 
 async function fetchStockData(symbol) {
   try {
-    const response = await fetch(`http://localhost:3000/stock/${symbol}`);
+    const response = await fetch(`/stock/${symbol}`);
     const data = await response.json();
     console.log("Stock Data:", data); // Debugging
 
@@ -198,7 +198,7 @@ async function fetchAPIKey() {
 
 async function fetchAppleStock() {
   const finnhubApiKey = await fetchAPIKey(); // Finnhub API Key
-  const yahooUrl = 'http://localhost:3000/yahoo'; // Proxy Server Yahoo API
+  const yahooUrl = '/yahoo'; // Proxy Server Yahoo API
   const symbol = "AAPL";
 
   if (!finnhubApiKey) {
@@ -208,7 +208,7 @@ async function fetchAppleStock() {
 
   try {
     // Fetch Finnhub API
-    const finnhubUrl = `https://finnhub.io/api/v1/quote?symbol=${symbol}&token=${finnhubApiKey}`;
+    const finnhubUrl = `/stock/${symbol}`;
     const finnhubResponse = await fetch(finnhubUrl);
     const finnhubData = await finnhubResponse.json();
 
@@ -436,7 +436,7 @@ const stripe = Stripe("pk_test_51Pp474P12x31ZwKIU3ian8k4DPSItSboee9oQujst9DgmNpf
 
 async function handlePayment(amount) {
   try {
-      const response = await fetch("http://localhost:3000/create-checkout-session", {
+      const response = await fetch("/create-checkout-session", {
           method: "POST",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({ amount })
@@ -501,7 +501,7 @@ document.getElementById("sellBtn").addEventListener("click", () => handlePayment
 // }
 // const handlePaymentSuccess = async (price, quantity, total) => {
 //   try {
-//       const response = await fetch("http://localhost:3000/store-purchase", {
+//       const response = await fetch("/store-purchase", {
 //           method: "POST",
 //           headers: {
 //               "Content-Type": "application/json",
@@ -515,7 +515,7 @@ document.getElementById("sellBtn").addEventListener("click", () => handlePayment
 //       console.error("Error storing purchase:", error);
 //   }
 // };
-// fetch("http://localhost:3000/api/store-purchase", {
+// fetch("/api/store-purchase", {
 //   method: "POST",
 //   headers: {
 //       "Content-Type": "application/json",
@@ -543,7 +543,7 @@ document.getElementById("sellBtn").addEventListener("click", () => handlePayment
 //       }
 
 //       // Send data to the backend
-//       const response = await fetch("http://localhost:3000/store-purchase", {
+//       const response = await fetch("/store-purchase", {
 //           method: "POST",
 //           headers: { "Content-Type": "application/json" },
 //           body: JSON.stringify({ price, quantity, total ,transactionType}),
@@ -573,7 +573,7 @@ document.getElementById("sellBtn").addEventListener("click", () => handlePayment
 //       console.log("Sending Data:", { price, quantity, total, transactionType }); // Debugging
 
 //       // Send data to the backend
-//       const response = await fetch("http://localhost:3000/store-purchase", {
+//       const response = await fetch("/store-purchase", {
 //           method: "POST",
 //           headers: { "Content-Type": "application/json" },
 //           body: JSON.stringify({ price, quantity, total, transactionType }),
@@ -609,7 +609,7 @@ const handlePaymentSuccess = async (transactionType) => {
       }
 
       // Send purchase data to backend
-      const response = await fetch("http://localhost:3000/store-purchase", {
+      const response = await fetch("/store-purchase", {
           method: "POST",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({name, price, quantity, total, transactionType }), // Ensure transactionType is sent
