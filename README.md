@@ -81,6 +81,8 @@ cd ai-service && pytest -q    # AI service: 10 pytest tests (Claude mocked, Chro
 The AI service has interactive docs at `http://localhost:8001/docs`.
 
 ## Deploy (DigitalOcean, GitHub Student Pack)
+Full step-by-step guide, including where to get every key: [docs/DEPLOYMENT.md](docs/DEPLOYMENT.md).
+
 1. Create a free MongoDB Atlas cluster and copy its connection string.
 2. In DigitalOcean go to **Apps → Create App → Import from app spec**, and upload `.do/app.yaml`.
 3. Fill in the secrets: `MONGO_URL`, `FINNHUB_API_KEY`, `STRIPE_SECRET_KEY`, `JWT_SECRET`,
