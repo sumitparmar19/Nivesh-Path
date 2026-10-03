@@ -281,7 +281,7 @@
   </body>
           
   <script>
-    fetch('http://localhost:3000/transactions')
+    fetch('/transactions')
       .then(res => res.json())
       .then(data => {
         // Sort the data by timestamp in descending order (latest first)
@@ -316,7 +316,7 @@
       
 const exchangeRate = 0.012;  // Example: 1 INR = 0.012 USD, update as per current exchange rate
 
-fetch('http://localhost:3000/transactions')
+fetch('/transactions')
   .then(res => res.json())
   .then(data => {
     let balance = 93067.75;  // Starting balance in USD

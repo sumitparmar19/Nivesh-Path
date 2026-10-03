@@ -49,7 +49,7 @@
 // setInterval(() => fetchStockData("AAPL"), 3000); // Refresh Every 3 Sec
 
 // async function fetchStockData(symbol) {
-//   const response = await fetch(`http://localhost:3000/stock/${symbol}`);
+//   const response = await fetch(`/stock/${symbol}`);
 //   const data = await response.json();
 //   console.log(data); // Debugging
 
@@ -72,7 +72,7 @@
 // fetchStockData("AAPL");
 async function fetchStockData(symbol) {
   try {
-    const response = await fetch(`http://localhost:3000/stock/${symbol}`);
+    const response = await fetch(`/stock/${symbol}`);
     const data = await response.json();
     console.log(data); // Debugging
 
@@ -119,7 +119,7 @@ async function fetchAPIKey() {
 
 async function fetchAppleStock() {
   const finnhubApiKey = await fetchAPIKey(); // Finnhub API Key
-  const yahooUrl = 'http://localhost:3000/yahoo'; // Proxy Server Yahoo API
+  const yahooUrl = '/yahoo'; // Proxy Server Yahoo API
   const symbol = "AAPL";
 
   if (!finnhubApiKey) {
@@ -129,7 +129,7 @@ async function fetchAppleStock() {
 
   try {
     // Fetch Finnhub API
-    const finnhubUrl = `https://finnhub.io/api/v1/quote?symbol=${symbol}&token=${finnhubApiKey}`;
+    const finnhubUrl = `/stock/${symbol}`;
     const finnhubResponse = await fetch(finnhubUrl);
     const finnhubData = await finnhubResponse.json();
 
@@ -234,11 +234,11 @@ new Chart(ctx, {
   }
 });
 
-const API_KEY = "YOUR_FINNHUB_API_KEY";  
+// Quotes are fetched through the backend proxy so no API key is needed in the browser.
 const stockSymbols = ["AAPL", "TSLA", "NVDA", "MSFT"]; // Add more stock symbols
 
 async function fetchStockData(symbol) {
-    const response = await fetch(`https://finnhub.io/api/v1/quote?symbol=${symbol}&token=${API_KEY}`);
+    const response = await fetch(`/stock/${symbol}`);
     return response.json();
 }
 
