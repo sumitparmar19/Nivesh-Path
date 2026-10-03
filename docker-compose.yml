@@ -1,0 +1,42 @@
+# Runs the full Nivesh-Path stack locally: `docker compose up --build`, then open http://localhost:3000
+services:
+  backend:
+    build: .
+    ports:
+      - "3000:3000"
+    env_file: .env
+    environment:
+      MONGO_URL: mongodb://mongo:27017/niveshpath
+      REDIS_URL: redis://redis:6379
+      AI_SERVICE_URL: http://ai-service:8001
+      PUBLIC_BASE_URL: http://localhost:3000
+    depends_on:
+      - mongo
+      - redis
+      - ai-service
+    restart: unless-stopped
+
+  ai-service:
+    build: ./ai-service
+    ports:
+      - "8001:8001"
+    env_file: .env
+    environment:
+      CHROMA_PERSIST_DIR: /data/chroma
+    volumes:
+      - chroma_data:/data/chroma
+    restart: unless-stopped
+
+  mongo:
+    image: mongo:7
+    volumes:
+      - mongo_data:/data/db
+    restart: unless-stopped
+
+  redis:
+    image: redis:7-alpine
+    restart: unless-stopped
+
+volumes:
+  mongo_data:
+  chroma_data:

@@ -1,0 +1,20 @@
+# Dependencies
+node_modules/
+__pycache__/
+*.pyc
+.venv/
+venv/
+
+# Secrets - never commit real keys
+.env
+.env.*
+!.env.example
+
+# Build / runtime output
+dist/
+build/
+coverage/
+.pytest_cache/
+chroma_data/
+*.log
+.DS_Store
