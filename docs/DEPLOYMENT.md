@@ -1,6 +1,6 @@
 # Keys, secrets and deployment guide
 
-You don't need to change any code to change keys. The app reads every secret from environment
+You don't need to change any code to change keys or accounts. The app reads every secret from environment
 variables:
 
 | Where the app runs | Where the keys go |
@@ -12,62 +12,121 @@ Never paste keys into code, commits, GitHub issues or chat messages.
 
 ---
 
-## Part 1 - Replace the leaked keys (about 15 minutes)
+## Part 1 - Create your own accounts and keys (about 30 minutes)
 
-The old values were committed to GitHub in `.env` and `public/client.js`, so treat them as public.
+The original keys belong to a previous teammate's accounts (the MongoDB user `dhrumil`, plus that
+person's Stripe and Finnhub accounts). They were committed to GitHub, so treat them as public and
+stop using them. Create your own free accounts below. You'll end up with **7 values** to put in
+`.env`.
 
-### 1. Stripe secret key
-1. Go to <https://dashboard.stripe.com> and make sure **Test mode** is on (toggle at the top right).
-2. Open **Developers → API keys**.
-3. Next to **Secret key**, click **⋯ → Roll key**. Set expiration to **Now**, then confirm.
-4. Copy the new key (`sk_test_...`). It is shown only once.
-5. Put it in `.env` as `STRIPE_SECRET_KEY=sk_test_...`
+Tip: open a plain text file (outside the project folder) and paste each value into it as you go.
+Delete that file when you're done.
 
-The **publishable key** (`pk_test_...`) in `public/*.js` is meant to be public, so you don't need
-to change it. If you ever switch to a different Stripe account, replace it in those files.
+### 1. MongoDB Atlas -> `MONGO_URL` (database)
+1. Go to <https://www.mongodb.com/cloud/atlas/register> and sign up with your own email or Google.
+2. You'll land on **"Deploy your cluster"**. Choose **M0 (Free)**, provider **AWS**, any nearby
+   region. Name it `NiveshPath`, then click **Create Deployment**.
+3. A **"Connect to NiveshPath"** popup opens and asks you to create a database user:
+   - Username: `niveshpath_app`
+   - Password: click **Autogenerate Secure Password**, then **Copy** it into your text file.
+   - Click **Create Database User**.
+   - (Later you can find this under **Security → Database Access** in the left sidebar.)
+4. Allow connections from anywhere (DigitalOcean has no fixed IP):
+   - Left sidebar: **Security → Network Access → + Add IP Address → Allow Access from Anywhere**
+     (`0.0.0.0/0`) → **Confirm**.
+5. Get the connection string:
+   - Left sidebar: **Database → Clusters** → on your cluster click **Connect → Drivers**.
+   - Copy the string under step 3. It looks like
+     `mongodb+srv://niveshpath_app:<db_password>@niveshpath.abc12.mongodb.net/?retryWrites=true&w=majority&appName=NiveshPath`
+   - Replace `<db_password>` with your password, and add the database name `niveshpath` after
+     `.net/`:
+     `mongodb+srv://niveshpath_app:YOURPASS@niveshpath.abc12.mongodb.net/niveshpath?retryWrites=true&w=majority&appName=NiveshPath`
+   - If your password contains `@ : / ? # %`, autogenerate a new one without symbols. Those
+     characters break the URL.
+6. Your `.env` line: `MONGO_URL=mongodb+srv://niveshpath_app:...`
 
-### 2. MongoDB Atlas password
-The old connection string contains the username and password `dhrumil / dhrumil7pat`.
-1. Go to <https://cloud.mongodb.com>, sign in and open your project.
-2. In the left menu, open **Security → Database Access**.
-3. Find the user `dhrumil`, click **Edit → Edit Password**, then **Autogenerate Secure Password**.
-   Copy it and click **Update User**.
-4. Build the new connection string. Go to **Database → Connect → Drivers** and copy the string,
-   then replace `<password>` with the new password:
-   `mongodb+srv://dhrumil:NEW_PASSWORD@niveshpathcluster.egrir.mongodb.net/Nivesh?retryWrites=true&w=majority`
-5. Put it in `.env` as `MONGO_URL=mongodb+srv://...`
-6. For DigitalOcean, go to **Security → Network Access → Add IP Address** and choose
-   **Allow access from anywhere** (`0.0.0.0/0`). App Platform has no fixed IP, so this is the
-   simple option; the strong password protects the database.
+The database starts empty. The app creates its collections (`users`, `purchases`) automatically
+on first use.
 
-### 3. Finnhub API key
-1. Go to <https://finnhub.io/dashboard> and sign in.
-2. If you see a **Regenerate** option, use it. If not, create a new free account and use its key.
-3. Put it in `.env` as `FINNHUB_API_KEY=...`
+### 2. Stripe -> `STRIPE_SECRET_KEY` (payments, test mode)
+1. Go to <https://dashboard.stripe.com/register> and sign up. You do **not** need to activate
+   payments or enter bank details for test mode.
+2. Make sure **Test mode** is on: the toggle or the orange "Test mode" banner at the top of the
+   dashboard. Use a Sandbox if Stripe offers one.
+3. Open **Developers** (bottom-left, or <https://dashboard.stripe.com/test/apikeys>) → **API keys**.
+4. Under **Standard keys**, find **Secret key** (`sk_test_...`), click **Reveal test key**, and copy it.
+5. Your `.env` line: `STRIPE_SECRET_KEY=sk_test_...`
 
-### 4. New keys you'll also need
-| Variable | Where to get it |
-|---|---|
-| `JWT_SECRET` | Any long random string. Generate one with `node -e "console.log(require('crypto').randomBytes(48).toString('hex'))"` |
-| `ANTHROPIC_API_KEY` | <https://console.anthropic.com> → **API Keys → Create Key**. Add billing credit first. Without this key the AI Advisor still works, but only gives rule-based answers. |
-| `SENTRY_DSN` (optional) | <https://sentry.io> (free with the GitHub Student Pack) → create a Node project → copy the DSN |
+You don't need the publishable key (`pk_test_...`): the pages redirect to Stripe's hosted
+checkout page the server creates. To test a payment, use card `4242 4242 4242 4242`, any future
+date, any CVC.
 
-### 5. Your final local `.env`
+### 3. Finnhub -> `FINNHUB_API_KEY` (live stock prices)
+1. Go to <https://finnhub.io/register> and sign up (free plan).
+2. After login you land on the **Dashboard** (<https://finnhub.io/dashboard>). Your **API Key** is
+   shown at the top. Copy it.
+3. Your `.env` line: `FINNHUB_API_KEY=...`
+
+The free plan allows 60 calls per minute. The app caches quotes for 60 seconds, so that's plenty.
+
+### 4. Anthropic (Claude) -> `ANTHROPIC_API_KEY` (AI Advisor)
+1. Go to <https://console.anthropic.com> and sign up.
+2. Add credit: **Settings → Billing → Buy credits**. $5 is plenty; each analysis costs a few cents.
+3. Create the key: **Settings → API Keys → + Create Key**, name it `nivesh-path`, and copy it.
+   It starts with `sk-ant-` and is shown only once.
+4. Your `.env` line: `ANTHROPIC_API_KEY=sk-ant-...`
+
+Without this key the AI Advisor still works, but only gives rule-based answers.
+
+### 5. JWT secret -> `JWT_SECRET` (login tokens, no account needed)
+In a terminal in the project folder, run:
+```
+node -e "console.log(require('crypto').randomBytes(48).toString('hex'))"
+```
+Copy the output. Your `.env` line: `JWT_SECRET=<that output>`
+
+### 6. Sentry -> `SENTRY_DSN` (optional, error tracking, free with the Student Pack)
+1. Go to <https://sentry.io/signup> (or claim it via <https://education.github.com/pack>).
+2. **Create Project → Node.js (Express)** → name it `nivesh-path`.
+3. Copy the **DSN** shown in the setup instructions (`https://...@...ingest.sentry.io/...`).
+   You can find it later under **Settings → Projects → nivesh-path → Client Keys (DSN)**.
+4. Your `.env` line: `SENTRY_DSN=https://...`
+
+### 7. Put it all in `.env`
+In the project root, open `.env` (or copy `.env.example` to `.env`), delete the old values, and
+make it look like this:
 ```
 PORT=3000
 PUBLIC_BASE_URL=http://localhost:3000
-FINNHUB_API_KEY=your_new_finnhub_key
-MONGO_URL=mongodb+srv://dhrumil:NEW_PASSWORD@niveshpathcluster.egrir.mongodb.net/Nivesh?retryWrites=true&w=majority
-STRIPE_SECRET_KEY=sk_test_new_key
-JWT_SECRET=long_random_string
+MONGO_URL=mongodb+srv://niveshpath_app:YOURPASS@niveshpath.abc12.mongodb.net/niveshpath?retryWrites=true&w=majority&appName=NiveshPath
+STRIPE_SECRET_KEY=sk_test_...
+FINNHUB_API_KEY=...
+JWT_SECRET=...
 AI_SERVICE_URL=http://localhost:8001
+SENTRY_DSN=
 ANTHROPIC_API_KEY=sk-ant-...
 CLAUDE_MODEL=claude-opus-5-5
 ```
-Check that it works: run `npm install && npm run dev`, open <http://localhost:3000/health>, and
-confirm it shows `"db":"connected"`.
+`.env` is git-ignored, so it stays on your computer. **No code changes are needed**: every key is
+read from here.
 
----
+### 8. Check it works locally
+```
+npm install
+npm run dev                      # terminal 1 -> http://localhost:3000/health
+cd ai-service && python -m venv .venv
+.venv/bin/pip install -r requirements.txt     # Windows: .venv\Scripts\pip
+.venv/bin/uvicorn main:app --port 8001        # terminal 2
+```
+- <http://localhost:3000/health> should show `"db":"connected","payments":true`
+- <http://localhost:8001/health> should show `"llm_configured":true`
+- <http://localhost:3000/advisor.html> → Analyze → the badge should say **AI insight**
+- A company page (e.g. Tesla) → Buy → you should land on a Stripe checkout page
+
+### 9. (Optional) Delete the old values everywhere
+- Remove any old keys from other copies of the project, notes or chats.
+- Ask the previous teammate to rotate or delete their keys. They are still visible in this repo's
+  git history.
 
 ## Part 2 - Deploy to DigitalOcean (about 20 minutes)
 
@@ -109,7 +168,7 @@ values and tick **Encrypt** on each one:
 | Symptom | Fix |
 |---|---|
 | Build fails on the **ai** component with "Dockerfile not found" | In the App Spec, change `dockerfile_path: ai-service/Dockerfile` to `dockerfile_path: Dockerfile` (the path is relative to `source_dir`) and save |
-| `/health` shows `"db":"disconnected"` | Check `MONGO_URL` and the Atlas Network Access step (Part 1, step 2.6) |
+| `/health` shows `"db":"disconnected"` | Check `MONGO_URL` and the Atlas Network Access step (Part 1, section 1, step 4) |
 | Advisor badge says "Rule-based insight" | `ANTHROPIC_API_KEY` is missing or invalid on the **ai** component, or the account has no credit |
 | Stripe checkout errors | `STRIPE_SECRET_KEY` is missing on **web**, or you rolled the key and forgot to update it |
 
