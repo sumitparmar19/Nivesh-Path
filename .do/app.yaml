@@ -1,0 +1,56 @@
+# DigitalOcean App Platform spec (GitHub Student Pack credit).
+# Deploy: DigitalOcean dashboard -> Apps -> Create App -> "Import from app spec" (or `doctl apps create --spec .do/app.yaml`).
+# Fill in the SECRET values in the dashboard after import. Use a free MongoDB Atlas cluster for MONGO_URL.
+name: nivesh-path
+region: nyc
+services:
+  - name: web
+    github:
+      repo: sumitparmar19/Nivesh-Path
+      branch: main
+      deploy_on_push: true
+    dockerfile_path: Dockerfile
+    http_port: 3000
+    instance_count: 1
+    instance_size_slug: apps-s-1vcpu-0.5gb
+    health_check:
+      http_path: /health
+    routes:
+      - path: /
+    envs:
+      - key: AI_SERVICE_URL
+        value: ${ai.PRIVATE_URL}
+      - key: PUBLIC_BASE_URL
+        value: ${APP_URL}
+      - key: MONGO_URL
+        type: SECRET
+      - key: FINNHUB_API_KEY
+        type: SECRET
+      - key: STRIPE_SECRET_KEY
+        type: SECRET
+      - key: JWT_SECRET
+        type: SECRET
+      - key: SENTRY_DSN
+        type: SECRET
+
+  - name: ai
+    github:
+      repo: sumitparmar19/Nivesh-Path
+      branch: main
+      deploy_on_push: true
+    source_dir: ai-service
+    dockerfile_path: ai-service/Dockerfile
+    internal_ports:
+      - 8001
+    instance_count: 1
+    instance_size_slug: apps-s-1vcpu-1gb
+    health_check:
+      http_path: /health
+      port: 8001
+    envs:
+      - key: ANTHROPIC_API_KEY
+        type: SECRET
+      - key: CLAUDE_MODEL
+        value: claude-opus-5-5
+      - key: SENTRY_DSN
+        type: SECRET
