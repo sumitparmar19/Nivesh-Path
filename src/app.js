@@ -1,4 +1,4 @@
-// Builds the Express app. Dependencies are injectable so tests can run without Mongo/Stripe/Finnhub.
+// Builds the Express app. Dependencies are injectable so tests can run without Mongo/Finnhub/the AI service.
 const path = require("path");
 const express = require("express");
 const cors = require("cors");
@@ -10,9 +10,9 @@ const { createCache } = require("./lib/cache");
 const { createQuoteService } = require("./lib/quotes");
 const { createAiClient } = require("./lib/aiClient");
 const stockRoutes = require("./routes/stocks");
-const checkoutRoutes = require("./routes/checkout");
 const purchaseRoutes = require("./routes/purchases");
-const { authRoutes, optionalAuth } = require("./routes/auth");
+const { authRoutes } = require("./routes/auth");
+const { optionalAuth } = require("./middleware/auth");
 const aiRoutes = require("./routes/ai");
 
 function createApp(deps = {}) {
@@ -20,8 +20,6 @@ function createApp(deps = {}) {
   const User = deps.User || require("./models/User");
   const quotes = deps.quotes || createQuoteService({ cache: deps.cache || createCache() });
   const aiClient = deps.aiClient || createAiClient();
-  const stripe =
-    deps.stripe !== undefined ? deps.stripe : config.stripeSecretKey ? require("stripe")(config.stripeSecretKey) : null;
 
   const app = express();
   app.disable("x-powered-by");
@@ -35,14 +33,13 @@ function createApp(deps = {}) {
     res.json({
       status: "ok",
       db: mongoose.connection.readyState === 1 ? "connected" : "disconnected",
-      payments: Boolean(stripe),
+      ai: Boolean(config.aiServiceUrl),
     });
   });
 
   app.use(optionalAuth);
   app.use(stockRoutes({ quotes }));
-  app.use(checkoutRoutes({ stripe, Purchase, aiClient }));
-  app.use(purchaseRoutes({ Purchase, aiClient }));
+  app.use(purchaseRoutes({ Purchase, User, quotes, aiClient }));
   app.use(authRoutes({ User }));
   app.use(aiRoutes({ Purchase, quotes, aiClient }));
 

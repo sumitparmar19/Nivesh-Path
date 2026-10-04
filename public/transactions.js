@@ -1,39 +1,15 @@
-// Transactions page: confirms a returning Stripe payment, then lists trades with filters and totals.
+// Transactions page: the logged-in user's trades (filter + search) and their cash / portfolio summary.
+// All data comes from protected APIs via NP.authFetch, so it redirects to login when signed out.
 (function () {
-  const START_BALANCE = 100000;
   const money = (n) => Number(n || 0).toLocaleString("en-US", { style: "currency", currency: "USD" });
   const esc = (s) => String(s ?? "").replace(/[&<>"']/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" })[c]);
-  const toast = (m, t, h) => (window.NP ? window.NP.toast(m, t, h) : console.log(m));
+  const NP = window.NP;
 
   const tbody = document.getElementById("transactionTable");
   const empty = document.getElementById("txEmpty");
   const search = document.getElementById("txSearch");
   let rows = [];
   let filter = "all";
-
-  async function confirmPayment() {
-    const params = new URLSearchParams(location.search);
-    const sessionId = params.get("session_id");
-    if (!sessionId) return;
-    // Remove the id from the address bar so a refresh doesn't re-confirm.
-    history.replaceState(null, "", location.pathname);
-    try {
-      const res = await fetch("/api/checkout/confirm", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ session_id: sessionId }),
-      });
-      const data = await res.json().catch(() => ({}));
-      if (res.ok && data.purchase) {
-        const p = data.purchase;
-        toast(`Bought ${p.quantity} ${p.name} for ${money(p.total)}.`, "success", "Payment confirmed");
-      } else if (!res.ok) {
-        toast(data.error || "We couldn't confirm that payment.", "error");
-      }
-    } catch (err) {
-      toast("We couldn't confirm that payment. Check your connection and refresh.", "error");
-    }
-  }
 
   function render() {
     const q = (search.value || "").trim().toUpperCase();
@@ -59,27 +35,27 @@
     }
   }
 
-  function summarise() {
-    const bought = rows.filter((t) => t.transactionType === "buy");
-    const sold = rows.filter((t) => t.transactionType === "sell");
-    const sum = (list) => list.reduce((acc, t) => acc + Number(t.total || 0), 0);
-    document.getElementById("walletBalance").textContent = money(START_BALANCE - sum(bought) + sum(sold));
-    document.getElementById("totalBought").textContent = money(sum(bought));
-    document.getElementById("totalSold").textContent = money(sum(sold));
-    document.getElementById("buyCount").textContent = `${bought.length} buy${bought.length === 1 ? "" : "s"}`;
-    document.getElementById("sellCount").textContent = `${sold.length} sell${sold.length === 1 ? "" : "s"}`;
+  function showSummary(s) {
+    document.getElementById("walletBalance").textContent = money(s.cashBalance);
+    document.getElementById("totalValue").textContent = money(s.totalValue);
+    document.getElementById("holdingsFoot").textContent = `${money(s.holdingsValue)} in ${s.positions.length} holding${s.positions.length === 1 ? "" : "s"}`;
+    const pnl = document.getElementById("totalPnl");
+    pnl.textContent = `${s.totalPnl >= 0 ? "+" : ""}${money(s.totalPnl)}`;
+    pnl.classList.toggle("np-up", s.totalPnl > 0);
+    pnl.classList.toggle("np-down", s.totalPnl < 0);
+    document.getElementById("pnlFoot").textContent = `${s.totalPnlPercent >= 0 ? "+" : ""}${s.totalPnlPercent}% since you started with ${money(s.totalDeposited)}`;
   }
 
   async function load() {
     try {
-      const res = await fetch("/transactions");
-      if (!res.ok) throw new Error();
-      rows = await res.json();
+      const [txRes, sumRes] = await Promise.all([NP.authFetch("/api/transactions"), NP.authFetch("/api/portfolio/cash-balance")]);
+      if (!txRes.ok || !sumRes.ok) throw new Error();
+      rows = await txRes.json();
+      showSummary(await sumRes.json());
     } catch (err) {
       rows = [];
-      toast("Couldn't load your transactions. Please refresh in a moment.", "error");
+      NP.toast("Couldn't load your transactions. Please refresh in a moment.", "error");
     }
-    summarise();
     render();
   }
 
@@ -95,5 +71,5 @@
   );
   search.addEventListener("input", render);
 
-  confirmPayment().finally(load);
+  load();
 })();

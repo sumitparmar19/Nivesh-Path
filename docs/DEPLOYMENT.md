@@ -48,18 +48,9 @@ Delete that file when you're done.
 The database starts empty. The app creates its collections (`users`, `purchases`) automatically
 on first use.
 
-### 2. Stripe -> `STRIPE_SECRET_KEY` (payments, test mode)
-1. Go to <https://dashboard.stripe.com/register> and sign up. You do **not** need to activate
-   payments or enter bank details for test mode.
-2. Make sure **Test mode** is on: the toggle or the orange "Test mode" banner at the top of the
-   dashboard. Use a Sandbox if Stripe offers one.
-3. Open **Developers** (bottom-left, or <https://dashboard.stripe.com/test/apikeys>) → **API keys**.
-4. Under **Standard keys**, find **Secret key** (`sk_test_...`), click **Reveal test key**, and copy it.
-5. Your `.env` line: `STRIPE_SECRET_KEY=sk_test_...`
-
-You don't need the publishable key (`pk_test_...`): the pages redirect to Stripe's hosted
-checkout page the server creates. To test a payment, use card `4242 4242 4242 4242`, any future
-date, any CVC.
+### 2. Stripe - no longer needed
+Since Phase 2A the app is paper trading with $100,000 of virtual cash per user, so Stripe is not used.
+If you added `STRIPE_SECRET_KEY` to DigitalOcean you can delete it.
 
 ### 3. Finnhub -> `FINNHUB_API_KEY` (live stock prices)
 1. Go to <https://finnhub.io/register> and sign up (free plan).
@@ -99,7 +90,6 @@ make it look like this:
 PORT=3000
 PUBLIC_BASE_URL=http://localhost:3000
 MONGO_URL=mongodb+srv://niveshpath_app:YOURPASS@niveshpath.abc12.mongodb.net/niveshpath?retryWrites=true&w=majority&appName=NiveshPath
-STRIPE_SECRET_KEY=sk_test_...
 FINNHUB_API_KEY=...
 JWT_SECRET=...
 AI_SERVICE_URL=http://localhost:8001
@@ -121,7 +111,7 @@ cd ai-service && python -m venv .venv
 - <http://localhost:3000/health> should show `"db":"connected","payments":true`
 - <http://localhost:8001/health> should show `"llm_configured":true`
 - <http://localhost:3000/advisor.html> → Analyze → the badge should say **AI insight**
-- A company page (e.g. Tesla) → Buy → you should land on a Stripe checkout page
+- Sign up, open a company page (e.g. Tesla) → Buy → your cash balance drops and the trade shows on Transactions
 
 ### 9. (Optional) Delete the old values everywhere
 - Remove any old keys from other copies of the project, notes or chats.
@@ -151,7 +141,7 @@ values and tick **Encrypt** on each one:
 
 | Component | Variables |
 |---|---|
-| web | `MONGO_URL`, `FINNHUB_API_KEY`, `STRIPE_SECRET_KEY`, `JWT_SECRET`, `SENTRY_DSN` (optional) |
+| web | `MONGO_URL`, `FINNHUB_API_KEY`, `JWT_SECRET` (required in production), `SENTRY_DSN` (optional) |
 | ai | `ANTHROPIC_API_KEY`, `SENTRY_DSN` (optional) |
 
 `AI_SERVICE_URL`, `PUBLIC_BASE_URL` and `CLAUDE_MODEL` are already filled in by the spec.
@@ -170,8 +160,31 @@ values and tick **Encrypt** on each one:
 | Build fails on the **ai** component with "Dockerfile not found" | In the App Spec, change `dockerfile_path: ai-service/Dockerfile` to `dockerfile_path: Dockerfile` (the path is relative to `source_dir`) and save |
 | `/health` shows `"db":"disconnected"` | Check `MONGO_URL` and the Atlas Network Access step (Part 1, section 1, step 4) |
 | Advisor badge says "Rule-based insight" | `ANTHROPIC_API_KEY` is missing or invalid on the **ai** component, or the account has no credit |
-| Stripe checkout errors | `STRIPE_SECRET_KEY` is missing on **web**, or you rolled the key and forgot to update it |
+| "Login required" on every page | `JWT_SECRET` changed (old tokens become invalid) - just log in again |
 
 ### Cost
 `web` (0.5 GB) costs about $5/month and `ai` (1 GB) about $10/month, which the student credit
 covers for over a year. To pause billing, destroy the app; you can recreate it from the spec any time.
+
+---
+
+## Part 3 - Custom domain (free .me from the GitHub Student Pack, ~20 minutes)
+
+1. **Claim the domain:** <https://education.github.com/pack> → **Namecheap** → "Get access" → search for a
+   `.me` name (e.g. `niveshpath.me`) → check out with the Student Pack coupon (free for 1 year).
+   (Alternative in the same pack: **Name.com** free domain.)
+2. **Add it in DigitalOcean:** your app → **Settings** → **Domains** → **Add Domain** → enter `niveshpath.me`
+   (and optionally `www.niveshpath.me`) → choose **"You manage your domain"**. DigitalOcean shows a
+   **CNAME target** like `nivesh-path-vzeak.ondigitalocean.app`.
+3. **Point DNS at it (Namecheap):** Dashboard → **Domain List** → **Manage** next to the domain → **Advanced DNS**:
+   - Delete the default "parking page" records.
+   - For `www`: **Add New Record** → `CNAME Record` · Host `www` · Value = the CNAME target from step 2 · TTL Automatic.
+   - For the root (`niveshpath.me`): add a **CNAME/ALIAS** record with Host `@` and the same target. If Namecheap
+     doesn't allow it, either use only `www.niveshpath.me` (and add a **URL Redirect Record** from `@` to
+     `https://www.niveshpath.me`), or move DNS to DigitalOcean (Networking → Domains, set Namecheap nameservers to
+     `ns1/ns2/ns3.digitalocean.com`).
+4. Wait 5-60 minutes. DigitalOcean issues the **HTTPS certificate automatically** (Let's Encrypt) - the domain shows
+   "Active" in Settings → Domains.
+5. `PUBLIC_BASE_URL` follows the domain automatically (`${APP_URL}`). Update the live link in `README.md`, `CLAUDE.md`,
+   your resume and LinkedIn.
+

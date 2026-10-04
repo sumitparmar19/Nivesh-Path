@@ -90,9 +90,10 @@ document.addEventListener('DOMContentLoaded', function() {
                         city: data.city || '',
                         address: data.address || ''
                     }));
-                    
-                    // Redirect to dashboard
-                    window.location.href = 'user-dashboard.html';
+                    localStorage.setItem('token', data.token);
+
+                    // Go back to the page that asked for login, or to the markets home
+                    window.location.href = safeNext() || '/search.html';
                 } else {
                     alert(data.message || 'Login failed. Please check your credentials.');
                 }
@@ -103,11 +104,16 @@ document.addEventListener('DOMContentLoaded', function() {
         });
     }
     
-    // Check if user is already logged in
+    // Only allow same-site relative paths as the post-login destination
+    function safeNext() {
+        const next = new URLSearchParams(window.location.search).get('next');
+        return next && next.startsWith('/') && !next.startsWith('//') ? next : null;
+    }
+
+    // Already logged in with a valid (unexpired) token: skip the form
     const checkLoginStatus = function() {
-        const user = JSON.parse(localStorage.getItem('niveshPathUser') || '{}');
-        if (user.isLoggedIn) {
-            window.location.href = 'user-dashboard.html';
+        if (window.NP && window.NP.isLoggedIn()) {
+            window.location.href = safeNext() || '/search.html';
         }
     };
     
