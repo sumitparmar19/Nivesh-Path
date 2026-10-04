@@ -142,9 +142,14 @@ values and tick **Encrypt** on each one:
 | Component | Variables |
 |---|---|
 | web | `MONGO_URL`, `FINNHUB_API_KEY`, `JWT_SECRET` (required in production), `SENTRY_DSN` (optional) |
-| ai | `ANTHROPIC_API_KEY`, `SENTRY_DSN` (optional) |
+| ai | `ANTHROPIC_API_KEY`, `MONGO_URL` (same value as web), `SENTRY_DSN` (optional) |
 
 `AI_SERVICE_URL`, `PUBLIC_BASE_URL` and `CLAUDE_MODEL` are already filled in by the spec.
+
+Why the **ai** component needs `MONGO_URL` too: App Platform wipes the container disk on every deploy,
+so the AI service's ChromaDB index starts empty. On boot it re-embeds every user's trades from MongoDB
+(a few seconds), and behavioral-pattern results are stored in MongoDB's `behavioral_patterns` collection.
+Without `MONGO_URL` the advisor still works, but forgets past trades after each deploy.
 
 ### 4. Deploy and check
 1. Click **Create Resources** (or **Deploy**). The first build takes about 5-10 minutes; watch the
@@ -159,6 +164,7 @@ values and tick **Encrypt** on each one:
 |---|---|
 | Build fails on the **ai** component with "Dockerfile not found" | In the App Spec, change `dockerfile_path: ai-service/Dockerfile` to `dockerfile_path: Dockerfile` (the path is relative to `source_dir`) and save |
 | `/health` shows `"db":"disconnected"` | Check `MONGO_URL` and the Atlas Network Access step (Part 1, section 1, step 4) |
+| AI `/health` shows `"vector_index": {"status": "failed"}` or `"disabled"` | `MONGO_URL` is missing or wrong on the **ai** component |
 | Advisor badge says "Rule-based insight" | `ANTHROPIC_API_KEY` is missing or invalid on the **ai** component, or the account has no credit |
 | "Login required" on every page | `JWT_SECRET` changed (old tokens become invalid) - just log in again |
 

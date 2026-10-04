@@ -38,6 +38,7 @@ function fakeModel(initial = [], defaults = {}) {
       return saved;
     },
     find: (filter) => query(rows.filter((r) => matches(r, filter))),
+    countDocuments: async (filter) => rows.filter((r) => matches(r, filter)).length,
     findOne: async (filter) => rows.find((r) => matches(r, filter)) || null,
     findById: async (id) => rows.find((r) => String(r._id) === String(id)) || null,
     findOneAndUpdate: async (filter, update) => {
@@ -65,6 +66,18 @@ function setup(overrides = {}) {
     aiClient: {
       analyzePortfolio: jest.fn(async (payload) => ({ ok: true, received: payload })),
       ingestTransactions: jest.fn(async () => ({ stored: 1 })),
+      health: jest.fn(async () => ({
+        status: "ok", llm_configured: true, model: "claude-test",
+        vector_index: { status: "ok", users: 2, transactions: 5, seconds: 0.4, failed_users: ["secret-user"] },
+      })),
+      memory: jest.fn(async (userId) => ({
+        user_id: userId, indexed_trades: 1, durable_storage: true,
+        index: { status: "ok", users: 2, transactions: 5, seconds: 0.4 }, patterns: [],
+      })),
+      rebuildMemory: jest.fn(async (userId) => ({
+        user_id: userId, indexed_trades: 2, durable_storage: true,
+        index: { status: "ok", users: 2, transactions: 5, seconds: 0.4 }, patterns: [],
+      })),
     },
     ...overrides,
   };
@@ -115,6 +128,8 @@ describe("protected routes require a valid JWT", () => {
     ["get", "/api/portfolio/cash-balance"],
     ["post", "/api/ai/analyze-portfolio"],
     ["get", "/api/me"],
+    ["get", "/api/ai/memory"],
+    ["post", "/api/ai/memory/rebuild"],
   ];
   test.each(routes)("%s %s without a token -> 401", async (method, path) => {
     const res = await request(setup().app)[method](path).send({});
@@ -311,6 +326,51 @@ describe("AI advisor proxy", () => {
     const res = await request(app).post("/api/ai/analyze-portfolio").set(auth(u))
       .send({ holdings: [{ symbol: "AAPL", quantity: 1, avg_price: 10 }] });
     expect(res.status).toBe(502);
+  });
+});
+
+describe("AI memory and status", () => {
+  test("memory compares the caller's trades in MongoDB with what the AI has indexed", async () => {
+    const { app, deps } = setup();
+    const a = await newUser(app);
+    const b = await newUser(app);
+    await buy(app, a, "AAPL", 1);
+    await buy(app, a, "MSFT", 1);
+    await buy(app, b, "TSLA", 1);
+    const res = await request(app).get("/api/ai/memory").set(auth(a));
+    expect(res.status).toBe(200);
+    expect(res.body).toMatchObject({ tradesInDatabase: 2, aiReachable: true, indexedTrades: 1, durableStorage: true });
+    expect(deps.aiClient.memory).toHaveBeenCalledWith(a.id);
+
+    const rebuilt = await request(app).post("/api/ai/memory/rebuild").set(auth(a));
+    expect(rebuilt.body.indexedTrades).toBe(2);
+    expect(deps.aiClient.rebuildMemory).toHaveBeenCalledWith(a.id);
+  });
+
+  test("memory still answers when the AI service is down", async () => {
+    const down = setup({
+      aiClient: { memory: async () => Promise.reject(new Error("down")), ingestTransactions: async () => ({}) },
+    });
+    const v = await newUser(down.app);
+    const res = await request(down.app).get("/api/ai/memory").set(auth(v));
+    expect(res.status).toBe(200);
+    expect(res.body).toEqual({ tradesInDatabase: 0, aiReachable: false });
+  });
+
+  test("public status reports each service without leaking user ids", async () => {
+    const res = await request(setup().app).get("/api/status");
+    expect(res.status).toBe(200);
+    expect(res.body.web).toBe("ok");
+    expect(res.body.ai).toMatchObject({ reachable: true, llmConfigured: true, model: "claude-test" });
+    expect(res.body.ai.vectorIndex).toEqual({ status: "ok", users: 2, transactions: 5, seconds: 0.4 });
+    expect(JSON.stringify(res.body)).not.toContain("secret-user");
+  });
+
+  test("status says the AI is unreachable instead of failing", async () => {
+    const { app } = setup({ aiClient: { health: async () => Promise.reject(new Error("down")) } });
+    const res = await request(app).get("/api/status");
+    expect(res.status).toBe(200);
+    expect(res.body.ai).toEqual({ reachable: false });
   });
 });
 

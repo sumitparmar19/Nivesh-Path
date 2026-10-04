@@ -5,3 +5,4 @@ langchain-core==1.6.6
 chromadb==1.5.9
 pydantic==2.13.5
 sentry-sdk[fastapi]==2.71.0
+pymongo==4.18.2

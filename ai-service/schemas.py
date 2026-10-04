@@ -104,3 +104,22 @@ class AnalyzePortfolioResponse(BaseModel):
     model: str | None = None
     relevant_history: list[str] = Field(default_factory=list)
     disclaimer: str = "Educational insights only - not financial advice."
+
+
+class IndexStatus(BaseModel):
+    """Public summary of the boot-time ChromaDB rebuild (no user ids)."""
+
+    status: Literal["pending", "running", "ok", "failed", "disabled"]
+    users: int = 0
+    transactions: int = 0
+    seconds: float = 0.0
+
+
+class MemoryStatus(BaseModel):
+    """Body returned by the /api/ai/memory endpoints: what the advisor remembers about one user."""
+
+    user_id: str
+    indexed_trades: int = Field(..., description="Trades currently embedded in the user's ChromaDB collection")
+    durable_storage: bool = Field(..., description="True when MongoDB is configured, so memory survives deploys")
+    index: IndexStatus
+    patterns: list[dict] = Field(default_factory=list, description="Stored behavioral-pattern results (Phase 2C)")

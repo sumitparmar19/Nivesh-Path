@@ -1,0 +1,182 @@
+<!DOCTYPE html>
+<!-- What's new: a public changelog of every feature shipped so far, each with a "Try it" link,
+     plus live status of the web app, database, AI service and the AI memory rebuild. -->
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>What's new | Nivesh-Path</title>
+    <meta name="description" content="Everything new in Nivesh-Path: AI advisor, paper-trading accounts, AI memory and what is coming next.">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Plus+Jakarta+Sans:wght@600;700;800&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
+    <link rel="stylesheet" href="/assets/nivesh.css">
+    <link rel="icon" href="/psk/finallogo.png">
+</head>
+<body>
+    <nav class="navbar">
+        <a href="/psk/index.html" class="logo">
+            <img src="/psk/finallogo.png" alt="Nivesh Path logo">
+        </a>
+        <div class="nav-links">
+            <a href="/index.html">Stocks</a>
+            <a href="/advisor.html">AI Advisor</a>
+            <a href="/portfolio.html">Portfolio</a>
+            <a href="/psk/pages/about.html">About</a>
+            <a href="/psk/pages/products.html">Products</a>
+            <a href="/psk/pages/pricing.html">Pricing</a>
+            <a href="/psk/pages/support.html">Support</a>
+            <a href="/psk/pages/login.html" id="login-link">Login</a>
+            <a href="/psk/pages/user-dashboard.html" id="dashboard-link" style="display: none;" aria-label="Account">
+                <i class="fas fa-user-circle"></i>
+            </a>
+        </div>
+    </nav>
+
+    <div class="main">
+        <div class="nav1">
+            <div class="sidebar">
+                <div class="nav-menu">
+                    <a href="/search.html" class="nav-item"><i class="fas fa-house"></i><span>Home</span></a>
+                    <a href="/psk/pages/user-dashboard.html" class="nav-item"><i class="fas fa-user-circle"></i><span>Account</span></a>
+                    <a href="/transactions.html" class="nav-item"><i class="fas fa-wallet"></i><span>Transactions</span></a>
+                    <a href="/advisor.html" class="nav-item"><i class="fas fa-wand-magic-sparkles"></i><span>AI Advisor</span></a>
+                    <a href="/portfolio.html" class="nav-item"><i class="fas fa-chart-pie"></i><span>Portfolio</span></a>
+                    <a href="/whats-new.html" class="nav-item"><i class="fas fa-gift"></i><span>What's new</span></a>
+                    <a href="/psk/pages/contect.html" class="nav-item"><i class="fas fa-comment-dots"></i><span>Contact Us</span></a>
+                    <a href="/index.html" class="nav-item"><i class="fas fa-chart-line"></i><span>Insights</span></a>
+                    <a href="/psk/pages/about.html" class="nav-item"><i class="fas fa-life-ring"></i><span>About Us</span></a>
+                </div>
+            </div>
+        </div>
+
+
+        <section class="np-page">
+            <div class="np-hero-band">
+                <p class="np-eyebrow"><i class="fas fa-gift"></i> Release notes</p>
+                <h1>What's new in Nivesh-Path</h1>
+                <p>Nivesh-Path is becoming the AI that knows <b>your</b> trading habits. Here is everything shipped so far, newest first, with a link to try each feature yourself.</p>
+                <div class="np-hero-actions">
+                    <a class="np-btn np-btn--light" href="/portfolio.html"><i class="fas fa-chart-pie"></i> Open my portfolio</a>
+                    <a class="np-btn np-btn--outline-light" href="/psk/pages/signup.html" id="heroSignup"><i class="fas fa-user-plus"></i> Create a free account</a>
+                </div>
+            </div>
+
+            <div class="np-grid-2">
+                <div class="np-card np-card-pad">
+                    <div class="np-card-head">
+                        <h2><i class="fas fa-heart-pulse"></i> Live system status</h2>
+                        <span class="np-pill np-pill--muted" id="overall"><span class="np-dot"></span>Checking…</span>
+                    </div>
+                    <ul class="np-checks" id="checks">
+                        <li><span><i class="fas fa-globe"></i> Web app</span><b id="stWeb">…</b></li>
+                        <li><span><i class="fas fa-database"></i> Database (MongoDB Atlas)</span><b id="stDb">…</b></li>
+                        <li><span><i class="fas fa-microchip"></i> AI service</span><b id="stAi">…</b></li>
+                        <li><span><i class="fas fa-wand-magic-sparkles"></i> Claude AI model</span><b id="stLlm">…</b></li>
+                        <li><span><i class="fas fa-brain"></i> AI memory rebuild</span><b id="stIndex">…</b></li>
+                    </ul>
+                    <p class="np-muted" style="margin:12px 0 0;font-size:.82rem" id="stChecked"></p>
+                </div>
+                <div class="np-card np-card-pad">
+                    <div class="np-card-head">
+                        <h2><i class="fas fa-layer-group"></i> Under the hood</h2>
+                    </div>
+                    <div class="np-chips">
+                        <span class="np-chip">Node.js 22 + Express</span><span class="np-chip">MongoDB Atlas</span>
+                        <span class="np-chip">JWT auth + bcrypt</span><span class="np-chip">Python FastAPI</span>
+                        <span class="np-chip">Claude API</span><span class="np-chip">LangChain</span>
+                        <span class="np-chip">ChromaDB (RAG)</span><span class="np-chip">Redis cache</span>
+                        <span class="np-chip">Docker</span><span class="np-chip">GitHub Actions CI</span>
+                        <span class="np-chip">DigitalOcean</span><span class="np-chip">Jest + pytest</span>
+                    </div>
+                    <p class="np-muted" style="margin:16px 0 0;line-height:1.6;font-size:.92rem">
+                        Every change runs 60+ automated tests before it can reach this site, and each deploy rebuilds the AI's memory from the database automatically.
+                    </p>
+                </div>
+            </div>
+
+            <div class="np-timeline">
+                <article class="np-card np-card-pad np-release np-reveal-me">
+                    <div class="np-release-head">
+                        <span class="np-pill">New</span><span class="np-pill np-pill--muted">Latest update · Oct 2026</span>
+                    </div>
+                    <h2>AI memory that survives every update</h2>
+                    <p>The advisor's memory of your trades used to be wiped whenever the site was updated. Now your trades live in the database, and the AI's memory is rebuilt from them automatically.</p>
+                    <ul class="np-feature-list">
+                        <li><i class="fas fa-circle-check"></i><span><b>Automatic rebuild.</b> When the AI service starts, it re-reads every trade from MongoDB and re-indexes it in a few seconds.</span></li>
+                        <li><i class="fas fa-circle-check"></i><span><b>Self-healing.</b> If your memory is missing when you ask the advisor something, it is rebuilt for you on the spot.</span></li>
+                        <li><i class="fas fa-circle-check"></i><span><b>See it and re-sync it.</b> The new AI memory panel shows how many trades are saved and how many the advisor can recall.</span></li>
+                        <li><i class="fas fa-circle-check"></i><span><b>Ready for your Trading DNA.</b> A new store for behavioral patterns (panic sells, FOMO buys) that the next release fills in.</span></li>
+                    </ul>
+                    <div class="np-try">
+                        <a class="np-btn np-btn--sm" href="/portfolio.html"><i class="fas fa-brain"></i> See your AI memory</a>
+                        <a class="np-btn np-btn--ghost np-btn--sm" href="/advisor.html">Ask the advisor</a>
+                    </div>
+                </article>
+
+                <article class="np-card np-card-pad np-release np-reveal-me">
+                    <div class="np-release-head">
+                        <span class="np-pill">New</span><span class="np-pill np-pill--muted">Phase 2A · Oct 2026</span>
+                    </div>
+                    <h2>Your own account with $100,000 of virtual cash</h2>
+                    <p>Nivesh-Path is now a real paper-trading platform: every user has a private account and a cash balance that moves with each trade.</p>
+                    <ul class="np-feature-list">
+                        <li><i class="fas fa-circle-check"></i><span><b>Secure sign-in.</b> Passwords are hashed and every request carries a signed token; you only ever see your own trades.</span></li>
+                        <li><i class="fas fa-circle-check"></i><span><b>Virtual cash ledger.</b> Start with $100,000. Buying spends cash, selling returns it, at the live market price.</span></li>
+                        <li><i class="fas fa-circle-check"></i><span><b>Safe orders.</b> You can't spend more than you have or sell shares you don't own, even if you click twice.</span></li>
+                        <li><i class="fas fa-circle-check"></i><span><b>New Portfolio page.</b> Cash, holdings, allocation, profit and loss and recent activity in one place.</span></li>
+                    </ul>
+                    <div class="np-try">
+                        <a class="np-btn np-btn--sm" href="/portfolio.html"><i class="fas fa-chart-pie"></i> Open portfolio</a>
+                        <a class="np-btn np-btn--ghost np-btn--sm" href="/Tesla.html">Place a trade</a>
+                        <a class="np-btn np-btn--ghost np-btn--sm" href="/transactions.html">Transactions</a>
+                    </div>
+                </article>
+
+                <article class="np-card np-card-pad np-release np-reveal-me">
+                    <div class="np-release-head"><span class="np-pill np-pill--muted">Phase 1 · Oct 2026</span></div>
+                    <h2>AI Portfolio Advisor, powered by Claude</h2>
+                    <p>Get a plain-English read on your portfolio: risk level, diversification score, strengths, risks and next steps.</p>
+                    <ul class="np-feature-list">
+                        <li><i class="fas fa-circle-check"></i><span><b>Grounded in your history.</b> The advisor looks up your most relevant past trades before answering and shows you which ones it used.</span></li>
+                        <li><i class="fas fa-circle-check"></i><span><b>Numbers you can trust.</b> Profit, weights and concentration are calculated in code, never guessed by the AI.</span></li>
+                        <li><i class="fas fa-circle-check"></i><span><b>Always answers.</b> If the AI is unavailable, a rule-based analysis takes over so the page never breaks.</span></li>
+                    </ul>
+                    <div class="np-try"><a class="np-btn np-btn--sm" href="/advisor.html"><i class="fas fa-wand-magic-sparkles"></i> Try the advisor</a></div>
+                </article>
+
+                <article class="np-card np-card-pad np-release np-reveal-me">
+                    <div class="np-release-head"><span class="np-pill np-pill--muted">Phase 1 · Oct 2026</span></div>
+                    <h2>A redesigned, faster site</h2>
+                    <p>A new design system across every page, plus a rebuilt trading flow.</p>
+                    <ul class="np-feature-list">
+                        <li><i class="fas fa-circle-check"></i><span><b>One look everywhere.</b> New typography, cards, animations, a mobile menu and friendly notifications instead of pop-ups.</span></li>
+                        <li><i class="fas fa-circle-check"></i><span><b>Live quotes, cached.</b> Stock prices are fetched on the server and cached, so pages load fast and API keys never reach your browser.</span></li>
+                        <li><i class="fas fa-circle-check"></i><span><b>Fixed trading.</b> Every company page now records the right ticker at the live price.</span></li>
+                    </ul>
+                    <div class="np-try"><a class="np-btn np-btn--sm" href="/search.html"><i class="fas fa-chart-line"></i> Browse stocks</a></div>
+                </article>
+
+                <article class="np-card np-card-pad np-release np-release--soon np-reveal-me">
+                    <div class="np-release-head"><span class="np-pill np-pill--amber">Coming next</span></div>
+                    <h2>On the roadmap</h2>
+                    <p>Next up: the features that make Nivesh-Path a coach for your own trading behavior.</p>
+                    <div class="np-roadmap">
+                        <div><span class="np-pill np-pill--muted">2B</span><strong>Faster React app</strong><span>The core pages rebuilt in React + TypeScript, with a page for every stock.</span></div>
+                        <div><span class="np-pill np-pill--muted">2C</span><strong>Behavioral Mirror</strong><span>Your "Trading DNA": panic sells, FOMO buys and holding habits, found in your own trades.</span></div>
+                        <div><span class="np-pill np-pill--muted">2D</span><strong>Pre-trade check</strong><span>A quick gut-check before you buy or sell, plus portfolio stress tests.</span></div>
+                        <div><span class="np-pill np-pill--muted">2E</span><strong>News + AI chat</strong><span>Market news linked to your holdings and a chat that knows your portfolio.</span></div>
+                    </div>
+                </article>
+            </div>
+
+            <p class="np-muted" style="text-align:center;font-size:.85rem;margin:4px 0 8px">Nivesh-Path is a paper-trading and learning tool. Insights are educational, not financial advice.</p>
+        </section>
+    </div>
+
+    <script src="/assets/nivesh.js" defer></script>
+    <script src="/whats-new.js" defer></script>
+    <script src="/psk/js/main.js"></script>
+</body>
+</html>

@@ -17,6 +17,10 @@ Live: https://nivesh-path-vzeak.ondigitalocean.app (custom domain pending) · Re
 - [x] Phase 1 - AI Portfolio Advisor, modular backend, Docker, CI, DigitalOcean deploy, site redesign
 - [x] **Phase 2A** - per-user accounts (JWT on all trade/portfolio/AI routes), virtual $100k cash ledger,
       per-user ChromaDB collections, Stripe removed, Botpress removed
+- [x] **ChromaDB persistence** - MongoDB is the source of truth; ai-service rebuilds Chroma from `purchases` on boot
+      (`ai-service/startup.py`) + lazily per user; `behavioral_patterns` collection (`PatternStore`) for 2C results
+- [x] **Feature UI** - `/portfolio.html` (cash, holdings, allocation, recent trades, AI memory panel; replaces the
+      dashboard1 mock-up), `/whats-new.html` (release notes + live `/api/status`), AI memory strip on the advisor
 - [ ] **Phase 2B - next:** React 18 + TypeScript + Tailwind migration of 5 core pages (+ dynamic `/stock/:symbol`)
 - [ ] 2C Behavioral Mirror · 2D Pre-trade check + stress test · 2E news pipeline + AI chat · 2F cloud/observability
 
@@ -32,13 +36,16 @@ src/
   models/User.js     # users (bcryptjs hash, cashBalance, totalDeposited)
   routes/            # stocks (quotes), purchases (trades + portfolio), auth (register/login/me), ai (proxy)
 models/Stock1.js     # Trade model "Purchase": userId, name(=ticker), price, quantity, total, transactionType
-public/              # static UI served by Express (company pages, markets, transactions, advisor)
+public/              # static UI served by Express (company pages, markets, transactions, advisor,
+                     #   portfolio.html dashboard, whats-new.html release notes + live status)
 public/assets/       # design system on EVERY page: nivesh.css, nivesh.js (toasts, NP.authFetch session helpers), trade.js
 public/psk/          # marketing site + login/signup (served at /psk/...)
 psk/                 # older copy of marketing site + bolt React/TS starter (NOT served)
 ai-service/          # Python FastAPI AI service (port 8001, internal only)
   services/llm_service.py         # LangChain prompt + Anthropic SDK structured output
-  services/vector_service.py      # ChromaDB RAG, one collection per user (transactions_user_<id>)
+  services/vector_service.py      # ChromaDB RAG, one collection per user (transactions_user_<id>) - a cache only
+  services/mongo_store.py         # MongoDB: TradeStore (reads purchases) + PatternStore (behavioral_patterns)
+  startup.py                      # cold-start rebuild of ChromaDB from MongoDB (runs at boot)
   services/portfolio_analytics.py # deterministic metrics + rule-based fallback
 tests/app.test.js    # Jest + Supertest (isolation, auth, ledger, AI proxy)
 ai-service/tests/    # pytest
@@ -51,6 +58,8 @@ docs/                # PHASE1_REPORT.md, PHASE2_PLAN.md, DEPLOYMENT.md
   -> `{success, newBalance, transaction}`; server prices from Finnhub, 400 on insufficient funds / not enough shares
 - `GET /api/transactions` · `GET /api/portfolio/holdings` · `GET /api/portfolio/cash-balance` (cash, holdings value, total P&L)
 - `POST /api/ai/analyze-portfolio` -> FastAPI with `user_id`; `POST /api/ai/transactions` (FastAPI) indexes trades per user
+- `GET /api/ai/memory` (trades in Mongo vs indexed in Chroma) · `POST /api/ai/memory/rebuild` (re-index caller's trades)
+- `GET /api/status` - public: web, db, AI service, model, memory-rebuild status (no user data)
 - `GET /search`, `GET /stock/:symbol` - public cached Finnhub quotes (key never sent to the browser)
 
 ## Stack
@@ -71,8 +80,10 @@ docs/                # PHASE1_REPORT.md, PHASE2_PLAN.md, DEPLOYMENT.md
 - Every new file starts with a brief comment explaining what it does and why it exists
 - Never hardcode API keys - environment variables only; `.env` is git-ignored, update `.env.example`
 - Keep commits small and descriptive; run `npm test` and `pytest` before pushing; never break CI
+- Durable AI data (behavioral patterns etc.) goes to MongoDB via `PatternStore`; ChromaDB is wiped on every deploy
 - Don't do arithmetic in the LLM - compute numbers in code and pass them in
 - UI (until React): pages include fonts + `/assets/nivesh.css` in <head> and `/assets/nivesh.js` (defer) before </body>;
   protected calls use `NP.authFetch`; stock pages set `<body data-symbol="TICKER">` and load `/assets/trade.js`
 - Store trades by ticker (AAPL, TSLA...), never company names
+- Every shipped feature must be visible in the UI and get an entry on `public/whats-new.html`
 - At the end of a session, update "Current progress" above and the notes in `docs/PHASE2_PLAN.md`

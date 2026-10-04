@@ -1,0 +1,195 @@
+<!DOCTYPE html>
+<!-- Portfolio dashboard: the signed-in user's virtual cash, holdings at live prices, allocation,
+     recent trades and what the AI advisor remembers. Replaces the old static dashboard1.html mock-up. -->
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Portfolio | Nivesh-Path</title>
+    <meta name="description" content="Your Nivesh-Path paper-trading portfolio: cash, holdings, P&L and AI memory.">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Plus+Jakarta+Sans:wght@600;700;800&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
+    <link rel="stylesheet" href="/assets/nivesh.css">
+    <link rel="icon" href="/psk/finallogo.png">
+</head>
+<body>
+    <nav class="navbar">
+        <a href="/psk/index.html" class="logo">
+            <img src="/psk/finallogo.png" alt="Nivesh Path logo">
+        </a>
+        <div class="nav-links">
+            <a href="/index.html">Stocks</a>
+            <a href="/advisor.html">AI Advisor</a>
+            <a href="/portfolio.html">Portfolio</a>
+            <a href="/psk/pages/about.html">About</a>
+            <a href="/psk/pages/products.html">Products</a>
+            <a href="/psk/pages/pricing.html">Pricing</a>
+            <a href="/psk/pages/support.html">Support</a>
+            <a href="/psk/pages/login.html" id="login-link">Login</a>
+            <a href="/psk/pages/user-dashboard.html" id="dashboard-link" style="display: none;" aria-label="Account">
+                <i class="fas fa-user-circle"></i>
+            </a>
+        </div>
+    </nav>
+
+    <div class="main">
+        <div class="nav1">
+            <div class="sidebar">
+                <div class="nav-menu">
+                    <a href="/search.html" class="nav-item"><i class="fas fa-house"></i><span>Home</span></a>
+                    <a href="/psk/pages/user-dashboard.html" class="nav-item"><i class="fas fa-user-circle"></i><span>Account</span></a>
+                    <a href="/transactions.html" class="nav-item"><i class="fas fa-wallet"></i><span>Transactions</span></a>
+                    <a href="/advisor.html" class="nav-item"><i class="fas fa-wand-magic-sparkles"></i><span>AI Advisor</span></a>
+                    <a href="/portfolio.html" class="nav-item"><i class="fas fa-chart-pie"></i><span>Portfolio</span></a>
+                    <a href="/whats-new.html" class="nav-item"><i class="fas fa-gift"></i><span>What's new</span></a>
+                    <a href="/psk/pages/contect.html" class="nav-item"><i class="fas fa-comment-dots"></i><span>Contact Us</span></a>
+                    <a href="/index.html" class="nav-item"><i class="fas fa-chart-line"></i><span>Insights</span></a>
+                    <a href="/psk/pages/about.html" class="nav-item"><i class="fas fa-life-ring"></i><span>About Us</span></a>
+                </div>
+            </div>
+        </div>
+
+
+        <section class="np-page">
+            <header class="np-page-head">
+                <div>
+                    <p class="np-eyebrow">Paper trading account</p>
+                    <h1>Your portfolio</h1>
+                    <p class="np-lede" id="greeting">Cash, holdings and performance at live prices.</p>
+                </div>
+                <div class="np-try">
+                    <a class="np-btn np-btn--ghost" href="/search.html"><i class="fas fa-magnifying-glass-chart"></i> Trade stocks</a>
+                    <a class="np-btn" href="/advisor.html"><i class="fas fa-wand-magic-sparkles"></i> Ask the AI advisor</a>
+                </div>
+            </header>
+
+            <div class="np-welcome" id="welcome" hidden>
+                <i class="fas fa-hand-holding-dollar lead"></i>
+                <div>
+                    <strong>Welcome! You have $100,000 in virtual cash.</strong>
+                    <span>Buy any of the 12 stocks at the live price. Your trades build the history the AI advisor learns from.</span>
+                </div>
+                <a class="np-btn np-btn--sm" href="/search.html">Make your first trade</a>
+            </div>
+
+            <div class="np-stats">
+                <div class="np-stat np-stat--brand">
+                    <span class="np-stat-label"><i class="fas fa-wallet"></i> Cash available</span>
+                    <strong class="np-stat-value" id="cash"><span class="np-skeleton" style="width:120px;height:26px;display:inline-block"></span></strong>
+                    <span class="np-stat-foot" id="cashFoot">Virtual cash you can trade with</span>
+                </div>
+                <div class="np-stat">
+                    <span class="np-stat-label"><i class="fas fa-layer-group"></i> Invested</span>
+                    <strong class="np-stat-value" id="holdingsValue">$—</strong>
+                    <span class="np-stat-foot" id="holdingsFoot">Holdings at live prices</span>
+                </div>
+                <div class="np-stat">
+                    <span class="np-stat-label"><i class="fas fa-sack-dollar"></i> Total value</span>
+                    <strong class="np-stat-value" id="totalValue">$—</strong>
+                    <span class="np-stat-foot">Cash + holdings</span>
+                </div>
+                <div class="np-stat">
+                    <span class="np-stat-label"><i class="fas fa-arrow-trend-up"></i> Total P&amp;L</span>
+                    <strong class="np-stat-value" id="totalPnl">$—</strong>
+                    <span class="np-stat-foot" id="pnlFoot">Since you started</span>
+                </div>
+            </div>
+
+            <div class="np-grid-2">
+                <div class="np-card np-card-pad">
+                    <div class="np-card-head">
+                        <h2><i class="fas fa-chart-pie"></i> Allocation</h2>
+                        <span class="np-pill np-pill--muted" id="positionCount">0 holdings</span>
+                    </div>
+                    <div class="np-alloc">
+                        <div class="np-donut">
+                            <svg viewBox="0 0 120 120" aria-hidden="true" id="donut"></svg>
+                            <div class="np-donut-center"><strong id="donutTotal">$—</strong><span>total value</span></div>
+                        </div>
+                        <ul class="np-legend" id="legend"></ul>
+                    </div>
+                </div>
+
+                <div class="np-card np-card-pad">
+                    <div class="np-card-head">
+                        <h2><i class="fas fa-brain"></i> AI memory</h2>
+                        <span class="np-pill np-pill--muted" id="memoryPill"><span class="np-dot"></span>Checking…</span>
+                    </div>
+                    <div class="np-memory">
+                        <div class="np-memory-nums">
+                            <div class="np-memory-num"><strong id="memDb">–</strong><span>trades saved in your account</span></div>
+                            <div class="np-memory-num"><strong id="memIndexed">–</strong><span>trades the AI can recall</span></div>
+                        </div>
+                        <div class="np-meter" aria-hidden="true"><div id="memMeter"></div></div>
+                        <p id="memText">The AI advisor keeps a searchable memory of your trades so its advice can point to what you actually did.</p>
+                        <div class="np-memory-foot">
+                            <span class="np-muted" id="memIndex" style="font-size:.84rem"></span>
+                            <button type="button" class="np-btn np-btn--ghost np-btn--sm" id="rebuildBtn"><i class="fas fa-rotate"></i> Re-sync memory</button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="np-card np-table-card">
+                <div class="np-table-tools">
+                    <h2 style="margin:0;font-size:1.12rem"><i class="fas fa-briefcase" style="color:var(--np-brand-600)"></i> Holdings</h2>
+                    <span class="np-muted" style="font-size:.86rem">Prices refresh every 60 seconds</span>
+                </div>
+                <div class="np-table-wrap">
+                    <table class="np-table">
+                        <thead>
+                            <tr>
+                                <th>Stock</th>
+                                <th class="num">Shares</th>
+                                <th class="num">Avg cost</th>
+                                <th class="num">Live price</th>
+                                <th class="num">Value</th>
+                                <th class="num">P&amp;L</th>
+                                <th class="num">Weight</th>
+                                <th></th>
+                            </tr>
+                        </thead>
+                        <tbody id="holdingsTable">
+                            <tr class="np-row-loading"><td colspan="8"><span class="np-skeleton" style="width:100%;height:14px"></span></td></tr>
+                            <tr class="np-row-loading"><td colspan="8"><span class="np-skeleton" style="width:100%;height:14px"></span></td></tr>
+                        </tbody>
+                    </table>
+                </div>
+                <div class="np-empty" id="holdingsEmpty" hidden>
+                    <i class="fas fa-seedling"></i>
+                    <h3>No holdings yet</h3>
+                    <p>Your $100,000 is all cash. Pick a stock to start building your portfolio.</p>
+                    <a class="np-btn" href="/search.html">Explore stocks</a>
+                </div>
+            </div>
+
+            <div class="np-grid-2">
+                <div class="np-card np-card-pad">
+                    <div class="np-card-head">
+                        <h2><i class="fas fa-clock-rotate-left"></i> Recent activity</h2>
+                        <a class="np-link" href="/transactions.html">See all <i class="fas fa-arrow-right"></i></a>
+                    </div>
+                    <ul class="np-checks" id="recent"><li><span class="np-muted">Loading…</span></li></ul>
+                </div>
+                <div class="np-card np-card-pad">
+                    <div class="np-card-head">
+                        <h2><i class="fas fa-shield-halved"></i> How your account works</h2>
+                    </div>
+                    <ul class="np-feature-list">
+                        <li><i class="fas fa-circle-check"></i><span><b>Your own account.</b> Your trades and portfolio are private to you; nobody else's data is ever mixed in.</span></li>
+                        <li><i class="fas fa-circle-check"></i><span><b>$100,000 of virtual cash.</b> Orders fill at the live market price; you can't spend more than you have or sell shares you don't own.</span></li>
+                        <li><i class="fas fa-circle-check"></i><span><b>AI that remembers.</b> Every trade is saved to the database and indexed for the AI advisor, and the index is rebuilt automatically after each update to the site.</span></li>
+                    </ul>
+                    <a class="np-link" href="/whats-new.html">See everything that's new <i class="fas fa-arrow-right"></i></a>
+                </div>
+            </div>
+        </section>
+    </div>
+
+    <script src="/assets/nivesh.js" defer></script>
+    <script src="/portfolio.js" defer></script>
+    <script src="/psk/js/main.js"></script>
+</body>
+</html>
