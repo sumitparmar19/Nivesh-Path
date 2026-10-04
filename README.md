@@ -25,6 +25,9 @@ your portfolio's risk, diversification and next steps.
   browser.
 - **Per-user paper trading:** JWT-protected accounts, each with an isolated portfolio and a $100k virtual
   cash ledger (atomic MongoDB `$inc`, server-side pricing, concurrency-safe buys and sells).
+- **Portfolio dashboard:** cash, holdings at live prices, allocation chart, P&L, recent trades and an
+  "AI memory" panel that shows (and can re-sync) what the advisor remembers.
+- **What's new page:** release notes with links to try each feature, plus live system status.
 - **Auth:** bcrypt password hashing and JWT access tokens.
 - **Production practices:** Docker Compose, GitHub Actions CI (Jest + pytest + image builds),
   Sentry error tracking, and rate limiting on the paid AI endpoint.
@@ -67,8 +70,8 @@ npm run dev
 
 ## Tests
 ```bash
-npm test                      # backend: 32 Jest/Supertest tests
-cd ai-service && pytest -q    # AI service: 20 pytest tests (Claude mocked, Chroma in-memory, mongomock)
+npm test                      # backend: 38 Jest/Supertest tests
+cd ai-service && pytest -q    # AI service: 22 pytest tests (Claude mocked, Chroma in-memory, mongomock)
 ```
 
 ## API highlights

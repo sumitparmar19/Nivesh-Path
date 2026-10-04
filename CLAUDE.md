@@ -19,6 +19,8 @@ Live: https://nivesh-path-vzeak.ondigitalocean.app (custom domain pending) · Re
       per-user ChromaDB collections, Stripe removed, Botpress removed
 - [x] **ChromaDB persistence** - MongoDB is the source of truth; ai-service rebuilds Chroma from `purchases` on boot
       (`ai-service/startup.py`) + lazily per user; `behavioral_patterns` collection (`PatternStore`) for 2C results
+- [x] **Feature UI** - `/portfolio.html` (cash, holdings, allocation, recent trades, AI memory panel; replaces the
+      dashboard1 mock-up), `/whats-new.html` (release notes + live `/api/status`), AI memory strip on the advisor
 - [ ] **Phase 2B - next:** React 18 + TypeScript + Tailwind migration of 5 core pages (+ dynamic `/stock/:symbol`)
 - [ ] 2C Behavioral Mirror · 2D Pre-trade check + stress test · 2E news pipeline + AI chat · 2F cloud/observability
 
@@ -34,7 +36,8 @@ src/
   models/User.js     # users (bcryptjs hash, cashBalance, totalDeposited)
   routes/            # stocks (quotes), purchases (trades + portfolio), auth (register/login/me), ai (proxy)
 models/Stock1.js     # Trade model "Purchase": userId, name(=ticker), price, quantity, total, transactionType
-public/              # static UI served by Express (company pages, markets, transactions, advisor)
+public/              # static UI served by Express (company pages, markets, transactions, advisor,
+                     #   portfolio.html dashboard, whats-new.html release notes + live status)
 public/assets/       # design system on EVERY page: nivesh.css, nivesh.js (toasts, NP.authFetch session helpers), trade.js
 public/psk/          # marketing site + login/signup (served at /psk/...)
 psk/                 # older copy of marketing site + bolt React/TS starter (NOT served)
@@ -55,6 +58,8 @@ docs/                # PHASE1_REPORT.md, PHASE2_PLAN.md, DEPLOYMENT.md
   -> `{success, newBalance, transaction}`; server prices from Finnhub, 400 on insufficient funds / not enough shares
 - `GET /api/transactions` · `GET /api/portfolio/holdings` · `GET /api/portfolio/cash-balance` (cash, holdings value, total P&L)
 - `POST /api/ai/analyze-portfolio` -> FastAPI with `user_id`; `POST /api/ai/transactions` (FastAPI) indexes trades per user
+- `GET /api/ai/memory` (trades in Mongo vs indexed in Chroma) · `POST /api/ai/memory/rebuild` (re-index caller's trades)
+- `GET /api/status` - public: web, db, AI service, model, memory-rebuild status (no user data)
 - `GET /search`, `GET /stock/:symbol` - public cached Finnhub quotes (key never sent to the browser)
 
 ## Stack
@@ -80,4 +85,5 @@ docs/                # PHASE1_REPORT.md, PHASE2_PLAN.md, DEPLOYMENT.md
 - UI (until React): pages include fonts + `/assets/nivesh.css` in <head> and `/assets/nivesh.js` (defer) before </body>;
   protected calls use `NP.authFetch`; stock pages set `<body data-symbol="TICKER">` and load `/assets/trade.js`
 - Store trades by ticker (AAPL, TSLA...), never company names
+- Every shipped feature must be visible in the UI and get an entry on `public/whats-new.html`
 - At the end of a session, update "Current progress" above and the notes in `docs/PHASE2_PLAN.md`

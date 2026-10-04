@@ -90,7 +90,8 @@
       <div class="table-scroll"><table class="positions">
         <thead><tr><th>Symbol</th><th>Value</th><th>P/L</th><th>Weight</th></tr></thead><tbody>${positions}</tbody>
       </table></div>
-      ${data.relevant_history.length ? `<h3>History the advisor used</h3><ul class="history">${data.relevant_history.map((h) => `<li>${esc(h)}</li>`).join("")}</ul>` : ""}
+      ${data.relevant_history.length ? `<h3><i class="fas fa-brain"></i> From your trade history</h3>
+        <p class="history-note">The advisor looked up these ${data.relevant_history.length} past trades of yours before answering.</p><ul class="history">${data.relevant_history.map((h) => `<li>${esc(h)}</li>`).join("")}</ul>` : ""}
       <p class="disclaimer">${esc(data.disclaimer)}</p>`;
   }
 
@@ -125,7 +126,27 @@
     }
   });
 
+  // Shows how many of the user's trades the advisor can recall (trades in MongoDB vs indexed in ChromaDB).
+  async function loadMemory() {
+    const strip = document.getElementById("memoryStrip");
+    try {
+      const res = await window.NP.authFetch("/api/ai/memory");
+      if (!res.ok) return;
+      const m = await res.json();
+      let text;
+      if (!m.aiReachable) text = "AI service offline - your trades are safe and will be re-indexed.";
+      else if (!m.tradesInDatabase) text = "No trades yet - make a trade and the advisor will remember it.";
+      else if (m.indexedTrades >= m.tradesInDatabase) text = `Remembers all ${m.tradesInDatabase} of your trades`;
+      else text = `Remembers ${m.indexedTrades} of ${m.tradesInDatabase} trades - catches up on your next analysis`;
+      document.getElementById("memoryText").textContent = text;
+      strip.hidden = false;
+    } catch {
+      /* the strip is optional */
+    }
+  }
+
   document.getElementById("addRowBtn").addEventListener("click", () => addRow());
   document.getElementById("reloadBtn").addEventListener("click", loadHoldings);
   loadHoldings();
+  loadMemory();
 })();

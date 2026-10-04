@@ -41,6 +41,14 @@
 - Tests: `ai-service/tests/test_cold_start.py` (mongomock): clear Chroma -> rebuild -> advisor answers with the
   user's history and no other user's.
 
+### Feature UI (done, before 2B)
+- `/portfolio.html` replaces the static `dashboard1.html` mock-up (now a redirect): cash, invested, total value, P&L,
+  allocation donut, holdings at live prices with Trade links, recent activity, and an **AI memory** panel
+  (`GET /api/ai/memory`, "Re-sync memory" -> `POST /api/ai/memory/rebuild`).
+- `/whats-new.html`: release notes with "Try it" links + live status from the public `GET /api/status`.
+- Advisor page shows how many trades the AI remembers; login/signup now land on `/portfolio.html`.
+- **2B must port these two pages** to React (`/portfolio`, `/whats-new`) along with the 5 core pages.
+
 ### Known risks to handle in later phases
 1. **Cold start** for the Behavioral Mirror: new users have no history -> add a demo account with realistic
    seeded trades and **CSV import** of real broker history (Robinhood / Webull / Zerodha) in Phase 2C.
