@@ -112,14 +112,18 @@ class VectorService:
         )
         return len(docs)
 
-    def has_history(self, user_id: str) -> bool:
-        """True when the user's collection exists and holds at least one trade."""
+    def count(self, user_id: str) -> int:
+        """How many trades are embedded for the user (0 when the collection is missing or unreadable)."""
         collection = self._collection(user_id, create=False)
         try:
-            return collection is not None and collection.count() > 0
+            return collection.count() if collection is not None else 0
         except Exception:
             logger.exception("Could not count vectors for user")
-            return False
+            return 0
+
+    def has_history(self, user_id: str) -> bool:
+        """True when the user's collection exists and holds at least one trade."""
+        return self.count(user_id) > 0
 
     def clear(self) -> None:
         """Drop every per-user collection (used to simulate a cold start in tests)."""

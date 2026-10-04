@@ -174,3 +174,32 @@ def test_behavioral_patterns_survive_in_mongo(db: Any) -> None:
     assert len(alice) == 1
     assert alice[0]["result"]["count"] == 2
     assert "_id" not in alice[0]
+
+
+def test_memory_endpoint_reports_indexed_trades_and_patterns(db: Any, vectors: VectorService) -> None:
+    trades = TradeStore(db)
+    PatternStore(db).upsert(str(ALICE), "panic_sell", {"count": 1})
+    client, _ = build_app(vectors, trades)
+    main.app.dependency_overrides[main.get_pattern_store] = lambda: PatternStore(db)
+
+    before = client.get(f"/api/ai/memory/{ALICE}").json()
+    assert before["indexed_trades"] == 0
+    assert before["durable_storage"] is True
+    assert before["patterns"][0]["pattern_type"] == "panic_sell"
+
+    after = client.post(f"/api/ai/memory/{ALICE}/rebuild").json()
+    assert after["indexed_trades"] == 3
+
+
+def test_manual_rebuild_needs_mongo(vectors: VectorService) -> None:
+    client, _ = build_app(vectors, None)
+    main.app.dependency_overrides[main.get_pattern_store] = lambda: None
+    assert client.post("/api/ai/memory/someone/rebuild").status_code == 503
+    body = client.get("/api/ai/memory/someone").json()
+    assert body == {
+        "user_id": "someone",
+        "indexed_trades": 0,
+        "durable_storage": False,
+        "index": body["index"],
+        "patterns": [],
+    }
