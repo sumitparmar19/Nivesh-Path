@@ -16,7 +16,7 @@ import main
 from config import get_settings
 from schemas import AIInsight, Holding, Recommendation, Transaction
 from services.llm_service import LLMService
-from services.vector_service import VectorService
+from services.vector_service import VectorService, collection_name_for
 
 HOLDINGS = [
     {"symbol": "AAPL", "quantity": 10, "avg_price": 150, "current_price": 180},
@@ -55,11 +55,9 @@ def make_client(messages: FakeMessages) -> Any:
 @pytest.fixture
 def vectors() -> VectorService:
     client = chromadb.EphemeralClient()
-    # The in-memory client is shared per process, so start each test from an empty collection.
-    try:
-        client.delete_collection("transactions")
-    except Exception:
-        pass
+    # The in-memory client is shared per process, so start each test with no collections.
+    for collection in client.list_collections():
+        client.delete_collection(getattr(collection, "name", collection))
     return VectorService(get_settings(), client=client)
 
 
@@ -122,6 +120,33 @@ def test_history_is_scoped_per_user(vectors: VectorService) -> None:
     vectors.add_transactions("alice", [Transaction(symbol="AAPL", quantity=1, price=10, transaction_type="buy")])
     assert vectors.search("bob", [Holding(symbol="AAPL", quantity=1, avg_price=1)], None) == []
     assert len(vectors.search("alice", [Holding(symbol="AAPL", quantity=1, avg_price=1)], None)) == 1
+
+
+def test_each_user_gets_a_separate_collection(vectors: VectorService) -> None:
+    tx = [Transaction(symbol="TSLA", quantity=2, price=200, transaction_type="buy")]
+    vectors.add_transactions("64f1c2aa0000000000000001", tx)
+    vectors.add_transactions("64f1c2aa0000000000000002", tx)
+    names = sorted(getattr(c, "name", c) for c in vectors._client.list_collections())
+    assert names == [
+        collection_name_for("64f1c2aa0000000000000001"),
+        collection_name_for("64f1c2aa0000000000000002"),
+    ]
+
+
+def test_collection_names_are_sanitised() -> None:
+    assert collection_name_for("../evil id") == "transactions_user____evil_id"
+    assert collection_name_for("") == "transactions_user_anonymous"
+
+
+def test_same_day_identical_trades_are_both_kept(vectors: VectorService) -> None:
+    from datetime import datetime
+
+    trades = [
+        Transaction(symbol="NVDA", quantity=1, price=100, transaction_type="buy", timestamp=datetime(2026, 10, 1, 10, 0)),
+        Transaction(symbol="NVDA", quantity=1, price=100, transaction_type="buy", timestamp=datetime(2026, 10, 1, 15, 0)),
+    ]
+    vectors.add_transactions("carol", trades)
+    assert len(vectors.search("carol", [Holding(symbol="NVDA", quantity=2, avg_price=100)], None)) == 2
 
 
 def test_falls_back_to_rules_without_api_key(vectors: VectorService) -> None:
