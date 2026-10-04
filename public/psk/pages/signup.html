@@ -5,7 +5,12 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Sign up - Nivesh Path</title>
     <link rel="stylesheet" href="../css/style.css">
-    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Plus+Jakarta+Sans:wght@600;700;800&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
+    <link rel="stylesheet" href="/assets/nivesh.css">
+    <link rel="icon" href="/psk/finallogo.png">
 </head>
 <body>
     <div class="signup-container">
@@ -14,7 +19,8 @@
                 <img src="/psk/finallogo.png" alt="Nivesh Path logo">
                 <div class="logo-text"></div>
             </div>
-            <h2>Sign up</h2>
+            <h2>Create your account</h2>
+            <p class="np-auth-sub">Start investing smarter in under a minute.</p>
             <form id="signupForm">
                 <div class="form-group">
                     <label for="mobile">Mobile number</label>
@@ -25,14 +31,14 @@
                     <input type="password" id="password" required>
                 </div>
                 <div class="form-group">
-                    <label for="name">name</label>
+                    <label for="name">Full name</label>
                     <input type="text" id="name" required>
                 </div>
                 <div class="form-group">
-                    <label for="email">email</label>
+                    <label for="email">Email</label>
                     <input type="email" id="email" required>
                 </div>
-                <button type="submit" class="submit-button">register</button>
+                <button type="submit" class="submit-button">Create account</button>
             </form>
             <p class="login-text">Already have an account? <a href="login.html">Login now</a></p>
             <div class="social-links">
@@ -46,5 +52,6 @@
     </div>
     
     <script src="../js/signup.js"></script>
+    <script src="/assets/nivesh.js" defer></script>
 </body>
 </html>
