@@ -10,14 +10,16 @@ from functools import lru_cache
 
 from pymongo.database import Database
 
-from fastapi import Depends, FastAPI, HTTPException
+from fastapi import Depends, FastAPI, HTTPException, Path
 from fastapi.middleware.cors import CORSMiddleware
 
 from config import get_settings
 from schemas import (
     AnalyzePortfolioRequest,
     AnalyzePortfolioResponse,
+    IndexStatus,
     IngestTransactionsRequest,
+    MemoryStatus,
 )
 from services.llm_service import LLMService, LLMUnavailableError
 from services.mongo_store import PatternStore, TradeStore, connect
@@ -127,6 +129,53 @@ def ingest_transactions(
         logger.exception("Failed to ingest transactions")
         raise HTTPException(status_code=500, detail="Could not store transactions") from exc
     return {"stored": stored}
+
+
+def _memory_status(
+    user_id: str, vectors: VectorService, patterns: PatternStore | None
+) -> MemoryStatus:
+    stored: list[dict] = []
+    if patterns is not None:
+        try:
+            stored = patterns.for_user(user_id)
+        except Exception:
+            logger.exception("Could not read behavioral patterns")
+    report = index_report.as_dict()
+    return MemoryStatus(
+        user_id=user_id,
+        indexed_trades=vectors.count(user_id),
+        durable_storage=patterns is not None,
+        index=IndexStatus(**{k: report[k] for k in ("status", "users", "transactions", "seconds")}),
+        patterns=stored,
+    )
+
+
+@app.get("/api/ai/memory/{user_id}", response_model=MemoryStatus)
+def memory_status(
+    user_id: str = Path(..., max_length=128),
+    vectors: VectorService = Depends(get_vector_service),
+    patterns: PatternStore | None = Depends(get_pattern_store),
+) -> MemoryStatus:
+    """What the advisor currently remembers for one user: indexed trades, rebuild status, stored patterns."""
+    return _memory_status(user_id, vectors, patterns)
+
+
+@app.post("/api/ai/memory/{user_id}/rebuild", response_model=MemoryStatus)
+def rebuild_memory(
+    user_id: str = Path(..., max_length=128),
+    vectors: VectorService = Depends(get_vector_service),
+    trades: TradeStore | None = Depends(get_trade_store),
+    patterns: PatternStore | None = Depends(get_pattern_store),
+) -> MemoryStatus:
+    """Re-embed one user's trades from MongoDB into ChromaDB (same as the boot-time rebuild, for one user)."""
+    if trades is None:
+        raise HTTPException(status_code=503, detail="MongoDB is not configured for the AI service")
+    try:
+        rebuild_user(vectors, trades, user_id)
+    except Exception as exc:
+        logger.exception("Manual rebuild failed")
+        raise HTTPException(status_code=502, detail="Could not rebuild from MongoDB") from exc
+    return _memory_status(user_id, vectors, patterns)
 
 
 @app.post("/api/ai/analyze-portfolio", response_model=AnalyzePortfolioResponse)
