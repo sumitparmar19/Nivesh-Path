@@ -17,6 +17,8 @@ class Settings:
     chroma_persist_dir: str | None
     chroma_host: str | None
     chroma_port: int
+    mongo_url: str | None
+    mongo_db_name: str | None
     sentry_dsn: str | None
     allowed_origins: list[str]
 
@@ -32,6 +34,8 @@ def get_settings() -> Settings:
         chroma_persist_dir=os.getenv("CHROMA_PERSIST_DIR") or None,
         chroma_host=os.getenv("CHROMA_HOST") or None,
         chroma_port=int(os.getenv("CHROMA_PORT", "8000")),
+        mongo_url=os.getenv("MONGO_URL") or os.getenv("MONGODB_URI") or None,
+        mongo_db_name=os.getenv("MONGO_DB_NAME") or None,
         sentry_dsn=os.getenv("SENTRY_DSN") or None,
         allowed_origins=[o.strip() for o in origins.split(",") if o.strip()],
     )

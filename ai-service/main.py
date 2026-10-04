@@ -3,7 +3,12 @@
 from __future__ import annotations
 
 import logging
+import threading
+from collections.abc import AsyncIterator
+from contextlib import asynccontextmanager
 from functools import lru_cache
+
+from pymongo.database import Database
 
 from fastapi import Depends, FastAPI, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
@@ -15,8 +20,10 @@ from schemas import (
     IngestTransactionsRequest,
 )
 from services.llm_service import LLMService, LLMUnavailableError
+from services.mongo_store import PatternStore, TradeStore, connect
 from services.portfolio_analytics import compute_metrics, rule_based_insight
 from services.vector_service import VectorService
+from startup import RebuildReport, rebuild_user, rebuild_vector_index
 
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger("ai-service")
@@ -28,10 +35,54 @@ if settings.sentry_dsn:
 
     sentry_sdk.init(dsn=settings.sentry_dsn, traces_sample_rate=0.2)
 
+index_report = RebuildReport()
+
+
+@lru_cache
+def get_mongo_db() -> Database | None:
+    """Shared MongoDB handle (None when MONGO_URL is unset, e.g. in tests or local dev)."""
+    try:
+        return connect(get_settings())
+    except Exception:
+        logger.exception("Invalid MONGO_URL; running without MongoDB")
+        return None
+
+
+def get_trade_store() -> TradeStore | None:
+    """Durable trade history written by the Node backend."""
+    db = get_mongo_db()
+    return TradeStore(db) if db is not None else None
+
+
+def get_pattern_store() -> PatternStore | None:
+    """Durable store for behavioral-pattern results (Phase 2C detectors write here)."""
+    db = get_mongo_db()
+    return PatternStore(db) if db is not None else None
+
+
+def _cold_start() -> None:
+    """Runs once at boot in a background thread so the health check passes immediately."""
+    patterns = get_pattern_store()
+    if patterns is not None:
+        try:
+            patterns.ensure_indexes()
+        except Exception:
+            logger.exception("Could not create behavioral_patterns indexes")
+    rebuild_vector_index(get_vector_service(), get_trade_store(), index_report)
+
+
+@asynccontextmanager
+async def lifespan(_: FastAPI) -> AsyncIterator[None]:
+    """Re-populate ChromaDB from MongoDB on cold start (the filesystem is wiped on each deploy)."""
+    threading.Thread(target=_cold_start, name="chroma-rebuild", daemon=True).start()
+    yield
+
+
 app = FastAPI(
     title="Nivesh-Path AI Service",
-    version="1.0.0",
+    version="1.1.0",
     description="Portfolio AI Advisor: Claude + LangChain + ChromaDB RAG.",
+    lifespan=lifespan,
 )
 app.add_middleware(
     CORSMiddleware,
@@ -55,8 +106,13 @@ def get_llm_service() -> LLMService:
 
 @app.get("/health")
 def health(llm: LLMService = Depends(get_llm_service)) -> dict[str, object]:
-    """Liveness probe; also reports whether Claude is configured."""
-    return {"status": "ok", "llm_configured": llm.available, "model": llm.model}
+    """Liveness probe; also reports whether Claude is configured and the RAG index rebuild status."""
+    return {
+        "status": "ok",
+        "llm_configured": llm.available,
+        "model": llm.model,
+        "vector_index": index_report.as_dict(),
+    }
 
 
 @app.post("/api/ai/transactions")
@@ -78,6 +134,7 @@ def analyze_portfolio(
     body: AnalyzePortfolioRequest,
     vectors: VectorService = Depends(get_vector_service),
     llm: LLMService = Depends(get_llm_service),
+    trades: TradeStore | None = Depends(get_trade_store),
 ) -> AnalyzePortfolioResponse:
     """Compute portfolio metrics, retrieve relevant history (RAG) and ask Claude for insights.
 
@@ -89,6 +146,13 @@ def analyze_portfolio(
     except Exception as exc:
         logger.exception("Metric computation failed")
         raise HTTPException(status_code=422, detail="Invalid holdings") from exc
+
+    if trades is not None and body.user_id != "anonymous" and not vectors.has_history(body.user_id):
+        # Lazy rebuild: covers users whose index is missing (boot rebuild still running or failed).
+        try:
+            rebuild_user(vectors, trades, body.user_id)
+        except Exception:
+            logger.exception("Lazy ChromaDB rebuild failed; analysing without history")
 
     history = vectors.search(body.user_id, body.holdings, body.question)
 

@@ -26,13 +26,28 @@
   `/psk/pages/login.html?next=...` on 401). Token stored as `localStorage.token` (+ inside `niveshPathUser`).
 - **ChromaDB:** one collection per user (`transactions_user_<id>`), see `collection_name_for()`.
 
+### ChromaDB persistence fix (done, before 2B)
+- MongoDB is the source of truth; ChromaDB is a rebuildable cache. The AI service reads `MONGO_URL` too
+  (add it to the DigitalOcean **ai** component).
+- `ai-service/startup.py` re-embeds every user's `purchases` into their Chroma collection on boot (FastAPI lifespan,
+  background thread, idempotent upserts); status shown in the AI service's `/health` as `vector_index`.
+  It can also be run by hand: `python startup.py`.
+- If a user's collection is missing at analysis time, it is rebuilt for that user on the spot (lazy rebuild).
+- `services/mongo_store.py`: `TradeStore` (reads `purchases`; userId as ObjectId or string; skips legacy and
+  malformed rows) and `PatternStore` (`behavioral_patterns`: one doc per `(user_id, pattern_type)`, unique index).
+  **Phase 2C detectors must write results to `PatternStore`, not to Chroma** (overrides plan steps that say
+  "store patterns in ChromaDB").
+- Database name: the one in the `MONGO_URL` path (as Mongoose does; `test` if none), or `MONGO_DB_NAME`.
+- Tests: `ai-service/tests/test_cold_start.py` (mongomock): clear Chroma -> rebuild -> advisor answers with the
+  user's history and no other user's.
+
 ### Known risks to handle in later phases
 1. **Cold start** for the Behavioral Mirror: new users have no history -> add a demo account with realistic
    seeded trades and **CSV import** of real broker history (Robinhood / Webull / Zerodha) in Phase 2C.
 2. **Historical data:** panic-sell/FOMO detection needs historical prices + news per trade; Finnhub free tier limits
    candles - confirm a free source before building 2C.
-3. **ChromaDB on DigitalOcean is ephemeral** (container disk resets on deploy). Keep MongoDB as the source of truth and
-   rebuild vectors from it, or move to MongoDB Atlas Vector Search.
+3. ~~**ChromaDB on DigitalOcean is ephemeral**~~ - fixed: rebuilt from MongoDB on cold start (see above). Atlas Vector
+   Search remains an option if the index grows too big to rebuild at boot.
 4. **Embeddings:** current ones are local hashing (lexical). Semantic search needs an embedding model (e.g. Voyage AI)
    - a local model is heavy for the 1 GB instance.
 5. **Model:** the plan says `claude-sonnet-4-6`; the app uses `CLAUDE_MODEL` (currently `claude-opus-5-5`).

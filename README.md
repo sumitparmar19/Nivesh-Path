@@ -16,7 +16,9 @@ your portfolio's risk, diversification and next steps.
   level, diversification score, strengths, risks, actionable recommendations, and answers to
   free-form questions.
 - **RAG over your history:** every trade is embedded into ChromaDB. The advisor retrieves the
-  most relevant past transactions before answering.
+  most relevant past transactions before answering. MongoDB stays the source of truth: on cold
+  start (every deploy) the AI service rebuilds ChromaDB from it, and behavioral-pattern results
+  are stored in a `behavioral_patterns` collection.
 - **Graceful degradation:** if the LLM is unavailable, a rule-based engine still returns a useful
   analysis, built on the same deterministic metrics (P/L, weights, HHI concentration).
 - **Live quotes:** Finnhub data is proxied and cached in Redis, so the API key never reaches the
@@ -65,8 +67,8 @@ npm run dev
 
 ## Tests
 ```bash
-npm test                      # backend: 15 Jest/Supertest tests
-cd ai-service && pytest -q    # AI service: 10 pytest tests (Claude mocked, Chroma in-memory)
+npm test                      # backend: 32 Jest/Supertest tests
+cd ai-service && pytest -q    # AI service: 20 pytest tests (Claude mocked, Chroma in-memory, mongomock)
 ```
 
 ## API highlights
