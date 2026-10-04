@@ -467,10 +467,10 @@ document.addEventListener('DOMContentLoaded', function() {
     // Logout functionality
     if (logoutBtn) {
         logoutBtn.addEventListener('click', function() {
-            // Clear user data
+            // Clear the session (token + profile) and go to the home page
             localStorage.removeItem('niveshPathUser');
-            // Redirect to home page
-            window.location.href = '../index.html';
+            localStorage.removeItem('token');
+            window.location.href = '/psk/index.html';
         });
     }
 });

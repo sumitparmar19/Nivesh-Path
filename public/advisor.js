@@ -26,7 +26,7 @@
   async function loadHoldings() {
     body.innerHTML = "";
     try {
-      const res = await fetch("/api/portfolio/holdings");
+      const res = await window.NP.authFetch("/api/portfolio/holdings");
       const holdings = res.ok ? await res.json() : [];
       if (holdings.length) holdings.forEach(addRow);
       else {
@@ -106,10 +106,8 @@
     analyzeBtn.disabled = true;
     analyzeBtn.querySelector("span").innerHTML = '<span class="spinner"></span> Analyzing…';
     try {
-      const user = JSON.parse(localStorage.getItem("niveshPathUser") || "{}");
-      const res = await fetch("/api/ai/analyze-portfolio", {
+      const res = await window.NP.authFetch("/api/ai/analyze-portfolio", {
         method: "POST",
-        headers: { "Content-Type": "application/json", ...(user.token ? { Authorization: `Bearer ${user.token}` } : {}) },
         body: JSON.stringify({
           holdings,
           risk_profile: document.getElementById("riskProfile").value,

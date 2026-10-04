@@ -36,7 +36,57 @@
       try { sessionStorage.removeItem("np-toast"); } catch (e) {}
     }, 4200);
   }
-  window.NP = { toast: toast };
+  // ---------- Session: JWT stored at login, sent as "Authorization: Bearer" on protected calls ----------
+  function clearSession() {
+    try {
+      localStorage.removeItem("token");
+      localStorage.removeItem("niveshPathUser");
+    } catch (e) {}
+  }
+  function getToken() {
+    try {
+      var stored = JSON.parse(localStorage.getItem("niveshPathUser") || "{}");
+      var token = localStorage.getItem("token") || stored.token;
+      if (!token) return null;
+      var part = token.split(".")[1].replace(/-/g, "+").replace(/_/g, "/");
+      var payload = JSON.parse(atob(part));
+      if (payload.exp && payload.exp * 1000 < Date.now()) {
+        clearSession();
+        return null;
+      }
+      return token;
+    } catch (e) {
+      return null;
+    }
+  }
+  function loginUrl() {
+    return "/psk/pages/login.html?next=" + encodeURIComponent(location.pathname + location.search);
+  }
+  function goToLogin(message) {
+    toast(message || "Please log in to continue.", "info", "Login required");
+    location.href = loginUrl();
+    return new Promise(function () {}); // the page is navigating away
+  }
+  async function authFetch(url, options) {
+    options = options || {};
+    var token = getToken();
+    if (!token) return goToLogin();
+    var headers = Object.assign({ "Content-Type": "application/json", Authorization: "Bearer " + token }, options.headers || {});
+    var res = await fetch(url, Object.assign({}, options, { headers: headers }));
+    if (res.status === 401) {
+      clearSession();
+      return goToLogin("Your session expired. Please log in again.");
+    }
+    return res;
+  }
+  function logout() {
+    clearSession();
+    toast("You have been logged out.", "info", "Signed out");
+    location.href = "/psk/index.html";
+  }
+  getToken(); // drop an expired session before other scripts read it
+
+  window.NP = { toast: toast, authFetch: authFetch, getToken: getToken, isLoggedIn: function () { return !!getToken(); }, logout: logout, loginUrl: loginUrl };
   window.alert = function (msg) { toast(String(msg)); };
   try {
     var pending = JSON.parse(sessionStorage.getItem("np-toast") || "null");
@@ -92,7 +142,7 @@
     if (sellRow) {
       var note = document.createElement("p");
       note.className = "np-trade-note";
-      note.textContent = "Buys are paid securely with Stripe (test mode). Sells are recorded instantly.";
+      note.textContent = "Paper trading with virtual cash. Orders fill instantly at the live price.";
       sellRow.insertAdjacentElement("afterend", note);
     }
   }
