@@ -1,79 +1,68 @@
-// Transaction history: store buys/sells, list them, and derive current holdings.
+// Per-user trading and portfolio API: virtual-cash buys/sells, trade history, holdings and wallet summary.
+// Every route requires a valid JWT and only ever reads or writes the caller's own trades.
 const express = require("express");
 const { buildHoldings } = require("../lib/portfolio");
-const { toSymbol } = require("../config");
+const { createLedger } = require("../lib/ledger");
+const { requireAuth } = require("../middleware/auth");
 
-function purchaseRoutes({ Purchase, aiClient }) {
+function purchaseRoutes({ Purchase, User, quotes, aiClient }) {
   const router = express.Router();
+  const ledger = createLedger({ User, Purchase, quotes });
 
-  async function storePurchase(req, res) {
+  // Accepts the new shape { symbol, quantity, price, type: "BUY"|"SELL" }
+  // and the Phase 1 shape { name, quantity, price, transactionType: "buy"|"sell" }.
+  async function trade(req, res, next) {
     try {
-      const { name, price, quantity, total, transactionType } = req.body || {};
-      if (!name || !price || !quantity || !total || !transactionType) {
-        return res.status(400).json({ error: "Missing required fields" });
-      }
-      if (!["buy", "sell"].includes(transactionType)) {
-        return res.status(400).json({ error: "transactionType must be 'buy' or 'sell'" });
-      }
-      const symbol = toSymbol(name);
-      if (Number(quantity) <= 0 || Number(price) <= 0) {
-        return res.status(400).json({ error: "Price and quantity must be greater than 0" });
-      }
-      if (transactionType === "sell") {
-        const owned = buildHoldings(await Purchase.find().lean()).find((h) => h.symbol === symbol);
-        const ownedQty = owned ? owned.quantity : 0;
-        if (Number(quantity) > ownedQty) {
-          return res.status(400).json({ error: `You own ${ownedQty} ${symbol} share${ownedQty === 1 ? "" : "s"}, so you can't sell ${quantity}.` });
-        }
-      }
-      const purchase = await Purchase.create({
-        name: symbol,
-        price: Number(price),
-        quantity: Number(quantity),
-        total: Number(total),
-        transactionType,
+      const body = req.body || {};
+      const result = await ledger.execute({
+        userId: req.user.id,
+        symbol: body.symbol || body.name,
+        quantity: body.quantity,
+        price: body.price,
+        type: body.type || body.transactionType,
       });
+      const tx = result.transaction;
 
-      // Feed the AI advisor's vector store; never block or fail the purchase on it.
-      aiClient
-        .ingestTransactions("anonymous", [
-          {
-            symbol: purchase.name,
-            quantity: purchase.quantity,
-            price: purchase.price,
-            transaction_type: purchase.transactionType,
-            timestamp: purchase.timestamp,
-          },
-        ])
-        .catch((err) => console.warn("AI ingest skipped:", err.message));
+      // Feed this user's AI memory; never block or fail the trade on it.
+      if (aiClient) {
+        aiClient
+          .ingestTransactions(req.user.id, [
+            { symbol: tx.name, quantity: tx.quantity, price: tx.price, transaction_type: tx.transactionType, timestamp: tx.timestamp },
+          ])
+          .catch((err) => console.warn("AI ingest skipped:", err.message));
+      }
 
-      return res.status(201).json({ message: "Purchase stored successfully!", purchase });
+      return res.status(201).json({ success: true, newBalance: result.newBalance, transaction: tx, purchase: tx });
     } catch (err) {
-      console.error("Error storing purchase:", err);
-      return res.status(500).json({ error: "Error storing purchase" });
+      return next(err);
     }
   }
 
-  router.post("/store-purchase", storePurchase);
-  router.post("/api/store-purchase", storePurchase);
+  router.post(["/store-purchase", "/api/store-purchase", "/api/trades"], requireAuth, trade);
 
-  router.get(["/transactions", "/api/transactions"], async (req, res) => {
+  router.get(["/transactions", "/api/transactions"], requireAuth, async (req, res, next) => {
     try {
-      const rows = await Purchase.find().sort({ timestamp: -1 }).limit(500).lean();
+      const rows = await Purchase.find({ userId: req.user.id }).sort({ timestamp: -1 }).limit(500).lean();
       res.json(rows);
     } catch (err) {
-      console.error("Error fetching transactions:", err);
-      res.status(500).json({ error: "Error fetching transactions" });
+      next(err);
     }
   });
 
-  router.get("/api/portfolio/holdings", async (req, res) => {
+  router.get("/api/portfolio/holdings", requireAuth, async (req, res, next) => {
     try {
-      const rows = await Purchase.find().lean();
-      res.json(buildHoldings(rows));
+      res.json(buildHoldings(await Purchase.find({ userId: req.user.id }).lean()));
     } catch (err) {
-      console.error("Error building holdings:", err);
-      res.status(500).json({ error: "Error building holdings" });
+      next(err);
+    }
+  });
+
+  // Wallet + portfolio summary: cash, holdings value at live prices, total value and P&L.
+  router.get(["/api/portfolio/cash-balance", "/api/portfolio/summary"], requireAuth, async (req, res, next) => {
+    try {
+      res.json(await ledger.summary(req.user.id));
+    } catch (err) {
+      next(err);
     }
   });
 
