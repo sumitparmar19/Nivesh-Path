@@ -5,7 +5,6 @@ flowchart LR
     B[Browser<br/>public/*.html] -->|HTTP| N[Node / Express API<br/>server.js :3000]
     N -->|quotes, cached| R[(Redis)]
     N -->|REST| F[Finnhub API]
-    N -->|Checkout| S[Stripe]
     N -->|users, transactions| M[(MongoDB)]
     N -->|POST /api/ai/analyze-portfolio<br/>POST /api/ai/transactions| A[FastAPI AI service<br/>ai-service :8001]
     A -->|embed + retrieve history| C[(ChromaDB)]

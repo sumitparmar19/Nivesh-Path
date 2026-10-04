@@ -11,6 +11,9 @@ const userSchema = new mongoose.Schema(
     country: { type: String, default: "India" },
     city: String,
     address: String,
+    // Virtual paper-trading wallet (Phase 2A): buys debit it, sells credit it.
+    cashBalance: { type: Number, default: 100000, min: 0 },
+    totalDeposited: { type: Number, default: 100000 },
   },
   { timestamps: true }
 );

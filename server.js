@@ -11,6 +11,10 @@ if (config.sentryDsn) {
 }
 
 async function start() {
+  if (process.env.NODE_ENV === "production" && !process.env.JWT_SECRET) {
+    console.error("JWT_SECRET must be set in production - refusing to start with the dev secret.");
+    process.exit(1);
+  }
   if (config.mongoUrl) {
     try {
       await mongoose.connect(config.mongoUrl);
