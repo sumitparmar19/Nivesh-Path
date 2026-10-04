@@ -3,6 +3,7 @@ const express = require("express");
 const bcrypt = require("bcryptjs");
 const jwt = require("jsonwebtoken");
 const { config } = require("../config");
+const { requireAuth } = require("../middleware/auth");
 
 function publicUser(user) {
   return {
@@ -14,7 +15,12 @@ function publicUser(user) {
     country: user.country || "India",
     city: user.city || "",
     address: user.address || "",
+    cashBalance: user.cashBalance ?? 100000,
   };
+}
+
+function signToken(user) {
+  return jwt.sign({ sub: String(user._id), email: user.email }, config.jwtSecret, { expiresIn: "7d" });
 }
 
 function authRoutes({ User }) {
@@ -35,7 +41,7 @@ function authRoutes({ User }) {
 
       const passwordHash = await bcrypt.hash(String(password), 10);
       const user = await User.create({ name, email: normalizedEmail, mobile, passwordHash });
-      return res.status(201).json({ message: "Registration successful", user: publicUser(user) });
+      return res.status(201).json({ message: "Registration successful", token: signToken(user), user: publicUser(user) });
     } catch (err) {
       console.error("Register error:", err);
       return res.status(500).json({ message: "Registration failed" });
@@ -44,35 +50,33 @@ function authRoutes({ User }) {
 
   router.post("/api/login", async (req, res) => {
     try {
-      const { mobile, password } = req.body || {};
-      if (!mobile || !password) return res.status(400).json({ message: "Mobile and password are required" });
+      const { mobile, email, password } = req.body || {};
+      const login = String(mobile || email || "").trim();
+      if (!login || !password) return res.status(400).json({ message: "Mobile (or email) and password are required" });
 
-      const user = await User.findOne({ mobile });
+      const user = await User.findOne(login.includes("@") ? { email: login.toLowerCase() } : { mobile: login });
       const ok = user && (await bcrypt.compare(String(password), user.passwordHash));
       if (!ok) return res.status(401).json({ message: "Invalid mobile number or password" });
 
-      const token = jwt.sign({ sub: String(user._id) }, config.jwtSecret, { expiresIn: "7d" });
-      return res.json({ token, ...publicUser(user) });
+      return res.json({ token: signToken(user), user: publicUser(user), ...publicUser(user) });
     } catch (err) {
       console.error("Login error:", err);
       return res.status(500).json({ message: "Login failed" });
     }
   });
 
+  // Current user's profile (used by the account page and navbar).
+  router.get("/api/me", requireAuth, async (req, res, next) => {
+    try {
+      const user = await User.findById(req.user.id);
+      if (!user) return res.status(401).json({ error: "Account not found. Please log in again." });
+      return res.json(publicUser(user));
+    } catch (err) {
+      return next(err);
+    }
+  });
+
   return router;
 }
 
-// Optional middleware for routes that should know who is calling.
-function optionalAuth(req, res, next) {
-  const header = req.headers.authorization || "";
-  if (header.startsWith("Bearer ")) {
-    try {
-      req.userId = jwt.verify(header.slice(7), config.jwtSecret).sub;
-    } catch {
-      return res.status(401).json({ message: "Invalid or expired token" });
-    }
-  }
-  next();
-}
-
-module.exports = { authRoutes, optionalAuth };
+module.exports = { authRoutes };

@@ -2,19 +2,26 @@
 const express = require("express");
 const rateLimit = require("express-rate-limit");
 const { buildHoldings } = require("../lib/portfolio");
+const { requireAuth } = require("../middleware/auth");
 
 function aiRoutes({ Purchase, quotes, aiClient }) {
   const router = express.Router();
 
-  // Each analysis is a paid LLM call, so cap it per client.
-  const limiter = rateLimit({ windowMs: 60 * 1000, limit: 10, standardHeaders: true, legacyHeaders: false });
+  // Each analysis is a paid LLM call, so cap it per user.
+  const limiter = rateLimit({
+    windowMs: 60 * 1000,
+    limit: 10,
+    standardHeaders: true,
+    legacyHeaders: false,
+    keyGenerator: (req) => req.user.id,
+  });
 
-  router.post("/api/ai/analyze-portfolio", limiter, async (req, res, next) => {
+  router.post("/api/ai/analyze-portfolio", requireAuth, limiter, async (req, res, next) => {
     try {
       const body = req.body || {};
       let holdings = Array.isArray(body.holdings) ? body.holdings : null;
       if (!holdings || holdings.length === 0) {
-        holdings = buildHoldings(await Purchase.find().lean());
+        holdings = buildHoldings(await Purchase.find({ userId: req.user.id }).lean());
       }
       if (holdings.length === 0) {
         return res.status(400).json({ error: "No holdings yet - buy a stock or send a holdings array." });
@@ -33,7 +40,7 @@ function aiRoutes({ Purchase, quotes, aiClient }) {
       });
 
       const result = await aiClient.analyzePortfolio({
-        user_id: req.userId || "anonymous",
+        user_id: req.user.id,
         holdings: enriched,
         question: body.question || undefined,
         risk_profile: body.risk_profile || "moderate",
