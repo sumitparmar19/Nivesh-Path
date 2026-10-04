@@ -3,7 +3,7 @@
 [![CI](https://github.com/sumitparmar19/Nivesh-Path/actions/workflows/ci.yml/badge.svg)](https://github.com/sumitparmar19/Nivesh-Path/actions/workflows/ci.yml)
 
 Nivesh-Path ("path to investment") is a full-stack stock-investing app. It shows live market
-data for 12 US stocks, takes payments through Stripe Checkout, tracks your trades, and has a
+data for 12 US stocks, lets every user paper-trade with **$100,000 in virtual cash**, and has a
 **Portfolio AI Advisor** that uses Claude and retrieval-augmented generation (RAG) to explain
 your portfolio's risk, diversification and next steps.
 
@@ -21,14 +21,15 @@ your portfolio's risk, diversification and next steps.
   analysis, built on the same deterministic metrics (P/L, weights, HHI concentration).
 - **Live quotes:** Finnhub data is proxied and cached in Redis, so the API key never reaches the
   browser.
-- **Payments:** Stripe Checkout for buy orders.
+- **Per-user paper trading:** JWT-protected accounts, each with an isolated portfolio and a $100k virtual
+  cash ledger (atomic MongoDB `$inc`, server-side pricing, concurrency-safe buys and sells).
 - **Auth:** bcrypt password hashing and JWT access tokens.
 - **Production practices:** Docker Compose, GitHub Actions CI (Jest + pytest + image builds),
   Sentry error tracking, and rate limiting on the paid AI endpoint.
 
 ## Architecture
 ```
-Browser -> Node/Express (:3000) -> MongoDB, Redis, Finnhub, Stripe
+Browser -> Node/Express (:3000) -> MongoDB, Redis, Finnhub
                                  -> FastAPI AI service (:8001) -> ChromaDB + Claude API
 ```
 See [architecture.md](architecture.md) for the diagrams and the request flow.
@@ -36,7 +37,7 @@ See [architecture.md](architecture.md) for the diagrams and the request flow.
 | Layer | Tech |
 |---|---|
 | Frontend | HTML, CSS, JavaScript (React + TypeScript + Tailwind app in progress in `psk/`) |
-| Backend | Node.js 22, Express, Mongoose, Redis, Stripe, JWT |
+| Backend | Node.js 22, Express, Mongoose, Redis, JWT |
 | AI service | Python 3.11, FastAPI, LangChain, Anthropic SDK, ChromaDB, Pydantic |
 | DevOps | Docker, Docker Compose, GitHub Actions, GHCR, DigitalOcean App Platform, Sentry |
 | Testing | Jest + Supertest, pytest |
@@ -45,7 +46,7 @@ See [architecture.md](architecture.md) for the diagrams and the request flow.
 
 **Option A: Docker (everything in one command)**
 ```bash
-cp .env.example .env        # add your Finnhub, Stripe and Anthropic keys
+cp .env.example .env        # add your MongoDB, Finnhub and Anthropic keys
 docker compose up --build   # http://localhost:3000  (AI Advisor: /advisor.html)
 ```
 
@@ -74,9 +75,9 @@ cd ai-service && pytest -q    # AI service: 10 pytest tests (Claude mocked, Chro
 | POST | `/api/ai/analyze-portfolio` | AI analysis; uses stored holdings if none are sent |
 | GET | `/api/portfolio/holdings` | Holdings derived from transactions |
 | GET | `/search`, `/stock/:symbol` | Cached live quotes |
-| POST | `/create-checkout-session` | Stripe Checkout session |
-| POST | `/store-purchase` · GET `/transactions` | Trade history |
-| POST | `/api/register` · `/api/login` | Auth (JWT) |
+| POST | `/api/store-purchase` | Buy/sell with virtual cash `{symbol, quantity, price, type}` (auth) |
+| GET | `/api/transactions` · `/api/portfolio/holdings` · `/api/portfolio/cash-balance` | Your trades, holdings, cash and P&L (auth) |
+| POST | `/api/register` · `/api/login` · GET `/api/me` | Auth (JWT) |
 
 The AI service has interactive docs at `http://localhost:8001/docs`.
 
@@ -85,7 +86,7 @@ Full step-by-step guide, including where to get every key: [docs/DEPLOYMENT.md](
 
 1. Create a free MongoDB Atlas cluster and copy its connection string.
 2. In DigitalOcean go to **Apps → Create App → Import from app spec**, and upload `.do/app.yaml`.
-3. Fill in the secrets: `MONGO_URL`, `FINNHUB_API_KEY`, `STRIPE_SECRET_KEY`, `JWT_SECRET`,
+3. Fill in the secrets: `MONGO_URL`, `FINNHUB_API_KEY`, `JWT_SECRET`,
    `ANTHROPIC_API_KEY`, and optionally `SENTRY_DSN`.
 4. Every push to `main` redeploys automatically.
 
