@@ -16,13 +16,18 @@ your portfolio's risk, diversification and next steps.
   level, diversification score, strengths, risks, actionable recommendations, and answers to
   free-form questions.
 - **RAG over your history:** every trade is embedded into ChromaDB. The advisor retrieves the
-  most relevant past transactions before answering.
+  most relevant past transactions before answering. MongoDB stays the source of truth: on cold
+  start (every deploy) the AI service rebuilds ChromaDB from it, and behavioral-pattern results
+  are stored in a `behavioral_patterns` collection.
 - **Graceful degradation:** if the LLM is unavailable, a rule-based engine still returns a useful
   analysis, built on the same deterministic metrics (P/L, weights, HHI concentration).
 - **Live quotes:** Finnhub data is proxied and cached in Redis, so the API key never reaches the
   browser.
 - **Per-user paper trading:** JWT-protected accounts, each with an isolated portfolio and a $100k virtual
   cash ledger (atomic MongoDB `$inc`, server-side pricing, concurrency-safe buys and sells).
+- **Portfolio dashboard:** cash, holdings at live prices, allocation chart, P&L, recent trades and an
+  "AI memory" panel that shows (and can re-sync) what the advisor remembers.
+- **What's new page:** release notes with links to try each feature, plus live system status.
 - **Auth:** bcrypt password hashing and JWT access tokens.
 - **Production practices:** Docker Compose, GitHub Actions CI (Jest + pytest + image builds),
   Sentry error tracking, and rate limiting on the paid AI endpoint.
@@ -65,8 +70,8 @@ npm run dev
 
 ## Tests
 ```bash
-npm test                      # backend: 15 Jest/Supertest tests
-cd ai-service && pytest -q    # AI service: 10 pytest tests (Claude mocked, Chroma in-memory)
+npm test                      # backend: 38 Jest/Supertest tests
+cd ai-service && pytest -q    # AI service: 22 pytest tests (Claude mocked, Chroma in-memory, mongomock)
 ```
 
 ## API highlights

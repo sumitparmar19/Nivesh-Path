@@ -37,6 +37,27 @@ function createApp(deps = {}) {
     });
   });
 
+  // Public status for the "What's new" page: is each part of the stack up? (no user data)
+  app.get("/api/status", async (req, res) => {
+    let ai = { reachable: false };
+    try {
+      const h = await aiClient.health();
+      ai = { reachable: true, llmConfigured: Boolean(h.llm_configured), model: h.model || null, vectorIndex: null };
+      if (h.vector_index) {
+        const { status, users, transactions, seconds } = h.vector_index;
+        ai.vectorIndex = { status, users, transactions, seconds };
+      }
+    } catch (err) {
+      // AI service unreachable: report it rather than failing the page
+    }
+    res.json({
+      web: "ok",
+      db: mongoose.connection.readyState === 1 ? "connected" : "disconnected",
+      ai,
+      checkedAt: new Date().toISOString(),
+    });
+  });
+
   app.use(optionalAuth);
   app.use(stockRoutes({ quotes }));
   app.use(purchaseRoutes({ Purchase, User, quotes, aiClient }));

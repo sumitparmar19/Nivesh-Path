@@ -93,7 +93,7 @@ document.addEventListener('DOMContentLoaded', function() {
                     localStorage.setItem('token', data.token);
 
                     // Go back to the page that asked for login, or to the markets home
-                    window.location.href = safeNext() || '/search.html';
+                    window.location.href = safeNext() || '/portfolio.html';
                 } else {
                     alert(data.message || 'Login failed. Please check your credentials.');
                 }
@@ -113,7 +113,7 @@ document.addEventListener('DOMContentLoaded', function() {
     // Already logged in with a valid (unexpired) token: skip the form
     const checkLoginStatus = function() {
         if (window.NP && window.NP.isLoggedIn()) {
-            window.location.href = safeNext() || '/search.html';
+            window.location.href = safeNext() || '/portfolio.html';
         }
     };
     

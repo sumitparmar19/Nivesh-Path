@@ -7,7 +7,8 @@ flowchart LR
     N -->|REST| F[Finnhub API]
     N -->|users, transactions| M[(MongoDB)]
     N -->|POST /api/ai/analyze-portfolio<br/>POST /api/ai/transactions| A[FastAPI AI service<br/>ai-service :8001]
-    A -->|embed + retrieve history| C[(ChromaDB)]
+    A -->|embed + retrieve history| C[(ChromaDB<br/>rebuildable cache)]
+    A -->|cold-start rebuild,<br/>behavioral_patterns| M
     A -->|structured output| L[Claude API<br/>claude-opus-5-5]
     N -. errors .-> Y[Sentry]
     A -. errors .-> Y
@@ -29,6 +30,18 @@ flowchart LR
      insight instead, so the page always works.
 5. Each new purchase (`POST /store-purchase`) is also sent to `POST /api/ai/transactions`
    and embedded into ChromaDB. That gives later analyses more history to draw on.
+
+## Persistence: why ChromaDB can be thrown away
+
+DigitalOcean App Platform wipes the container filesystem on every deploy, so ChromaDB is only a
+cache. MongoDB Atlas is the source of truth:
+
+- On boot, `ai-service/startup.py` re-embeds every user's trades from the `purchases` collection
+  into their own Chroma collection (background thread; progress on the AI service's `/health`).
+- If a user's collection is still missing when they ask the advisor, it is rebuilt for that user
+  on the spot.
+- Behavioral-pattern results (panic sells, FOMO buys, holding periods) are stored as documents in
+  MongoDB's `behavioral_patterns` collection, never only in Chroma.
 
 ## Deployment
 

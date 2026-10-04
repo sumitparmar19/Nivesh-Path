@@ -64,7 +64,7 @@ document.addEventListener('DOMContentLoaded', function() {
                         mobile: u.mobile, phone: u.mobile, country: u.country || 'India'
                     }));
                     alert('Welcome to Nivesh-Path! You have $100,000 in virtual cash to start investing.');
-                    window.location.href = '/search.html';
+                    window.location.href = '/portfolio.html';
                 } else {
                     alert(data.message || 'Registration failed');
                 }

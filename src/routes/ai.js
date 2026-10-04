@@ -51,6 +51,40 @@ function aiRoutes({ Purchase, quotes, aiClient }) {
     }
   });
 
+  // What the advisor remembers about the caller: trades in MongoDB vs trades embedded in ChromaDB.
+  async function memoryResponse(req, ai) {
+    const tradesInDatabase = Purchase.countDocuments
+      ? await Purchase.countDocuments({ userId: req.user.id })
+      : (await Purchase.find({ userId: req.user.id }).lean()).length;
+    if (!ai) return { tradesInDatabase, aiReachable: false };
+    return {
+      tradesInDatabase,
+      aiReachable: true,
+      indexedTrades: ai.indexed_trades,
+      durableStorage: ai.durable_storage,
+      index: ai.index,
+      patterns: ai.patterns || [],
+    };
+  }
+
+  router.get("/api/ai/memory", requireAuth, async (req, res, next) => {
+    try {
+      const ai = await aiClient.memory(req.user.id).catch(() => null); // AI down -> still answer
+      res.json(await memoryResponse(req, ai));
+    } catch (err) {
+      next(err);
+    }
+  });
+
+  router.post("/api/ai/memory/rebuild", requireAuth, limiter, async (req, res, next) => {
+    try {
+      const ai = await aiClient.rebuildMemory(req.user.id);
+      res.json(await memoryResponse(req, ai));
+    } catch (err) {
+      next(err);
+    }
+  });
+
   return router;
 }
 
