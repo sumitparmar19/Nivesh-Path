@@ -1,7 +1,8 @@
 
 document.addEventListener('DOMContentLoaded', function() {
     const container = document.getElementById('testimonialsContainer');
-    
+    if (!container) return;
+
     function scrollTestimonials() {
         if (container.scrollLeft >= container.scrollWidth - container.clientWidth) {
             container.scrollLeft = 0;

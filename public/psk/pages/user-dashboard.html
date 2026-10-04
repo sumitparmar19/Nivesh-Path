@@ -5,7 +5,12 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>User Dashboard - Nivesh Path</title>
     <link rel="stylesheet" href="../css/style.css">
-    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Plus+Jakarta+Sans:wght@600;700;800&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
+    <link rel="stylesheet" href="/assets/nivesh.css">
+    <link rel="icon" href="/psk/finallogo.png">
 </head>
 <body>
     <div class="app-container">
@@ -25,6 +30,10 @@
                     <i class="fas fa-exchange-alt"></i>
                     <span>Transactions</span>
                 </a>
+          <a href="/advisor.html" class="nav-item">
+            <i class="fas fa-wand-magic-sparkles"></i>
+            <span>AI Advisor</span>
+          </a>
                 <a href="../../index.html" class="nav-item">
                     <i class="fas fa-chart-line"></i>
                     <span>market</span>
@@ -85,8 +94,8 @@
             <input type="file" id="profile-image-input" accept="image/*" style="display: none;">
         </label>
     </div>
-    <h1 class="profile-name" id="profile-name">Puerto Rico</h1>
-    <p class="profile-contact" id="profile-contact">youremail@domain.com | +01 234 567 89</p>
+    <h1 class="profile-name" id="profile-name">Guest investor</h1>
+    <p class="profile-contact" id="profile-contact">Log in to see your profile</p>
 </div>
 
 
@@ -259,5 +268,6 @@
     </div>
 
     <script src="../js/dashboard.js"></script>
+    <script src="/assets/nivesh.js" defer></script>
 </body>
 </html>
