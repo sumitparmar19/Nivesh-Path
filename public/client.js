@@ -278,27 +278,3 @@ async function loadStocks() {
 }
 
 loadStocks();
-
-mongoose.connect("mongodb+srv://dhrumil:dhrumil7pat@niveshpathcluster.egrir.mongodb.net/Nivesh?retryWrites=true&w=majority&appName=NiveshPathCluster")
-const PriceSchema = {
-  price: Number,
-  quantity: Number,
-  total: Number
-}
-const Price = mongoose.model("Price", PriceSchema);
-
-app.get("/", function(req, res) {
-  res.sendFile((__dirname + "success.html"));
-})
-
-app.post("/", function(req, res){
-  let newPrice = new Price({
-    price: req.body.price,
-    quantity: req.body.quantity,
-    total: req.body.total
-  })
-  newPrice.save()
-    .then(() => res.send("Data saved successfully!"))
-    .catch((err) => res.status(500).send("Error saving data"));
-});
-
