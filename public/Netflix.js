@@ -337,7 +337,7 @@ window.addEventListener("storage", function(event) {
   //   }
   // }
   
-  const stripe = Stripe("pk_test_51Pp474P12x31ZwKIU3ian8k4DPSItSboee9oQujst9DgmNpfALIcz9pj7giVL8B0WsuiAXli1KwGeHMq48HoO45R00Gw2sVO6d"); // ✅ Replace with actual publishable key
+  // Checkout uses the Stripe-hosted URL returned by the server, so no publishable key is needed here.
   
   async function handlePayment(amount) {
     try {
@@ -349,14 +349,12 @@ window.addEventListener("storage", function(event) {
   
         const data = await response.json();
         
-        if (!data.id) { // ✅ Corrected session ID check
-            console.error("Error: No session ID received from backend", data);
+        if (!data.url) {
+            console.error("Error: No checkout URL received from backend", data);
             return;
         }
   
-        const { error } = await stripe.redirectToCheckout({ sessionId: data.id }); // ✅ Use correct ID
-  
-        if (error) console.error("Stripe Checkout Error:", error);
+        window.location.href = data.url;
     } catch (error) {
         console.error("Payment Error:", error);
     }
