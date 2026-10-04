@@ -1,4 +1,5 @@
 // Turns a list of buy/sell transactions into current holdings with average cost.
+const { toSymbol } = require("../config");
 
 function buildHoldings(transactions) {
   const bySymbol = new Map();
@@ -7,7 +8,7 @@ function buildHoldings(transactions) {
   );
 
   for (const tx of ordered) {
-    const symbol = String(tx.name || tx.symbol || "").toUpperCase();
+    const symbol = toSymbol(tx.name || tx.symbol);
     const qty = Number(tx.quantity);
     const price = Number(tx.price);
     if (!symbol || !(qty > 0) || !(price > 0)) continue;
