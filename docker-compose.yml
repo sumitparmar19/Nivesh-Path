@@ -23,6 +23,8 @@ services:
     env_file: .env
     environment:
       CHROMA_PERSIST_DIR: /data/chroma
+      # Same database as the web service: ChromaDB is rebuilt from it on cold start
+      MONGO_URL: mongodb://mongo:27017/niveshpath
     volumes:
       - chroma_data:/data/chroma
     restart: unless-stopped

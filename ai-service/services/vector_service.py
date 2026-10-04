@@ -112,6 +112,23 @@ class VectorService:
         )
         return len(docs)
 
+    def has_history(self, user_id: str) -> bool:
+        """True when the user's collection exists and holds at least one trade."""
+        collection = self._collection(user_id, create=False)
+        try:
+            return collection is not None and collection.count() > 0
+        except Exception:
+            logger.exception("Could not count vectors for user")
+            return False
+
+    def clear(self) -> None:
+        """Drop every per-user collection (used to simulate a cold start in tests)."""
+        prefix = f"{COLLECTION_NAME}_user_"
+        for collection in self._client.list_collections():
+            name = getattr(collection, "name", collection)
+            if str(name).startswith(prefix):
+                self._client.delete_collection(name)
+
     def search(self, user_id: str, holdings: list[Holding], question: str | None, k: int = 6) -> list[Document]:
         """Return the user's own past transactions most relevant to their holdings/question."""
         collection = self._collection(user_id, create=False)
