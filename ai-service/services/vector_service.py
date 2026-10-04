@@ -68,24 +68,43 @@ def _make_client(settings: Settings) -> Any:
     return chromadb.EphemeralClient()
 
 
+_SAFE_ID = re.compile(r"[^A-Za-z0-9_-]")
+
+
+def collection_name_for(user_id: str) -> str:
+    """Each user gets their own Chroma collection, so one user's trades can never be retrieved for another."""
+    safe = _SAFE_ID.sub("_", user_id or "anonymous")[:48] or "anonymous"
+    return f"{COLLECTION_NAME}_user_{safe}"
+
+
 class VectorService:
-    """Thin wrapper around a Chroma collection keyed by user."""
+    """Per-user trade journal stored in Chroma (one collection per user)."""
 
     def __init__(self, settings: Settings, client: Any | None = None) -> None:
         self._client = client or _make_client(settings)
-        self._collection = self._client.get_or_create_collection(
-            name=COLLECTION_NAME,
-            embedding_function=None,
-            metadata={"hnsw:space": "cosine"},
-        )
+
+    def _collection(self, user_id: str, create: bool) -> Any | None:
+        name = collection_name_for(user_id)
+        if create:
+            return self._client.get_or_create_collection(
+                name=name, embedding_function=None, metadata={"hnsw:space": "cosine"}
+            )
+        try:
+            return self._client.get_collection(name=name, embedding_function=None)
+        except Exception:  # no trades stored for this user yet
+            return None
 
     def add_transactions(self, user_id: str, transactions: list[Transaction]) -> int:
-        """Embed and upsert transactions; returns how many were stored."""
+        """Embed and upsert transactions into the user's collection; returns how many were stored."""
         docs = [transaction_to_document(user_id, tx) for tx in transactions]
         ids = [
-            hashlib.sha1(f"{user_id}|{d.page_content}".encode()).hexdigest() for d in docs
+            hashlib.sha1(
+                f"{user_id}|{tx.symbol}|{tx.transaction_type}|{tx.quantity}|{tx.price}|"
+                f"{tx.timestamp.isoformat() if tx.timestamp else d.page_content}".encode()
+            ).hexdigest()
+            for tx, d in zip(transactions, docs)
         ]
-        self._collection.upsert(
+        self._collection(user_id, create=True).upsert(
             ids=ids,
             documents=[d.page_content for d in docs],
             metadatas=[d.metadata for d in docs],
@@ -94,17 +113,19 @@ class VectorService:
         return len(docs)
 
     def search(self, user_id: str, holdings: list[Holding], question: str | None, k: int = 6) -> list[Document]:
-        """Return the user's past transactions most relevant to their holdings/question."""
+        """Return the user's own past transactions most relevant to their holdings/question."""
+        collection = self._collection(user_id, create=False)
+        if collection is None:
+            return []
         query = " ".join(h.symbol.upper() for h in holdings)
         if question:
             query = f"{question} {query}"
         try:
-            result = self._collection.query(
-                query_embeddings=embed_texts([query]),
-                n_results=k,
-                where={"user_id": user_id},
-            )
-        except Exception:  # an empty collection or a Chroma hiccup must not break analysis
+            count = collection.count()
+            if count == 0:
+                return []
+            result = collection.query(query_embeddings=embed_texts([query]), n_results=min(k, count))
+        except Exception:  # a Chroma hiccup must not break analysis
             logger.exception("Vector search failed")
             return []
         documents = (result.get("documents") or [[]])[0]
