@@ -354,23 +354,6 @@ function toggleGraph() {
   }
   
   // Button Click Handlers
-  document.getElementById("buyBtn").addEventListener("click", () => handlePayment(5000)); // $50
-  document.getElementById("buyBtn").addEventListener("click", async function () {
-    let total = calculateTotal(); // Get the latest total value
-    const response = await fetch("/create-checkout-session-walmart", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ amount: total }) // Send total amount to the server
-    });
-  
-    const session = await response.json();
-    if (session.url) {
-        window.location.href = session.url; // Redirect to Stripe checkout page
-    } else {
-        alert("Error creating checkout session");
-    }
-  });
-  document.getElementById("sellBtn").addEventListener("click", () => handlePayment(3000)); // $30
   
   // document.getElementById("buyBtn").addEventListener("click", async function () {
   //   handleTransaction("buy");
@@ -521,16 +504,11 @@ function toggleGraph() {
   };
   
   // Attach event listeners for Buy and Sell buttons
-  document.getElementById("buyBtn").addEventListener("click", () => handlePaymentSuccess("buy"));
-  document.getElementById("sellBtn").addEventListener("click", () => handlePaymentSuccess("sell"));
   
   // Attach event listener to a button (assuming you have a button with id 'submitBtn')
   // document.getElementById("buyBtn").addEventListener("click", () => handlePaymentSuccess("buy"));
   // document.getElementById("sellBtn").addEventListener("click", () => handlePaymentSuccess("sell"));
   
-  console.log("Sending data:", { name, price, quantity, total, transactionType });
   
-  console.log("Saving transaction:", transaction);
-  console.log("Saving stock data to MongoDB:", stockData);
   
   

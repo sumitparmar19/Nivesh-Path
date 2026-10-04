@@ -175,14 +175,14 @@ body.dark-mode .feature-card {
     justify-content: center;
     align-items: center;
     min-height: 100vh;
-    background: linear-gradient(rgba(255, 255, 255, 0.9), rgba(255, 255, 255, 0.9)), url('/b2.jpeg');
+    background: linear-gradient(rgba(255, 255, 255, 0.9), rgba(255, 255, 255, 0.9)), url('/psk/b2.jpeg');
     background-size: cover;
     background-position: center;
     transition: background 0.3s;
 }
 
 body.dark-mode .signup-container {
-    background: linear-gradient(rgba(30, 30, 30, 0.9), rgba(30, 30, 30, 0.9)), url('/b2.jpeg');
+    background: linear-gradient(rgba(30, 30, 30, 0.9), rgba(30, 30, 30, 0.9)), url('/psk/b2.jpeg');
     background-size: cover;
     background-position: center;
 }

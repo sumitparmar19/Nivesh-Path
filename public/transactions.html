@@ -3,97 +3,121 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Document</title>
-    <link rel="stylesheet" href="transactions.css">
+    <title>Transactions | Nivesh-Path</title>
+    <meta name="description" content="Your Nivesh-Path trade history, wallet balance and invested amount.">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Plus+Jakarta+Sans:wght@600;700;800&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
+    <link rel="stylesheet" href="/assets/nivesh.css">
+    <link rel="icon" href="/psk/finallogo.png">
 </head>
 <body>
-
-        <!-- Navigation Bar -->
-        <nav class="navbar">
-            <a href="psk/index.html" class="logo">
-                <img src="/psk/finallogo.png" alt="Nivesh Path logo">
-                <span class="logo-text"></span>
+    <nav class="navbar">
+        <a href="/psk/index.html" class="logo">
+            <img src="/psk/finallogo.png" alt="Nivesh Path logo">
+        </a>
+        <div class="nav-links">
+            <a href="/index.html">Stocks</a>
+            <a href="/advisor.html">AI Advisor</a>
+            <a href="/psk/pages/about.html">About</a>
+            <a href="/psk/pages/products.html">Products</a>
+            <a href="/psk/pages/pricing.html">Pricing</a>
+            <a href="/psk/pages/support.html">Support</a>
+            <a href="/psk/pages/login.html" id="login-link">Login</a>
+            <a href="/psk/pages/user-dashboard.html" id="dashboard-link" style="display: none;" aria-label="Account">
+                <i class="fas fa-user-circle"></i>
             </a>
-            <div class="nav-links">
-                <a href="index.html">Stocks</a>
-                <a href="psk/pages/about.html">About</a>
-                <a href="psk/pages/products.html">Products</a>
-                <a href="psk/pages/pricing.html">Pricing</a>
-                <a href="psk/pages/support.html">Support</a>
-                <a href="psk/pages/login.html" id="login-link">Login</a>
-                <a href="psk/pages/user-dashboard.html" id="dashboard-link" style="display: none;">
-                    <i class="fas fa-user-circle"></i>
-                </a>
-            </div>
-        </nav>
+        </div>
+    </nav>
 
     <div class="main">
-
         <div class="nav1">
-            <!-- <div class="img1">
-                <img src="img/logo.png" alt="">
-                <h2>NiveshPath</h2>
-            </div> -->
             <div class="sidebar">
-                <!-- <div class="logo">
-                  <img src="img/logo.png" alt="" style="height: 150px; width: 200px;">
-                </div> -->
-          
                 <div class="nav-menu">
-                  <a href="search.html" class="nav-item active">
-                    <i class="fas fa-home"></i>
-                    <span>Home</span>
-                  </a>
-                  <a href="psk/pages/user-dashboard.html" class="nav-item">
-                    <i class="fas fa-user-circle"></i>
-                    <span>Account</span>
-                  </a>
-                  <a href="transactions.html" class="nav-item">
-                    <i class="fas fa-wallet"></i>
-                    <span>Transaction</span>
-                  </a>
-                  <a href="dashboard1.html" class="nav-item">
-                    <i class="fas fa-sliders-h"></i>
-                    <span>Dashboard</span>
-                  </a>
-                  <a href="psk/pages/contect.html" class="nav-item">
-                    <i class="fas fa-comment-dots"></i>
-                    <span>Contact Us</span>
-                  </a>
-                  <a href="index.html" class="nav-item">
-                    <i class="fas fa-chart-line"></i>
-                    <span>Insights</span>
-                  </a>
-                  <a href="psk/pages/about.html" class="nav-item">
-                    <i class="fas fa-life-ring"></i>
-                    <span>About Us</span>
-                  </a>
+                    <a href="/search.html" class="nav-item"><i class="fas fa-house"></i><span>Home</span></a>
+                    <a href="/psk/pages/user-dashboard.html" class="nav-item"><i class="fas fa-user-circle"></i><span>Account</span></a>
+                    <a href="/transactions.html" class="nav-item"><i class="fas fa-wallet"></i><span>Transactions</span></a>
+                    <a href="/advisor.html" class="nav-item"><i class="fas fa-wand-magic-sparkles"></i><span>AI Advisor</span></a>
+                    <a href="/dashboard1.html" class="nav-item"><i class="fas fa-sliders-h"></i><span>Dashboard</span></a>
+                    <a href="/psk/pages/contect.html" class="nav-item"><i class="fas fa-comment-dots"></i><span>Contact Us</span></a>
+                    <a href="/index.html" class="nav-item"><i class="fas fa-chart-line"></i><span>Insights</span></a>
+                    <a href="/psk/pages/about.html" class="nav-item"><i class="fas fa-life-ring"></i><span>About Us</span></a>
                 </div>
-           </div>
+            </div>
         </div>
-        <div class="wallet" id="wallet" style="text-align:center; background:green; color:white; padding:20px; font-size:24px;">
-            <strong>Wallet Balance</strong>
-            <div id="walletBalance">100000.00</div>
-        </div>
-        
-        
-        <table border="1">
-            <thead>
-                <tr>
-                    <th>Name</th>
-                    <th>Price</th>
-                    <th>Quantity</th>
-                    <th>Total</th>
-                    <th>Transaction Type</th>
-                    <th>Timestamp</th>
-                </tr>
-            </thead>
-            <tbody id="transactionTable">
-                <!-- Data will be inserted here -->
-            </tbody>
-        </table>
+
+        <section class="np-page">
+            <header class="np-page-head">
+                <div>
+                    <p class="np-eyebrow">Portfolio</p>
+                    <h1>Transactions</h1>
+                    <p class="np-lede">Every buy and sell you've made, with your demo wallet balance.</p>
+                </div>
+                <a class="np-btn" href="/advisor.html"><i class="fas fa-wand-magic-sparkles"></i> Analyze with AI</a>
+            </header>
+
+            <div class="np-stats">
+                <div class="np-stat np-stat--brand">
+                    <span class="np-stat-label"><i class="fas fa-wallet"></i> Wallet balance</span>
+                    <strong class="np-stat-value" id="walletBalance">$100,000.00</strong>
+                    <span class="np-stat-foot">Starts at $100,000 demo cash</span>
+                </div>
+                <div class="np-stat">
+                    <span class="np-stat-label"><i class="fas fa-arrow-trend-up"></i> Total bought</span>
+                    <strong class="np-stat-value" id="totalBought">$0.00</strong>
+                    <span class="np-stat-foot" id="buyCount">0 buys</span>
+                </div>
+                <div class="np-stat">
+                    <span class="np-stat-label"><i class="fas fa-arrow-trend-down"></i> Total sold</span>
+                    <strong class="np-stat-value" id="totalSold">$0.00</strong>
+                    <span class="np-stat-foot" id="sellCount">0 sells</span>
+                </div>
+            </div>
+
+            <div class="np-card np-table-card">
+                <div class="np-table-tools">
+                    <div class="np-segment" role="tablist" aria-label="Filter transactions">
+                        <button type="button" class="is-active" data-filter="all" role="tab" aria-selected="true">All</button>
+                        <button type="button" data-filter="buy" role="tab" aria-selected="false">Buys</button>
+                        <button type="button" data-filter="sell" role="tab" aria-selected="false">Sells</button>
+                    </div>
+                    <label class="np-search">
+                        <i class="fas fa-magnifying-glass"></i>
+                        <input type="search" id="txSearch" placeholder="Search symbol…" aria-label="Search by symbol">
+                    </label>
+                </div>
+                <div class="np-table-wrap">
+                    <table class="np-table">
+                        <thead>
+                            <tr>
+                                <th>Stock</th>
+                                <th>Type</th>
+                                <th class="num">Price</th>
+                                <th class="num">Qty</th>
+                                <th class="num">Total</th>
+                                <th>Date</th>
+                            </tr>
+                        </thead>
+                        <tbody id="transactionTable">
+                            <tr class="np-row-loading"><td colspan="6"><span class="np-skeleton" style="width:100%;height:14px"></span></td></tr>
+                            <tr class="np-row-loading"><td colspan="6"><span class="np-skeleton" style="width:100%;height:14px"></span></td></tr>
+                            <tr class="np-row-loading"><td colspan="6"><span class="np-skeleton" style="width:100%;height:14px"></span></td></tr>
+                        </tbody>
+                    </table>
+                </div>
+                <div class="np-empty" id="txEmpty" hidden>
+                    <i class="fas fa-receipt"></i>
+                    <h3>No transactions yet</h3>
+                    <p>Pick a stock and place your first trade, then it will show up here.</p>
+                    <a class="np-btn" href="/search.html">Explore stocks</a>
+                </div>
+            </div>
+        </section>
     </div>
-        <script src="transactions.js"></script>
-        <script src="psk/js/main.js"></script>
-    </body>
-    </html>
+
+    <script src="/assets/nivesh.js" defer></script>
+    <script src="transactions.js" defer></script>
+    <script src="/psk/js/main.js"></script>
+</body>
+</html>

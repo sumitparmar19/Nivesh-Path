@@ -5,7 +5,12 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Login - Nivesh Path</title>
     <link rel="stylesheet" href="../css/style.css">
-    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Plus+Jakarta+Sans:wght@600;700;800&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
+    <link rel="stylesheet" href="/assets/nivesh.css">
+    <link rel="icon" href="/psk/finallogo.png">
 </head>
 <body>
     <div class="signup-container">
@@ -14,25 +19,18 @@
                 <img src="/psk/finallogo.png" alt="Nivesh Path logo">
                 <div class="logo-text"></div>
             </div>
-            <h2>Login</h2>
+            <h2>Welcome back</h2>
+            <p class="np-auth-sub">Log in to track your portfolio and get AI insights.</p>
             <form id="loginForm" method="POST">
                 <div class="form-group">
                     <label for="loginMobile">Mobile number</label>
-                    <input type="tel" id="loginMobile" required>
+                    <input type="tel" id="loginMobile" autocomplete="tel" placeholder="10-digit mobile number" required>
                 </div>
                 <div class="form-group">
                     <label for="loginPassword">Password</label>
-                    <input type="password" id="loginPassword" required>
+                    <input type="password" id="loginPassword" autocomplete="current-password" placeholder="Your password" required>
                 </div>
-                <div class="form-group">
-                    <label for="loginname">name</label>
-                    <input type="text" id="loginname" required>
-                </div>
-                <div class="form-group">
-                    <label for="loginemail">email</label>
-                    <input type="email" id="loginemail" required>
-                </div>
-                <button type="submit" class="submit-button">register</button>
+                <button type="submit" class="submit-button">Log in</button>
             </form>
             <p class="login-text">Don't have an account? <a href="signup.html">Sign up now</a></p>
             <p class="forgot-password"><a href="#">Forgot password?</a></p>
@@ -46,6 +44,7 @@
         </div>
     </div>
 
+    <script src="/assets/nivesh.js" defer></script>
 </body>
 <script src="../js/login.js"></script>
 </html>

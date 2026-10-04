@@ -332,139 +332,142 @@ fetchStockPrices();
 setInterval(fetchStockPrices, 60000);
 
   // Get the canvas element
-const ctx = document.getElementById('myChart').getContext('2d');
+// These mini charts only exist on pages with #myChart canvases; skip them elsewhere.
+if (document.getElementById('myChart') && typeof Chart !== 'undefined') {
+  const ctx = document.getElementById('myChart')?.getContext('2d');
 
-// Create a gradient fill for the background
-const gradient = ctx.createLinearGradient(0, 0, 0, 150);
-gradient.addColorStop(0, 'rgb(255, 62, 62)');  // Strong blue at the top
-gradient.addColorStop(1, 'rgba(62, 81, 255, 0)');  // Transparent at the bottom
+  // Create a gradient fill for the background
+  const gradient = ctx.createLinearGradient(0, 0, 0, 150);
+  gradient.addColorStop(0, 'rgb(255, 62, 62)');  // Strong blue at the top
+  gradient.addColorStop(1, 'rgba(62, 81, 255, 0)');  // Transparent at the bottom
 
-// Define the chart
-new Chart(ctx, {
-    type: 'line',  // Line chart
-    data: {
-        labels: ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun'], // X-axis labels
-        datasets: [{
-            data: [15, 10, 4, 12, 7, 5, 1], // Y-axis values (modify for your data)
-            borderColor: 'red',  // Line color
-            backgroundColor: gradient, // Gradient fill
-            fill: true,  // Fill under the line
-            tension: 0.4, // Creates the smooth, wavy curve effect
-            borderWidth: 2, // Line thickness
-            pointRadius: 0 // Hide data points
-        }]
-    },
-    options: {
-        plugins: { legend: { display: false } }, // Hide the legend
-        scales: {
-            x: { display: false }, // Hide X-axis
-            y: { display: false }  // Hide Y-axis
-        },
-        elements: { point: { radius: 0 } } // Hide points on the line
-    }
-});
-// document.addEventListener("DOMContentLoaded", async function () {
-//     // Define stocks to fetch
-//     const stocks = [
-//         { symbol: "AAPL", priceId: "current-price-aapl", changeId: "price-change-aapl" },
-//         { symbol: "NVDA", priceId: "current-price-nvda", changeId: "price-change-nvda" }
-//     ];
+  // Define the chart
+  new Chart(ctx, {
+      type: 'line',  // Line chart
+      data: {
+          labels: ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun'], // X-axis labels
+          datasets: [{
+              data: [15, 10, 4, 12, 7, 5, 1], // Y-axis values (modify for your data)
+              borderColor: 'red',  // Line color
+              backgroundColor: gradient, // Gradient fill
+              fill: true,  // Fill under the line
+              tension: 0.4, // Creates the smooth, wavy curve effect
+              borderWidth: 2, // Line thickness
+              pointRadius: 0 // Hide data points
+          }]
+      },
+      options: {
+          plugins: { legend: { display: false } }, // Hide the legend
+          scales: {
+              x: { display: false }, // Hide X-axis
+              y: { display: false }  // Hide Y-axis
+          },
+          elements: { point: { radius: 0 } } // Hide points on the line
+      }
+  });
+  // document.addEventListener("DOMContentLoaded", async function () {
+  //     // Define stocks to fetch
+  //     const stocks = [
+  //         { symbol: "AAPL", priceId: "current-price-aapl", changeId: "price-change-aapl" },
+  //         { symbol: "NVDA", priceId: "current-price-nvda", changeId: "price-change-nvda" }
+  //     ];
 
-//     async function fetchStockPrice(symbol) {
-//         try {
-//             const response = await fetch(`/search?symbol=${symbol}`);
-//             const data = await response.json();
+  //     async function fetchStockPrice(symbol) {
+  //         try {
+  //             const response = await fetch(`/search?symbol=${symbol}`);
+  //             const data = await response.json();
 
-//             if (data && data.c !== undefined) {
-//                 return { price: data.c, change: (data.c - data.pc).toFixed(2) };
-//             }
-//         } catch (error) {
-//             console.error(`Error fetching ${symbol} stock price:`, error);
-//         }
-//         return { price: "N/A", change: "N/A" };
-//     }
+  //             if (data && data.c !== undefined) {
+  //                 return { price: data.c, change: (data.c - data.pc).toFixed(2) };
+  //             }
+  //         } catch (error) {
+  //             console.error(`Error fetching ${symbol} stock price:`, error);
+  //         }
+  //         return { price: "N/A", change: "N/A" };
+  //     }
 
-//     async function updateStockPrices() {
-//         for (const stock of stocks) {
-//             const { price, change } = await fetchStockPrice(stock.symbol);
+  //     async function updateStockPrices() {
+  //         for (const stock of stocks) {
+  //             const { price, change } = await fetchStockPrice(stock.symbol);
 
-//             const priceElement = document.getElementById(stock.priceId);
-//             const changeElement = document.getElementById(stock.changeId);
+  //             const priceElement = document.getElementById(stock.priceId);
+  //             const changeElement = document.getElementById(stock.changeId);
 
-//             if (priceElement) {
-//                 priceElement.textContent = `$${price}`;
-//             } else {
-//                 console.error(`Element with ID ${stock.priceId} not found!`);
-//             }
+  //             if (priceElement) {
+  //                 priceElement.textContent = `$${price}`;
+  //             } else {
+  //                 console.error(`Element with ID ${stock.priceId} not found!`);
+  //             }
 
-//             if (changeElement) {
-//                 changeElement.textContent = change > 0 ? `+${change}` : change;
-//                 changeElement.style.color = change >= 0 ? "green" : "red"; // Color for positive/negative change
-//             } else {
-//                 console.error(`Element with ID ${stock.changeId} not found!`);
-//             }
-//         }
-//     }
+  //             if (changeElement) {
+  //                 changeElement.textContent = change > 0 ? `+${change}` : change;
+  //                 changeElement.style.color = change >= 0 ? "green" : "red"; // Color for positive/negative change
+  //             } else {
+  //                 console.error(`Element with ID ${stock.changeId} not found!`);
+  //             }
+  //         }
+  //     }
 
-//     updateStockPrices();
-// });
-const ctx1 = document.getElementById('myChart1').getContext('2d');
-const gradient1 = ctx1.createLinearGradient(0, 0, 0, 150);
-gradient1.addColorStop(0, 'rgb(91, 255, 62)');  // Strong blue at the top
-gradient1.addColorStop(1, 'rgba(62, 81, 255, 0)');  // Transparent at the bottom
+  //     updateStockPrices();
+  // });
+  const ctx1 = document.getElementById('myChart1')?.getContext('2d');
+  const gradient1 = ctx1.createLinearGradient(0, 0, 0, 150);
+  gradient1.addColorStop(0, 'rgb(91, 255, 62)');  // Strong blue at the top
+  gradient1.addColorStop(1, 'rgba(62, 81, 255, 0)');  // Transparent at the bottom
 
-// Define the chart
-new Chart(ctx1, {
-    type: 'line',  // Line chart
-    data: {
-        labels: ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun'], // X-axis labels
-        datasets: [{
-            data: [1, 5, 7,10, 15, 5], // Y-axis values (modify for your data)
-            borderColor: 'green',  // Line color
-            backgroundColor: gradient1, // Gradient fill
-            fill: true,  // Fill under the line
-            tension: 0.4, // Creates the smooth, wavy curve effect
-            borderWidth: 2, // Line thickness
-            pointRadius: 0 // Hide data points
-        }]
-    },
-    options: {
-        plugins: { legend: { display: false } }, // Hide the legend
-        scales: {
-            x: { display: false }, // Hide X-axis
-            y: { display: false }  // Hide Y-axis
-        },
-        elements: { point: { radius: 0 } } // Hide points on the line
-    }
-});
-const ctx2 = document.getElementById('myChart2').getContext('2d');
+  // Define the chart
+  new Chart(ctx1, {
+      type: 'line',  // Line chart
+      data: {
+          labels: ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun'], // X-axis labels
+          datasets: [{
+              data: [1, 5, 7,10, 15, 5], // Y-axis values (modify for your data)
+              borderColor: 'green',  // Line color
+              backgroundColor: gradient1, // Gradient fill
+              fill: true,  // Fill under the line
+              tension: 0.4, // Creates the smooth, wavy curve effect
+              borderWidth: 2, // Line thickness
+              pointRadius: 0 // Hide data points
+          }]
+      },
+      options: {
+          plugins: { legend: { display: false } }, // Hide the legend
+          scales: {
+              x: { display: false }, // Hide X-axis
+              y: { display: false }  // Hide Y-axis
+          },
+          elements: { point: { radius: 0 } } // Hide points on the line
+      }
+  });
+  const ctx2 = document.getElementById('myChart2')?.getContext('2d');
 
-// Create a gradient fill for the background
-const gradient2 = ctx.createLinearGradient(0, 0, 0, 150);
-gradient2.addColorStop(0, 'rgb(255, 62, 62)');  // Strong blue at the top
-gradient2.addColorStop(1, 'rgba(62, 81, 255, 0)');  // Transparent at the bottom
+  // Create a gradient fill for the background
+  const gradient2 = ctx.createLinearGradient(0, 0, 0, 150);
+  gradient2.addColorStop(0, 'rgb(255, 62, 62)');  // Strong blue at the top
+  gradient2.addColorStop(1, 'rgba(62, 81, 255, 0)');  // Transparent at the bottom
 
-// Define the chart
-new Chart(ctx2, {
-    type: 'line',  // Line chart
-    data: {
-        labels: ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun'], // X-axis labels
-        datasets: [{
-            data: [15, 5, 9, 7, 5, 1], // Y-axis values (modify for your data)
-            borderColor: 'red',  // Line color
-            backgroundColor: gradient2, // Gradient fill
-            fill: true,  // Fill under the line
-            tension: 0.4, // Creates the smooth, wavy curve effect
-            borderWidth: 2, // Line thickness
-            pointRadius: 0 // Hide data points
-        }]
-    },
-    options: {
-        plugins: { legend: { display: false } }, // Hide the legend
-        scales: {
-            x: { display: false }, // Hide X-axis
-            y: { display: false }  // Hide Y-axis
-        },
-        elements: { point: { radius: 0 } } // Hide points on the line
-    }
-});
+  // Define the chart
+  new Chart(ctx2, {
+      type: 'line',  // Line chart
+      data: {
+          labels: ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun'], // X-axis labels
+          datasets: [{
+              data: [15, 5, 9, 7, 5, 1], // Y-axis values (modify for your data)
+              borderColor: 'red',  // Line color
+              backgroundColor: gradient2, // Gradient fill
+              fill: true,  // Fill under the line
+              tension: 0.4, // Creates the smooth, wavy curve effect
+              borderWidth: 2, // Line thickness
+              pointRadius: 0 // Hide data points
+          }]
+      },
+      options: {
+          plugins: { legend: { display: false } }, // Hide the legend
+          scales: {
+              x: { display: false }, // Hide X-axis
+              y: { display: false }  // Hide Y-axis
+          },
+          elements: { point: { radius: 0 } } // Hide points on the line
+      }
+  });
+}

@@ -18,6 +18,8 @@ src/
   routes/            # stocks, checkout (Stripe), purchases, auth (JWT), ai (proxy)
 models/Stock1.js     # Purchase model (transactions) - still used
 public/              # static UI served by Express (company pages, dashboard, advisor.html)
+public/assets/       # design system loaded on EVERY page: nivesh.css (tokens, layout, components, motion),
+                     # nivesh.js (mobile menu, toasts replacing alert, scroll reveal, price flashes), trade.js (Buy/Sell)
 public/psk/          # marketing site + login/signup (served at /psk/...)
 psk/                 # older copy of the marketing site + bolt React/TS starter (NOT served)
 ai-service/          # Python FastAPI AI advisor (port 8001)
@@ -43,7 +45,8 @@ architecture.md
 - `POST /api/ai/analyze-portfolio` (Node) -> enriches holdings with live quotes -> `POST /api/ai/analyze-portfolio` (FastAPI)
 - `POST /api/ai/transactions` (FastAPI) - index transactions for RAG (Node calls it after each purchase)
 - `GET /search`, `GET /stock/:symbol` - cached Finnhub quotes (key never sent to the browser)
-- `POST /create-checkout-session[-<company>]` - Stripe
+- `POST /create-checkout-session[-<company>]` - Stripe (sends symbol/quantity/price; metadata on the session)
+- `POST /api/checkout/confirm` - transactions.html calls it with `?session_id`; records the buy only if Stripe says paid (idempotent)
 - `POST /store-purchase`, `GET /transactions`, `GET /api/portfolio/holdings`
 - `POST /api/register`, `POST /api/login` (returns JWT)
 
@@ -67,3 +70,6 @@ architecture.md
 - Never hardcode API keys - environment variables only; `.env` is git-ignored, update `.env.example`
 - Keep commits small and descriptive; run `npm test` and `pytest` before pushing
 - Don't do arithmetic in the LLM - compute numbers in code and pass them in
+- UI: new pages must include fonts + `/assets/nivesh.css` in <head> and `/assets/nivesh.js` (defer) before </body>;
+  stock pages also set `<body data-symbol="TICKER">` and load `/assets/trade.js`. Use `np-*` classes, not new one-off CSS.
+- Store trades by ticker (AAPL, TSLA...), never company names

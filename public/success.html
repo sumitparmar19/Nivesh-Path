@@ -3,26 +3,26 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Document</title>
-    <link rel="stylesheet" href="success.css">
+    <title>Payment successful | Nivesh-Path</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Plus+Jakarta+Sans:wght@600;700;800&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
+    <link rel="stylesheet" href="/assets/nivesh.css">
+    <link rel="icon" href="/psk/finallogo.png">
 </head>
 <body>
-    <table border="1">
-        <thead>
-            <tr>
-                <th>Name</th>
-                <th>Price</th>
-                <th>Quantity</th>
-                <th>Total</th>
-                <th>Transaction Type</th>
-                <th>Timestamp</th>
-            </tr>
-        </thead>
-        <tbody id="transactionTable">
-            <!-- Data will be inserted here -->
-        </tbody>
-    </table>
+    <main class="np-status">
+        <div class="np-status-card">
+            <div class="np-status-icon np-status-icon--ok"><i class="fas fa-check"></i></div>
+            <h1>Payment successful</h1>
+            <p>Your order went through. You'll find it in your transactions, and the AI Advisor will include it in your next analysis.</p>
+            <div class="np-status-actions">
+                <a class="np-btn" href="/transactions.html">View transactions</a>
+                <a class="np-btn np-btn--ghost" href="/advisor.html">Ask the AI Advisor</a>
+            </div>
+        </div>
+    </main>
+    <script src="/assets/nivesh.js" defer></script>
 </body>
-
-    
 </html>
