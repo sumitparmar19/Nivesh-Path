@@ -41,7 +41,7 @@ function createApp(deps = {}) {
 
   app.use(optionalAuth);
   app.use(stockRoutes({ quotes }));
-  app.use(checkoutRoutes({ stripe }));
+  app.use(checkoutRoutes({ stripe, Purchase, aiClient }));
   app.use(purchaseRoutes({ Purchase, aiClient }));
   app.use(authRoutes({ User }));
   app.use(aiRoutes({ Purchase, quotes, aiClient }));

@@ -3,13 +3,15 @@
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>Nivesh Dashboard</title>
-    <link
-      rel="stylesheet"
-      href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.2/css/all.min.css"
-    />
+    <title>Trading dashboard | Nivesh-Path</title>
     <link rel="stylesheet" href="dashboard1.css" />
-  </head>
+      <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Plus+Jakarta+Sans:wght@600;700;800&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
+    <link rel="stylesheet" href="/assets/nivesh.css">
+    <link rel="icon" href="/psk/finallogo.png">
+</head>
   <body>
     <!-- Sidebar -->
     <div class="sidebar">
@@ -28,8 +30,12 @@
         </a>
         <a href="transactions.html" class="nav-item">
           <i class="fas fa-wallet"></i>
-          <span>Transaction</span>
+          <span>Transactions</span>
         </a>
+          <a href="/advisor.html" class="nav-item">
+            <i class="fas fa-wand-magic-sparkles"></i>
+            <span>AI Advisor</span>
+          </a>
         <a href="psk/pages/about.html" class="nav-item">
           <i class="fas fa-sliders-h"></i>
           <span>About Us</span>
@@ -278,7 +284,8 @@
         </div>
       </div>
     </div>
-  </body>
+      <script src="/assets/nivesh.js" defer></script>
+</body>
           
   <script>
     fetch('/transactions')

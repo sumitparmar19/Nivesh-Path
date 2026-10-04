@@ -1,6 +1,7 @@
 // Transaction history: store buys/sells, list them, and derive current holdings.
 const express = require("express");
 const { buildHoldings } = require("../lib/portfolio");
+const { toSymbol } = require("../config");
 
 function purchaseRoutes({ Purchase, aiClient }) {
   const router = express.Router();
@@ -14,8 +15,19 @@ function purchaseRoutes({ Purchase, aiClient }) {
       if (!["buy", "sell"].includes(transactionType)) {
         return res.status(400).json({ error: "transactionType must be 'buy' or 'sell'" });
       }
+      const symbol = toSymbol(name);
+      if (Number(quantity) <= 0 || Number(price) <= 0) {
+        return res.status(400).json({ error: "Price and quantity must be greater than 0" });
+      }
+      if (transactionType === "sell") {
+        const owned = buildHoldings(await Purchase.find().lean()).find((h) => h.symbol === symbol);
+        const ownedQty = owned ? owned.quantity : 0;
+        if (Number(quantity) > ownedQty) {
+          return res.status(400).json({ error: `You own ${ownedQty} ${symbol} share${ownedQty === 1 ? "" : "s"}, so you can't sell ${quantity}.` });
+        }
+      }
       const purchase = await Purchase.create({
-        name: String(name).toUpperCase(),
+        name: symbol,
         price: Number(price),
         quantity: Number(quantity),
         total: Number(total),

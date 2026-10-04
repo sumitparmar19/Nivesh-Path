@@ -3,12 +3,16 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Document</title>
+    <title>Tesla (TSLA) stock price, chart &amp; trade | Nivesh-Path</title>
     <link rel="stylesheet" href="Tesla.css">
-    <script src="https://kit.fontawesome.com/97a405ce23.js" crossorigin="anonymous"></script>
-    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Plus+Jakarta+Sans:wght@600;700;800&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
+    <link rel="stylesheet" href="/assets/nivesh.css">
+    <link rel="icon" href="/psk/finallogo.png">
 </head>
-<body>
+<body data-symbol="TSLA">
     
     <!-- Navigation Bar -->
     <nav class="navbar">
@@ -18,6 +22,7 @@
         </a>
         <div class="nav-links">
             <a href="index.html">Stocks</a>
+                <a href="/advisor.html">AI Advisor</a>
             <a href="psk/pages/about.html">About</a>
             <a href="psk/pages/products.html">Products</a>
             <a href="psk/pages/pricing.html">Pricing</a>
@@ -51,8 +56,12 @@
                       </a>
                       <a href="transactions.html" class="nav-item">
                         <i class="fas fa-wallet"></i>
-                        <span>Transaction</span>
+                        <span>Transactions</span>
                       </a>
+          <a href="/advisor.html" class="nav-item">
+            <i class="fas fa-wand-magic-sparkles"></i>
+            <span>AI Advisor</span>
+          </a>
                       <a href="dashboard1.html" class="nav-item">
                         <i class="fas fa-sliders-h"></i>
                         <span>Dashboard</span>
@@ -599,6 +608,8 @@
           </div>
         </footer>
       </div>
+    <script src="/assets/nivesh.js" defer></script>
+    <script src="/assets/trade.js" defer></script>
 </body>
 <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>  
 <script src="https://js.stripe.com/v3/"></script>

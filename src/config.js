@@ -45,4 +45,27 @@ const CHECKOUT_SLUGS = {
   oracle: "ORCL",
 };
 
-module.exports = { config, STOCKS, CHECKOUT_SLUGS };
+// Older pages stored company names instead of tickers; map them so holdings and quotes still work.
+const NAME_TO_SYMBOL = {
+  APPLE: "AAPL",
+  NVIDIA: "NVDA",
+  TESLA: "TSLA",
+  MICROSOFT: "MSFT",
+  AMAZON: "AMZN",
+  AMAZONE: "AMZN",
+  WALMART: "WMT",
+  NIKE: "NKE",
+  UBER: "UBER",
+  STARBUCKS: "SBUX",
+  NETFLIX: "NFLX",
+  "GOLDMAN SACHS": "GS",
+  GOLDMAN: "GS",
+  ORACLE: "ORCL",
+};
+
+function toSymbol(name) {
+  const key = String(name || "").trim().toUpperCase();
+  return NAME_TO_SYMBOL[key] || key;
+}
+
+module.exports = { config, STOCKS, CHECKOUT_SLUGS, toSymbol };

@@ -189,3 +189,74 @@ describe("quote service", () => {
     await expect(svc.getQuote("not a symbol!")).rejects.toMatchObject({ status: 400 });
   });
 });
+
+describe("verified checkout", () => {
+  function stripeWith(session) {
+    return {
+      checkout: {
+        sessions: {
+          create: jest.fn(async () => ({ id: "cs_test_1", url: "https://stripe.test/cs" })),
+          retrieve: jest.fn(async () => session),
+        },
+      },
+    };
+  }
+  const paid = {
+    payment_status: "paid",
+    amount_total: 30000,
+    metadata: { symbol: "TSLA", quantity: "2", price: "150", transactionType: "buy" },
+  };
+
+  test("checkout carries trade details and returns to transactions with the session id", async () => {
+    const { app, deps } = setup({ stripe: stripeWith(paid) });
+    const res = await request(app)
+      .post("/create-checkout-session")
+      .send({ symbol: "tsla", quantity: 2, price: 150 });
+    expect(res.status).toBe(200);
+    const args = deps.stripe.checkout.sessions.create.mock.calls[0][0];
+    expect(args.line_items[0].price_data.unit_amount).toBe(30000);
+    expect(args.metadata).toMatchObject({ symbol: "TSLA", quantity: "2", price: "150" });
+    expect(args.success_url).toContain("/transactions.html?session_id={CHECKOUT_SESSION_ID}");
+  });
+
+  test("confirm records a paid buy exactly once", async () => {
+    const { app, deps } = setup({ stripe: stripeWith(paid) });
+    const first = await request(app).post("/api/checkout/confirm").send({ session_id: "cs_test_1" });
+    expect(first.status).toBe(201);
+    expect(first.body.purchase).toMatchObject({ name: "TSLA", quantity: 2, total: 300, transactionType: "buy" });
+    const again = await request(app).post("/api/checkout/confirm").send({ session_id: "cs_test_1" });
+    expect(again.body.status).toBe("already_recorded");
+    expect(deps.Purchase.rows).toHaveLength(1);
+    expect(deps.aiClient.ingestTransactions).toHaveBeenCalledTimes(1);
+  });
+
+  test("confirm rejects unpaid sessions and bad ids", async () => {
+    const { app, deps } = setup({ stripe: stripeWith({ ...paid, payment_status: "unpaid" }) });
+    expect((await request(app).post("/api/checkout/confirm").send({ session_id: "cs_test_1" })).status).toBe(402);
+    expect((await request(app).post("/api/checkout/confirm").send({ session_id: "../evil" })).status).toBe(400);
+    expect(deps.Purchase.rows).toHaveLength(0);
+  });
+});
+
+describe("sell validation and tickers", () => {
+  test("cannot sell more shares than owned", async () => {
+    const Purchase = fakeModel([{ name: "TSLA", price: 100, quantity: 2, total: 200, transactionType: "buy" }]);
+    const { app } = setup({ Purchase });
+    const tooMany = await request(app)
+      .post("/store-purchase")
+      .send({ name: "Tesla", price: 120, quantity: 3, total: 360, transactionType: "sell" });
+    expect(tooMany.status).toBe(400);
+    expect(tooMany.body.error).toContain("You own 2 TSLA shares");
+    const ok = await request(app)
+      .post("/store-purchase")
+      .send({ name: "Tesla", price: 120, quantity: 2, total: 240, transactionType: "sell" });
+    expect(ok.status).toBe(201);
+    expect(ok.body.purchase.name).toBe("TSLA");
+  });
+
+  test("legacy company names map to tickers in holdings", () => {
+    expect(buildHoldings([{ name: "Goldman Sachs", price: 10, quantity: 1, transactionType: "buy" }])).toEqual([
+      { symbol: "GS", quantity: 1, avg_price: 10 },
+    ]);
+  });
+});
