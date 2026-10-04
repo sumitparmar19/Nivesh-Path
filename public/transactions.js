@@ -4,6 +4,8 @@
   const money = (n) => Number(n || 0).toLocaleString("en-US", { style: "currency", currency: "USD" });
   const esc = (s) => String(s ?? "").replace(/[&<>"']/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" })[c]);
   const NP = window.NP;
+  let leaving = false; // a fetch cancelled by navigating away is not an error worth a toast
+  window.addEventListener("beforeunload", () => { leaving = true; });
 
   const tbody = document.getElementById("transactionTable");
   const empty = document.getElementById("txEmpty");
@@ -54,6 +56,7 @@
       showSummary(await sumRes.json());
     } catch (err) {
       rows = [];
+      if (leaving) return;
       NP.toast("Couldn't load your transactions. Please refresh in a moment.", "error");
     }
     render();
