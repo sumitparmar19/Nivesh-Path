@@ -40,7 +40,7 @@ function purchaseRoutes({ Purchase, User, quotes, aiClient }) {
 
   router.post(["/store-purchase", "/api/store-purchase", "/api/trades"], requireAuth, trade);
 
-  router.get(["/transactions", "/api/transactions"], requireAuth, async (req, res, next) => {
+  router.get("/api/transactions", requireAuth, async (req, res, next) => {
     try {
       const rows = await Purchase.find({ userId: req.user.id }).sort({ timestamp: -1 }).limit(500).lean();
       res.json(rows);

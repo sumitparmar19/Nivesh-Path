@@ -155,8 +155,8 @@ Without `MONGO_URL` the advisor still works, but forgets past trades after each 
 1. Click **Create Resources** (or **Deploy**). The first build takes about 5-10 minutes; watch the
    **Activity** tab.
 2. When it shows **Live**, open the URL, for example `https://nivesh-path-xxxxx.ondigitalocean.app`:
-   - `/health` should show `"status":"ok","db":"connected","payments":true`
-   - `/advisor.html` → click **Analyze**. The badge should say **"AI insight · claude-opus-5-5"**.
+   - `/health` should show `"status":"ok","db":"connected"`
+   - `/advisor` → click **Analyze**. The badge should say **"AI insight · claude-opus-5-5"**.
 3. Put the live URL in `README.md` (the "Live demo" line) and on your resume.
 
 ### If something fails
@@ -167,6 +167,7 @@ Without `MONGO_URL` the advisor still works, but forgets past trades after each 
 | AI `/health` shows `"vector_index": {"status": "failed"}` or `"disabled"` | `MONGO_URL` is missing or wrong on the **ai** component |
 | Advisor badge says "Rule-based insight" | `ANTHROPIC_API_KEY` is missing or invalid on the **ai** component, or the account has no credit |
 | "Login required" on every page | `JWT_SECRET` changed (old tokens become invalid) - just log in again |
+| A new React page misbehaves | **web** component → Environment Variables → add `REACT_DISABLED` = the route(s), e.g. `/markets,/stock`, and save. The app redeploys and serves the old HTML page for those routes. Remove the variable to switch back |
 
 ### Cost
 `web` (0.5 GB) costs about $5/month and `ai` (1 GB) about $10/month, which the student credit

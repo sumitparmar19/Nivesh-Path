@@ -44,18 +44,18 @@ See [architecture.md](architecture.md) for the diagrams and the request flow.
 
 | Layer | Tech |
 |---|---|
-| Frontend | HTML, CSS, JavaScript (React + TypeScript + Tailwind app in progress in `psk/`) |
+| Frontend | React 18, TypeScript, Tailwind, React Router, TanStack Query, Zustand, Recharts (Vite build in `frontend/`) |
 | Backend | Node.js 22, Express, Mongoose, Redis, JWT |
 | AI service | Python 3.11, FastAPI, LangChain, Anthropic SDK, ChromaDB, Pydantic |
 | DevOps | Docker, Docker Compose, GitHub Actions, GHCR, DigitalOcean App Platform, Sentry |
-| Testing | Jest + Supertest, pytest |
+| Testing | Jest + Supertest, pytest, Vitest + Testing Library, Playwright (end-to-end in CI) |
 
 ## Run locally
 
 **Option A: Docker (everything in one command)**
 ```bash
 cp .env.example .env        # add your MongoDB, Finnhub and Anthropic keys
-docker compose up --build   # http://localhost:3000  (AI Advisor: /advisor.html)
+docker compose up --build   # http://localhost:3000  (AI Advisor: /advisor)
 ```
 
 **Option B: run each service yourself**
@@ -69,12 +69,19 @@ uvicorn main:app --port 8001
 # Backend (new terminal, repo root)
 npm install
 npm run dev
+
+# React app (new terminal): dev server on :5173 with API calls proxied to :3000
+cd frontend && npm install && npm run dev
+# or build it once and let Express serve it on :3000
+cd frontend && npm run build
 ```
 
 ## Tests
 ```bash
-npm test                      # backend: 69 Jest/Supertest tests
-cd ai-service && pytest -q    # AI service: 23 pytest tests (Claude mocked, Chroma in-memory, mongomock)
+npm test                      # backend: Jest/Supertest
+cd ai-service && pytest -q    # AI service: pytest (Claude mocked, Chroma in-memory, mongomock)
+cd frontend && npm test       # React app: Vitest + Testing Library
+cd frontend && npm run e2e    # Playwright smoke test against a running server (see frontend/playwright.config.ts)
 ```
 
 ## API highlights
@@ -82,7 +89,7 @@ cd ai-service && pytest -q    # AI service: 23 pytest tests (Claude mocked, Chro
 |---|---|---|
 | POST | `/api/ai/analyze-portfolio` | AI analysis; uses stored holdings if none are sent |
 | GET | `/api/portfolio/holdings` | Holdings derived from transactions |
-| GET | `/search`, `/stock/:symbol` | Cached live quotes |
+| GET | `/api/stocks/:symbol/quote\|profile\|metrics\|news\|candles`, `/api/stocks/search?q=` | Cached market data |
 | POST | `/api/store-purchase` | Buy/sell with virtual cash `{symbol, quantity, price, type}` (auth) |
 | GET | `/api/transactions` · `/api/portfolio/holdings` · `/api/portfolio/cash-balance` | Your trades, holdings, cash and P&L (auth) |
 | POST | `/api/register` · `/api/login` · GET `/api/me` | Auth (JWT) |

@@ -92,6 +92,17 @@ function aiRoutes({ Purchase, Analysis, quotes, aiClient }) {
     }
   });
 
+  router.delete("/api/ai/history/:id", requireAuth, async (req, res, next) => {
+    try {
+      if (!Analysis || !/^[a-f0-9]{24}$/i.test(req.params.id)) return res.status(404).json({ error: "Analysis not found" });
+      const result = await Analysis.deleteOne({ _id: req.params.id, userId: req.user.id });
+      if (!result || !result.deletedCount) return res.status(404).json({ error: "Analysis not found" });
+      res.json({ deleted: true });
+    } catch (err) {
+      next(err);
+    }
+  });
+
   // What the advisor remembers about the caller: trades in MongoDB vs trades embedded in ChromaDB.
   async function memoryResponse(req, ai) {
     const tradesInDatabase = Purchase.countDocuments

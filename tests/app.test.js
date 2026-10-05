@@ -101,6 +101,7 @@ function setup(overrides = {}) {
     Message: fakeModel(),
     mailer: { enabled: true, send: jest.fn(async () => true) },
     contactTo: "owner@example.com",
+    spa: { distDir: "/nonexistent-react-build" }, // legacy behaviour unless a test opts in
     ...overrides,
   };
   return { app: createApp(deps), deps };
@@ -153,6 +154,12 @@ describe("health and static", () => {
     }
   });
 
+  test("the old psk/ prototype folder is gone from the repo", () => {
+    const fs = require("fs");
+    const path = require("path");
+    expect(fs.existsSync(path.join(__dirname, "..", "psk"))).toBe(false);
+  });
+
   test("no page names other people or the copied Groww footer", () => {
     const fs = require("fs");
     const path = require("path");
@@ -163,10 +170,10 @@ describe("health and static", () => {
     }
   });
 
-  test("never leaks the Finnhub key", async () => {
-    process.env.FINNHUB_API_KEY = "secret-key";
-    const res = await request(setup().app).get("/api/get-api-key");
-    expect(JSON.stringify(res.body)).not.toContain("secret-key");
+  test("the old JSON quote routes are gone so /stock/:symbol is free for the React app", async () => {
+    const { app } = setup();
+    expect((await request(app).get("/api/get-api-key")).status).toBe(404);
+    expect((await request(app).get("/api/stocks/AAPL/quote")).headers["content-type"]).toContain("json");
   });
 });
 
@@ -175,7 +182,6 @@ describe("protected routes require a valid JWT", () => {
     ["post", "/api/store-purchase"],
     ["post", "/store-purchase"],
     ["get", "/api/transactions"],
-    ["get", "/transactions"],
     ["get", "/api/portfolio/holdings"],
     ["get", "/api/portfolio/cash-balance"],
     ["post", "/api/ai/analyze-portfolio"],
@@ -547,6 +553,9 @@ describe("account data is saved to the database", () => {
     expect((await request(app).get(`/api/ai/history/${run.body.analysisId}`).set(auth(a))).body.result.ok).toBe(true);
     expect((await request(app).get(`/api/ai/history/${run.body.analysisId}`).set(auth(b))).status).toBe(404);
     expect((await request(app).get("/api/ai/history").set(auth(b))).body).toEqual([]);
+    expect((await request(app).delete(`/api/ai/history/${run.body.analysisId}`).set(auth(b))).status).toBe(404);
+    expect((await request(app).delete(`/api/ai/history/${run.body.analysisId}`).set(auth(a))).body).toEqual({ deleted: true });
+    expect((await request(app).get("/api/ai/history").set(auth(a))).body).toEqual([]);
   });
 
   test("contact messages are saved and emailed, no login needed", async () => {
@@ -595,6 +604,34 @@ describe("portfolio math and quotes", () => {
     await svc.getQuote("AAPL");
     expect(fetchImpl).toHaveBeenCalledTimes(1);
     await expect(svc.getQuote("not a symbol!")).rejects.toMatchObject({ status: 400 });
+  });
+});
+
+describe("React routes are not shadowed by API aliases", () => {
+  test("GET /transactions is the page URL, not the old JSON alias", async () => {
+    const { app } = setup();
+    const res = await request(app).get("/transactions");
+    expect(res.status).not.toBe(401);
+  });
+});
+
+describe("fake market data mode (browser tests only)", () => {
+  test("FAKE_MARKET_DATA serves stable made-up prices without a Finnhub key", async () => {
+    const { app } = setup({ quotes: undefined, marketData: undefined, fakeMarket: true });
+    const a = await request(app).get("/api/stocks/AAPL/quote");
+    expect(a.status).toBe(200);
+    expect(a.body.price).toBeGreaterThan(0);
+    const b = await request(app).get("/api/stocks/AAPL/quote");
+    expect(b.body.price).toBe(a.body.price);
+    const search = await request(app).get("/api/stocks/search?q=tes");
+    expect(search.body.map((r) => r.symbol)).toContain("TSLA");
+    const candles = await request(app).get("/api/stocks/MSFT/candles");
+    expect(candles.body.available).toBe(true);
+  });
+
+  test("server.js refuses fake market data in production", () => {
+    const src = require("fs").readFileSync(require("path").join(__dirname, "..", "server.js"), "utf8");
+    expect(src).toMatch(/NODE_ENV === "production" && process\.env\.FAKE_MARKET_DATA === "1"/);
   });
 });
 
@@ -699,5 +736,78 @@ describe("stock data API (Finnhub, cached)", () => {
     const md = createMarketData({ cache: new MemoryCache(), quotes: fakeQuotes, fetchImpl: jest.fn(), apiKey: "" });
     const { app } = setup({ marketData: md });
     expect((await request(app).get("/api/stocks/AAPL/profile")).status).toBe(503);
+  });
+});
+
+describe("React app serving and staged rollout", () => {
+  const fs = require("fs");
+  const os = require("os");
+  const path = require("path");
+  const dist = fs.mkdtempSync(path.join(os.tmpdir(), "np-dist-"));
+  fs.mkdirSync(path.join(dist, "static"));
+  fs.writeFileSync(path.join(dist, "index.html"), "<!doctype html><div id=root>react-app</div>");
+  fs.writeFileSync(path.join(dist, "static", "app.js"), "console.log(1)");
+  fs.writeFileSync(path.join(dist, "logo.png"), "png");
+  const withSpa = (disabled = new Set()) => setup({ spa: { distDir: dist, disabled } }).app;
+
+  test("React routes serve index.html, including any /stock/:symbol", async () => {
+    const app = withSpa();
+    for (const route of ["/", "/portfolio", "/markets", "/stock/XOM", "/account", "/login"]) {
+      const res = await request(app).get(route);
+      expect([route, res.status, res.text]).toEqual([route, 200, expect.stringContaining("react-app")]);
+    }
+    expect((await request(app).get("/static/app.js")).headers["cache-control"]).toContain("immutable");
+  });
+
+  test("legacy URLs redirect to their React route", async () => {
+    const app = withSpa();
+    const cases = {
+      "/TSLA.html": "/stock/TSLA",
+      "/Amazone.html": "/stock/AMZN",
+      "/index.html": "/stock/AAPL",
+      "/stock.html?symbol=xom": "/stock/XOM",
+      "/search.html": "/markets",
+      "/portfolio.html": "/portfolio",
+      "/psk/pages/user-dashboard.html": "/account",
+      "/psk/pages/login.html?next=%2Fadvisor.html": "/login?redirect=%2Fadvisor.html",
+      "/psk/pages/contect.html": "/contact",
+    };
+    for (const [from, to] of Object.entries(cases)) {
+      const res = await request(app).get(from);
+      expect([from, res.status, res.headers.location]).toEqual([from, 301, to]);
+    }
+  });
+
+  test("API routes and unknown API paths are never swallowed by the React app", async () => {
+    const app = withSpa();
+    const missing = await request(app).get("/api/does-not-exist");
+    expect([missing.status, missing.headers["content-type"]]).toEqual([404, expect.stringContaining("json")]);
+    expect((await request(app).get("/api/stocks/curated")).headers["content-type"]).toContain("json");
+  });
+
+  test("unknown page URLs get the React 404 screen with a 404 status", async () => {
+    const app = withSpa();
+    const res = await request(app).get("/no-such-page");
+    expect([res.status, res.text]).toEqual([404, expect.stringContaining("react-app")]);
+    expect((await request(app).get("/missing-file.png")).status).toBe(404);
+    expect((await request(app).get("/missing-file.png")).text).not.toContain("react-app");
+  });
+
+  test("a disabled route falls back to its legacy HTML page", async () => {
+    const app = withSpa(new Set(["/markets"]));
+    expect((await request(app).get("/search.html")).status).toBe(200);
+    expect((await request(app).get("/search.html")).text).toContain("Find a stock");
+    expect((await request(app).get("/portfolio.html")).status).toBe(301);
+  });
+
+  test("without a React build the legacy site is unchanged", async () => {
+    const app = setup({ spa: { distDir: path.join(dist, "missing") } }).app;
+    expect((await request(app).get("/")).headers.location).toBe("/psk/index.html");
+    expect((await request(app).get("/TSLA.html")).status).toBe(200);
+  });
+
+  test("REACT_DISABLED parsing accepts /stock as shorthand", () => {
+    const { disabledRoutes } = require("../src/spa");
+    expect([...disabledRoutes(" /stock , /markets")]).toEqual(["/stock/:symbol", "/markets"]);
   });
 });

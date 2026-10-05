@@ -15,6 +15,10 @@ async function start() {
     console.error("JWT_SECRET must be set in production - refusing to start with the dev secret.");
     process.exit(1);
   }
+  if (process.env.NODE_ENV === "production" && process.env.FAKE_MARKET_DATA === "1") {
+    console.error("FAKE_MARKET_DATA is for automated tests only - refusing to show made-up prices in production.");
+    process.exit(1);
+  }
   if (config.mongoUrl) {
     try {
       await mongoose.connect(config.mongoUrl);
