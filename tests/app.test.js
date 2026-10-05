@@ -105,10 +105,40 @@ describe("health and static", () => {
     expect(res.body.status).toBe("ok");
   });
 
-  test("serves the dashboard and advisor pages", async () => {
+  test("serves the landing, markets, stock and advisor pages", async () => {
     const { app } = setup();
-    expect((await request(app).get("/")).status).toBe(200);
-    expect((await request(app).get("/advisor.html")).status).toBe(200);
+    const root = await request(app).get("/");
+    expect(root.status).toBe(302);
+    expect(root.headers.location).toBe("/psk/index.html");
+    for (const page of ["/psk/index.html", "/search.html", "/TSLA.html", "/stock.html", "/advisor.html", "/psk/pages/about.html"]) {
+      expect((await request(app).get(page)).status).toBe(200);
+    }
+  });
+
+  test("old company-name URLs redirect to ticker pages", async () => {
+    const { app } = setup();
+    const res = await request(app).get("/Amazone.html");
+    expect(res.status).toBe(301);
+    expect(res.headers.location).toBe("/AMZN.html");
+    expect((await request(app).get("/index.html")).headers.location).toBe("/AAPL.html");
+    expect((await request(app).get("/psk/pages/pricing.html")).status).toBe(301);
+  });
+
+  test("prototype source and config files are not served", async () => {
+    const { app } = setup();
+    for (const file of ["/psk/package.json", "/psk/src/App.tsx", "/psk/.niveshpath/prompt", "/psk/public/user-dashboard/index.html", "/footer.html"]) {
+      expect((await request(app).get(file)).status).toBeGreaterThanOrEqual(400);
+    }
+  });
+
+  test("no page names other people or the copied Groww footer", () => {
+    const fs = require("fs");
+    const path = require("path");
+    const walk = (dir) => fs.readdirSync(dir, { withFileTypes: true }).flatMap((e) =>
+      e.isDirectory() ? walk(path.join(dir, e.name)) : /\.(html|js|css)$/.test(e.name) ? [path.join(dir, e.name)] : []);
+    for (const file of walk(path.join(__dirname, "..", "public"))) {
+      expect([file, /dhrumil|viraj|harsh parekh|dhruval|groww/i.test(fs.readFileSync(file, "utf8"))]).toEqual([file, false]);
+    }
   });
 
   test("never leaks the Finnhub key", async () => {

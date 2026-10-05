@@ -1,88 +1,111 @@
 <!DOCTYPE html>
+<!-- AI Portfolio Advisor: analyze the user's holdings with Claude (grounded in their own past trades),
+     ask a question, and reopen any earlier analysis from the saved history. -->
 <html lang="en">
 <head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>AI Portfolio Advisor | Nivesh-Path</title>
-  <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;500;600;700&display=swap" rel="stylesheet">
-  <link rel="stylesheet" href="advisor.css">
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>AI Portfolio Advisor | Nivesh-Path</title>
+    <meta name="description" content="Get a plain-English read on your portfolio's risk and diversification, grounded in your own trade history.">
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Plus+Jakarta+Sans:wght@600;700;800&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
     <link rel="stylesheet" href="/assets/nivesh.css">
+    <link rel="stylesheet" href="/advisor.css">
     <link rel="icon" href="/psk/finallogo.png">
 </head>
 <body>
-  <header class="topbar">
-    <a href="index.html" class="brand"><i class="fas fa-seedling"></i> Nivesh-Path</a>
-    <nav>
-      <a href="index.html">Stocks</a>
-      <a href="/portfolio.html">Portfolio</a>
-      <a href="transactions.html">Transactions</a>
-      <a href="advisor.html" class="active">AI Advisor</a>
-      <a href="/whats-new.html">What's new</a>
+    <nav class="navbar">
+        <a href="/" class="logo">
+            <img src="/psk/finallogo.png" alt="Nivesh Path logo">
+        </a>
+        <div class="nav-links" data-np-nav></div>
     </nav>
-  </header>
 
-  <main class="wrap">
-    <section class="hero">
-      <div>
-        <p class="eyebrow"><i class="fas fa-wand-magic-sparkles"></i> Powered by Claude</p>
-        <h1>AI Portfolio Advisor</h1>
-        <p class="lede">Get a plain-English read on your portfolio: risk, diversification and next steps, grounded in your own transaction history.</p>
-      </div>
-      <a class="memory-strip" id="memoryStrip" href="/portfolio.html" hidden>
-        <i class="fas fa-brain"></i>
-        <span><strong id="memoryTitle">AI memory</strong><small id="memoryText"></small></span>
-        <i class="fas fa-chevron-right"></i>
-      </a>
-    </section>
-
-    <section class="grid">
-      <form id="advisorForm" class="card" novalidate>
-        <div class="card-head">
-          <h2>Your holdings</h2>
-          <button type="button" class="link-btn" id="reloadBtn" title="Load holdings from your transactions">
-            <i class="fas fa-rotate"></i> Load from transactions
-          </button>
+    <div class="main">
+        <div class="nav1">
+            <div class="sidebar">
+                <div class="nav-menu" data-np-sidebar></div>
+            </div>
         </div>
-        <table class="holdings">
-          <thead><tr><th>Symbol</th><th>Qty</th><th>Avg price ($)</th><th></th></tr></thead>
-          <tbody id="holdingsBody"></tbody>
-        </table>
-        <button type="button" class="ghost-btn" id="addRowBtn"><i class="fas fa-plus"></i> Add holding</button>
 
-        <label class="field">
-          <span>Risk profile</span>
-          <select id="riskProfile">
-            <option value="conservative">Conservative</option>
-            <option value="moderate" selected>Moderate</option>
-            <option value="aggressive">Aggressive</option>
-          </select>
-        </label>
 
-        <label class="field">
-          <span>Ask a question <em>(optional)</em></span>
-          <textarea id="question" rows="3" maxlength="1000" placeholder="e.g. Am I too concentrated in tech?"></textarea>
-        </label>
 
-        <button type="submit" class="primary-btn" id="analyzeBtn">
-          <i class="fas fa-brain"></i> <span>Analyze my portfolio</span>
-        </button>
-        <p class="form-error" id="formError" role="alert"></p>
-      </form>
+        <section class="np-page np-advisor">
+            <header class="np-page-head">
+                <div>
+                    <p class="np-eyebrow"><i class="fas fa-wand-magic-sparkles"></i> Powered by Claude</p>
+                    <h1>AI Portfolio Advisor</h1>
+                    <p class="np-lede">A plain-English read on your risk, diversification and next steps, grounded in your own trade history.</p>
+                </div>
+                <a class="memory-strip" id="memoryStrip" href="/portfolio.html" hidden>
+                    <i class="fas fa-brain"></i>
+                    <span><strong>AI memory</strong><small id="memoryText"></small></span>
+                    <i class="fas fa-chevron-right"></i>
+                </a>
+            </header>
 
-      <section class="card results" id="results" aria-live="polite">
-        <div class="empty" id="emptyState">
-          <i class="fas fa-chart-pie"></i>
-          <p>Your analysis will appear here.</p>
-        </div>
-      </section>
-    </section>
-  </main>
+            <div class="grid">
+                <form id="advisorForm" class="card" novalidate>
+                    <div class="card-head">
+                        <h2>Your holdings</h2>
+                        <button type="button" class="link-btn" id="reloadBtn" title="Load holdings from your trades">
+                            <i class="fas fa-rotate"></i> Load my holdings
+                        </button>
+                    </div>
+                    <table class="holdings">
+                        <thead><tr><th>Symbol</th><th>Qty</th><th>Avg price ($)</th><th></th></tr></thead>
+                        <tbody id="holdingsBody"></tbody>
+                    </table>
+                    <button type="button" class="ghost-btn" id="addRowBtn"><i class="fas fa-plus"></i> Add a what-if holding</button>
 
-  <script src="/assets/nivesh.js" defer></script>
-  <script src="advisor.js" defer></script>
+                    <label class="field">
+                        <span>Risk profile</span>
+                        <select id="riskProfile">
+                            <option value="conservative">Conservative</option>
+                            <option value="moderate" selected>Moderate</option>
+                            <option value="aggressive">Aggressive</option>
+                        </select>
+                    </label>
+
+                    <label class="field">
+                        <span>Ask a question <em>(optional)</em></span>
+                        <textarea id="question" rows="3" maxlength="1000" placeholder="e.g. Am I too concentrated in tech?"></textarea>
+                    </label>
+                    <div class="np-chips np-question-chips" id="questionChips">
+                        <button type="button" class="np-chip">Am I too concentrated?</button>
+                        <button type="button" class="np-chip">Which position is riskiest?</button>
+                        <button type="button" class="np-chip">How can I diversify?</button>
+                    </div>
+
+                    <button type="submit" class="primary-btn" id="analyzeBtn">
+                        <i class="fas fa-brain"></i> <span>Analyze my portfolio</span>
+                    </button>
+                    <p class="form-error" id="formError" role="alert"></p>
+                </form>
+
+                <section class="card results" id="results" aria-live="polite">
+                    <div class="empty" id="emptyState">
+                        <i class="fas fa-chart-pie"></i>
+                        <p>Your analysis will appear here.</p>
+                    </div>
+                </section>
+            </div>
+
+            <section class="card" id="historyCard">
+                <div class="card-head">
+                    <h2><i class="fas fa-clock-rotate-left"></i> Past analyses</h2>
+                    <span class="np-muted" style="font-size:.85rem">Saved to your account</span>
+                </div>
+                <ul class="np-history" id="historyList"><li class="np-muted">Loading…</li></ul>
+            </section>
+
+            <footer data-np-footer></footer>
+        </section>
+    </div>
+
+    <script src="/assets/nivesh.js" defer></script>
+    <script src="/advisor.js" defer></script>
 </body>
 </html>
