@@ -44,7 +44,7 @@ See [architecture.md](architecture.md) for the diagrams and the request flow.
 
 | Layer | Tech |
 |---|---|
-| Frontend | HTML, CSS, JavaScript (React + TypeScript + Tailwind app in progress in `psk/`) |
+| Frontend | HTML, CSS, JavaScript with a shared design system (React + TypeScript + Tailwind migration: Phase 2B) |
 | Backend | Node.js 22, Express, Mongoose, Redis, JWT |
 | AI service | Python 3.11, FastAPI, LangChain, Anthropic SDK, ChromaDB, Pydantic |
 | DevOps | Docker, Docker Compose, GitHub Actions, GHCR, DigitalOcean App Platform, Sentry |
