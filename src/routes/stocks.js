@@ -39,30 +39,8 @@ function stockRoutes({ quotes, marketData }) {
     }
   });
 
-  router.get("/stock/:symbol", async (req, res, next) => {
-    try {
-      res.json(await quotes.getQuote(req.params.symbol));
-    } catch (err) {
-      next(err);
-    }
-  });
-
-  router.get("/stock", async (req, res, next) => {
-    try {
-      res.json(await quotes.getQuote(req.query.symbol || "AAPL"));
-    } catch (err) {
-      next(err);
-    }
-  });
-
   router.get("/api/stocks", (req, res) => {
     res.json(Object.entries(STOCKS).map(([symbol, name]) => ({ symbol, name })));
-  });
-
-  // Kept for the existing company pages: they used to call Finnhub directly with this key.
-  // The key is no longer exposed; quotes go through /stock/:symbol instead.
-  router.get("/api/get-api-key", (req, res) => {
-    res.json({ apiKey: "proxied" });
   });
 
   return router;
