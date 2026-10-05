@@ -3,7 +3,7 @@ const { config } = require("../config");
 
 const SYMBOL_RE = /^[A-Z.]{1,10}$/;
 
-function createQuoteService({ cache, fetchImpl = fetch }) {
+function createQuoteService({ cache, fetchImpl = fetch, apiKey = config.finnhubApiKey }) {
   async function getQuote(rawSymbol) {
     const symbol = String(rawSymbol || "").toUpperCase();
     if (!SYMBOL_RE.test(symbol)) {
@@ -16,13 +16,13 @@ function createQuoteService({ cache, fetchImpl = fetch }) {
     const cached = await cache.get(key);
     if (cached) return cached;
 
-    if (!config.finnhubApiKey) {
+    if (!apiKey) {
       const err = new Error("FINNHUB_API_KEY is not configured");
       err.status = 503;
       throw err;
     }
 
-    const url = `https://finnhub.io/api/v1/quote?symbol=${encodeURIComponent(symbol)}&token=${config.finnhubApiKey}`;
+    const url = `https://finnhub.io/api/v1/quote?symbol=${encodeURIComponent(symbol)}&token=${apiKey}`;
     const response = await fetchImpl(url);
     if (!response.ok) {
       const err = new Error(`Quote provider returned ${response.status}`);

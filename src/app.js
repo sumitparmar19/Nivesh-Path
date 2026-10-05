@@ -19,6 +19,8 @@ const watchlistRoutes = require("./routes/watchlist");
 const contactRoutes = require("./routes/contact");
 const { createMailer } = require("./lib/mailer");
 const { createMarketData } = require("./lib/marketData");
+const { mountSpa, mountSpaNotFound } = require("./spa");
+const { fakeFetch, FAKE_API_KEY } = require("./lib/fakeMarket");
 
 const LEGACY_PAGES = {
   "/index.html": "/AAPL.html",
@@ -46,8 +48,11 @@ function createApp(deps = {}) {
   const Purchase = deps.Purchase || require("../models/Stock1");
   const User = deps.User || require("./models/User");
   const cache = deps.cache || createCache();
-  const quotes = deps.quotes || createQuoteService({ cache });
-  const marketData = deps.marketData || createMarketData({ cache, quotes, fetchImpl: deps.fetchImpl });
+  // FAKE_MARKET_DATA=1 (browser tests only, refused in production by server.js): made-up prices, no Finnhub key.
+  const fake = deps.fakeMarket ?? process.env.FAKE_MARKET_DATA === "1";
+  const market = fake ? { fetchImpl: fakeFetch, apiKey: FAKE_API_KEY } : { fetchImpl: deps.fetchImpl };
+  const quotes = deps.quotes || createQuoteService({ cache, ...market });
+  const marketData = deps.marketData || createMarketData({ cache, quotes, ...market });
   const aiClient = deps.aiClient || createAiClient();
   const Analysis = deps.Analysis || require("./models/Analysis");
   const Watchlist = deps.Watchlist || require("./models/Watchlist");
@@ -100,11 +105,15 @@ function createApp(deps = {}) {
   app.use(contactRoutes({ Message, mailer, contactTo: deps.contactTo }));
   app.use(aiRoutes({ Purchase, Analysis, quotes, aiClient }));
 
+  // React app (frontend/dist): enabled routes take over, and the legacy URLs they replace redirect to them.
+  app.locals.reactRoutes = mountSpa(app, deps.spa || {});
+
   // Old page URLs (company-name pages, removed marketing pages) keep working via permanent redirects.
   app.get("/", (req, res) => res.redirect(302, "/psk/index.html"));
   app.get(Object.keys(LEGACY_PAGES), (req, res) => res.redirect(301, LEGACY_PAGES[req.path]));
 
   app.use(express.static(path.join(__dirname, "..", "public"), { index: false, dotfiles: "deny" }));
+  if (app.locals.reactRoutes.length) mountSpaNotFound(app, deps.spa || {});
 
   app.use("/api", (req, res) => res.status(404).json({ error: "Not found" }));
 
