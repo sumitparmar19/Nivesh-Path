@@ -1,0 +1,64 @@
+<!DOCTYPE html>
+<!-- Watchlist: stocks the user follows, with live prices; saved per user in MongoDB (/api/watchlist). -->
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Watchlist | Nivesh-Path</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Plus+Jakarta+Sans:wght@600;700;800&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
+    <link rel="stylesheet" href="/assets/nivesh.css">
+    <link rel="icon" href="/psk/finallogo.png">
+</head>
+<body>
+    <nav class="navbar">
+        <a href="/" class="logo">
+            <img src="/psk/finallogo.png" alt="Nivesh Path logo">
+        </a>
+        <div class="nav-links" data-np-nav></div>
+    </nav>
+
+    <div class="main">
+        <div class="nav1">
+            <div class="sidebar">
+                <div class="nav-menu" data-np-sidebar></div>
+            </div>
+        </div>
+
+
+
+        <section class="np-page">
+            <header class="np-page-head">
+                <div>
+                    <p class="np-eyebrow">Watchlist</p>
+                    <h1>Stocks you're watching</h1>
+                    <p class="np-lede">Star any stock to follow it here. Saved to your account, so it's the same on every device.</p>
+                </div>
+                <form class="np-add-watch" id="addForm">
+                    <label class="np-search"><i class="fas fa-plus"></i>
+                        <input id="addSymbol" placeholder="Add a ticker, e.g. XOM" maxlength="10" autocomplete="off" aria-label="Ticker to add">
+                    </label>
+                    <button type="submit" class="np-btn">Add</button>
+                </form>
+            </header>
+
+            <div class="np-card np-card-pad">
+                <div class="np-stock-list" id="watchList"><p class="np-muted">Loading your watchlist…</p></div>
+                <div class="np-empty" id="watchEmpty" hidden>
+                    <i class="fas fa-star"></i>
+                    <h3>Nothing here yet</h3>
+                    <p>Open any stock and tap <b>Watch</b>, or add a ticker above.</p>
+                    <a class="np-btn" href="/search.html">Browse markets</a>
+                </div>
+            </div>
+
+            <footer data-np-footer></footer>
+        </section>
+    </div>
+
+    <script src="/assets/nivesh.js" defer></script>
+    <script src="/watchlist.js" defer></script>
+</body>
+</html>

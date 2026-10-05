@@ -24,7 +24,12 @@ function matches(doc, filter = {}) {
 }
 function applyUpdate(doc, update) {
   for (const [k, v] of Object.entries(update.$inc || {})) doc[k] = (doc[k] || 0) + v;
-  Object.assign(doc, update.$set || {});
+  for (const [k, v] of Object.entries(update.$set || {})) {
+    const keys = k.split(".");
+    let target = doc;
+    keys.slice(0, -1).forEach((key) => { target = target[key] = target[key] || {}; });
+    target[keys[keys.length - 1]] = v;
+  }
 }
 function fakeModel(initial = [], defaults = {}) {
   const rows = initial.map((r, i) => ({ _id: `seed${i}`, ...r }));
@@ -46,6 +51,16 @@ function fakeModel(initial = [], defaults = {}) {
       if (!doc) return null;
       applyUpdate(doc, update);
       return doc;
+    },
+    deleteMany: async (filter) => {
+      const before = rows.length;
+      for (let i = rows.length - 1; i >= 0; i--) if (matches(rows[i], filter)) rows.splice(i, 1);
+      return { deletedCount: before - rows.length };
+    },
+    deleteOne: async (filter) => {
+      const i = rows.findIndex((r) => matches(r, filter));
+      if (i >= 0) rows.splice(i, 1);
+      return { deletedCount: i >= 0 ? 1 : 0 };
     },
     updateOne: async (filter, update) => {
       const doc = rows.find((r) => matches(r, filter));
@@ -74,11 +89,17 @@ function setup(overrides = {}) {
         user_id: userId, indexed_trades: 1, durable_storage: true,
         index: { status: "ok", users: 2, transactions: 5, seconds: 0.4 }, patterns: [],
       })),
+      deleteMemory: jest.fn(async () => ({ deleted: true })),
       rebuildMemory: jest.fn(async (userId) => ({
         user_id: userId, indexed_trades: 2, durable_storage: true,
         index: { status: "ok", users: 2, transactions: 5, seconds: 0.4 }, patterns: [],
       })),
     },
+    Analysis: fakeModel(),
+    Watchlist: fakeModel([], { addedAt: new Date() }),
+    Message: fakeModel(),
+    mailer: { enabled: true, send: jest.fn(async () => true) },
+    contactTo: "owner@example.com",
     ...overrides,
   };
   return { app: createApp(deps), deps };
@@ -160,6 +181,15 @@ describe("protected routes require a valid JWT", () => {
     ["get", "/api/me"],
     ["get", "/api/ai/memory"],
     ["post", "/api/ai/memory/rebuild"],
+    ["patch", "/api/me"],
+    ["patch", "/api/me/settings"],
+    ["post", "/api/me/password"],
+    ["delete", "/api/me"],
+    ["get", "/api/me/avatar"],
+    ["get", "/api/watchlist"],
+    ["post", "/api/watchlist"],
+    ["post", "/api/portfolio/reset"],
+    ["get", "/api/ai/history"],
   ];
   test.each(routes)("%s %s without a token -> 401", async (method, path) => {
     const res = await request(setup().app)[method](path).send({});
@@ -401,6 +431,138 @@ describe("AI memory and status", () => {
     const res = await request(app).get("/api/status");
     expect(res.status).toBe(200);
     expect(res.body.ai).toEqual({ reachable: false });
+  });
+});
+
+describe("account data is saved to the database", () => {
+  test("profile edits persist and are only the caller's", async () => {
+    const { app, deps } = setup();
+    const a = await newUser(app);
+    const b = await newUser(app);
+    const res = await request(app).patch("/api/me").set(auth(a)).send({ name: "Asha K", city: "Buffalo", country: "USA", nickname: "ak", passwordHash: "x" });
+    expect(res.status).toBe(200);
+    expect(res.body).toMatchObject({ name: "Asha K", city: "Buffalo", country: "USA", nickname: "ak" });
+    expect((await request(app).get("/api/me").set(auth(a))).body.city).toBe("Buffalo");
+    expect((await request(app).get("/api/me").set(auth(b))).body.city).toBe("");
+    expect(deps.User.rows.find((u) => String(u._id) === a.id).passwordHash).not.toBe("x");
+  });
+
+  test("email/mobile must stay unique and valid", async () => {
+    const { app } = setup();
+    const a = await newUser(app);
+    const b = await newUser(app);
+    expect((await request(app).patch("/api/me").set(auth(a)).send({ email: b.email })).status).toBe(409);
+    expect((await request(app).patch("/api/me").set(auth(a)).send({ email: "not-an-email" })).status).toBe(400);
+    expect((await request(app).patch("/api/me").set(auth(a)).send({ email: "New@Mail.com" })).body.email).toBe("new@mail.com");
+  });
+
+  test("settings persist and come back on login", async () => {
+    const { app } = setup();
+    const a = await newUser(app);
+    expect((await request(app).patch("/api/me/settings").set(auth(a)).send({ theme: "dark", notifications: false })).body)
+      .toMatchObject({ theme: "dark", notifications: false });
+    expect((await request(app).patch("/api/me/settings").set(auth(a)).send({ theme: "purple" })).status).toBe(400);
+    const login = await request(app).post("/api/login").send({ mobile: a.mobile, password: a.password });
+    expect(login.body.user.settings).toMatchObject({ theme: "dark", notifications: false });
+  });
+
+  test("password change checks the current password", async () => {
+    const { app } = setup();
+    const a = await newUser(app);
+    expect((await request(app).post("/api/me/password").set(auth(a)).send({ currentPassword: "wrong", newPassword: "newpass1" })).status).toBe(403);
+    expect((await request(app).post("/api/me/password").set(auth(a)).send({ currentPassword: a.password, newPassword: "newpass1" })).status).toBe(200);
+    expect((await request(app).post("/api/login").send({ mobile: a.mobile, password: a.password })).status).toBe(401);
+    expect((await request(app).post("/api/login").send({ email: a.email, password: "newpass1" })).status).toBe(200);
+  });
+
+  test("initials avatar is an SVG", async () => {
+    const { app } = setup();
+    const a = await newUser(app);
+    await request(app).patch("/api/me").set(auth(a)).send({ name: "Sumit Parmar" });
+    const res = await request(app).get("/api/me/avatar").set(auth(a)).buffer(true)
+      .parse((r, cb) => { let d = ""; r.on("data", (c) => { d += c; }); r.on("end", () => cb(null, d)); });
+    expect(res.headers["content-type"]).toContain("image/svg+xml");
+    expect(res.body).toContain(">SP</text>");
+  });
+
+  test("watchlist add, list, remove and isolation", async () => {
+    const { app } = setup();
+    const a = await newUser(app);
+    const b = await newUser(app);
+    expect((await request(app).post("/api/watchlist").set(auth(a)).send({ symbol: "tsla" })).status).toBe(201);
+    expect((await request(app).post("/api/watchlist").set(auth(a)).send({ symbol: "TSLA" })).status).toBe(200);
+    expect((await request(app).post("/api/watchlist").set(auth(a)).send({ symbol: "bad symbol!" })).status).toBe(400);
+    await request(app).post("/api/watchlist").set(auth(a)).send({ symbol: "XOM" });
+    expect((await request(app).get("/api/watchlist").set(auth(a))).body.map((w) => w.symbol).sort()).toEqual(["TSLA", "XOM"]);
+    expect((await request(app).get("/api/watchlist").set(auth(b))).body).toEqual([]);
+    expect((await request(app).delete("/api/watchlist/TSLA").set(auth(b))).body.removed).toBe(false);
+    expect((await request(app).delete("/api/watchlist/TSLA").set(auth(a))).body.removed).toBe(true);
+  });
+
+  test("reset puts cash back to $100k and clears only the caller's trades", async () => {
+    const { app, deps } = setup();
+    const a = await newUser(app);
+    const b = await newUser(app);
+    await buy(app, a, "TSLA", 5);
+    await buy(app, b, "AAPL", 2);
+    expect((await request(app).post("/api/portfolio/reset").set(auth(a)).send({})).status).toBe(400);
+    const res = await request(app).post("/api/portfolio/reset").set(auth(a)).send({ confirm: "RESET" });
+    expect(res.body).toMatchObject({ success: true, cashBalance: 100000, tradesRemoved: 1 });
+    expect((await request(app).get("/api/transactions").set(auth(a))).body).toEqual([]);
+    expect((await request(app).get("/api/transactions").set(auth(b))).body).toHaveLength(1);
+    expect((await request(app).get("/api/portfolio/cash-balance").set(auth(a))).body.cashBalance).toBe(100000);
+    expect(deps.aiClient.deleteMemory).toHaveBeenCalledWith(a.id);
+  });
+
+  test("delete account removes the user and all their data", async () => {
+    const { app, deps } = setup();
+    const a = await newUser(app);
+    const b = await newUser(app);
+    await buy(app, a, "NVDA", 1);
+    await buy(app, b, "NVDA", 1);
+    await request(app).post("/api/watchlist").set(auth(a)).send({ symbol: "NVDA" });
+    await request(app).post("/api/ai/analyze-portfolio").set(auth(a)).send({});
+    expect((await request(app).delete("/api/me").set(auth(a)).send({ password: a.password })).status).toBe(400);
+    expect((await request(app).delete("/api/me").set(auth(a)).send({ password: "wrong", confirm: "DELETE" })).status).toBe(403);
+    expect((await request(app).delete("/api/me").set(auth(a)).send({ password: a.password, confirm: "DELETE" })).status).toBe(200);
+    expect((await request(app).get("/api/me").set(auth(a))).status).toBe(401);
+    expect(deps.Purchase.rows.filter((r) => String(r.userId) === a.id)).toHaveLength(0);
+    expect(deps.Watchlist.rows).toHaveLength(0);
+    expect(deps.Analysis.rows).toHaveLength(0);
+    expect(deps.Purchase.rows.filter((r) => String(r.userId) === b.id)).toHaveLength(1);
+    expect(deps.aiClient.deleteMemory).toHaveBeenCalledWith(a.id);
+  });
+
+  test("each AI analysis is saved and only its owner can reopen it", async () => {
+    const { app } = setup();
+    const a = await newUser(app);
+    const b = await newUser(app);
+    await buy(app, a, "MSFT", 2);
+    const run = await request(app).post("/api/ai/analyze-portfolio").set(auth(a)).send({ question: "Am I diversified?", risk_profile: "aggressive" });
+    expect(run.body.analysisId).toBeTruthy();
+    const list = await request(app).get("/api/ai/history").set(auth(a));
+    expect(list.body).toHaveLength(1);
+    expect(list.body[0]).toMatchObject({ id: run.body.analysisId, question: "Am I diversified?", riskProfile: "aggressive" });
+    expect((await request(app).get(`/api/ai/history/${run.body.analysisId}`).set(auth(a))).body.result.ok).toBe(true);
+    expect((await request(app).get(`/api/ai/history/${run.body.analysisId}`).set(auth(b))).status).toBe(404);
+    expect((await request(app).get("/api/ai/history").set(auth(b))).body).toEqual([]);
+  });
+
+  test("contact messages are saved and emailed, no login needed", async () => {
+    const { app, deps } = setup();
+    expect((await request(app).post("/api/contact").send({ name: "Visitor", email: "nope", message: "hi" })).status).toBe(400);
+    const res = await request(app).post("/api/contact").send({ name: "Visitor", email: "v@x.com", subject: "Hello", message: "Nice project" });
+    expect(res.status).toBe(201);
+    expect(res.body).toEqual({ success: true, emailed: true });
+    expect(deps.Message.rows[0]).toMatchObject({ name: "Visitor", email: "v@x.com", message: "Nice project", emailed: true });
+    expect(deps.mailer.send).toHaveBeenCalledWith(expect.objectContaining({ to: "owner@example.com", replyTo: "v@x.com" }));
+  });
+
+  test("contact still saves when email is not configured or fails", async () => {
+    const { app, deps } = setup({ mailer: { enabled: true, send: async () => false } });
+    const res = await request(app).post("/api/contact").send({ name: "V", email: "v@x.com", message: "Hi" });
+    expect(res.body).toEqual({ success: true, emailed: false });
+    expect(deps.Message.rows).toHaveLength(1);
   });
 });
 

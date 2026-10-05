@@ -14,6 +14,10 @@ const purchaseRoutes = require("./routes/purchases");
 const { authRoutes } = require("./routes/auth");
 const { optionalAuth } = require("./middleware/auth");
 const aiRoutes = require("./routes/ai");
+const { accountRoutes } = require("./routes/account");
+const watchlistRoutes = require("./routes/watchlist");
+const contactRoutes = require("./routes/contact");
+const { createMailer } = require("./lib/mailer");
 
 const LEGACY_PAGES = {
   "/index.html": "/AAPL.html",
@@ -42,6 +46,10 @@ function createApp(deps = {}) {
   const User = deps.User || require("./models/User");
   const quotes = deps.quotes || createQuoteService({ cache: deps.cache || createCache() });
   const aiClient = deps.aiClient || createAiClient();
+  const Analysis = deps.Analysis || require("./models/Analysis");
+  const Watchlist = deps.Watchlist || require("./models/Watchlist");
+  const Message = deps.Message || require("./models/Message");
+  const mailer = deps.mailer || createMailer();
 
   const app = express();
   app.disable("x-powered-by");
@@ -84,7 +92,10 @@ function createApp(deps = {}) {
   app.use(stockRoutes({ quotes }));
   app.use(purchaseRoutes({ Purchase, User, quotes, aiClient }));
   app.use(authRoutes({ User }));
-  app.use(aiRoutes({ Purchase, quotes, aiClient }));
+  app.use(accountRoutes({ User, Purchase, Watchlist, Analysis, aiClient }));
+  app.use(watchlistRoutes({ Watchlist }));
+  app.use(contactRoutes({ Message, mailer, contactTo: deps.contactTo }));
+  app.use(aiRoutes({ Purchase, Analysis, quotes, aiClient }));
 
   // Old page URLs (company-name pages, removed marketing pages) keep working via permanent redirects.
   app.get("/", (req, res) => res.redirect(302, "/psk/index.html"));

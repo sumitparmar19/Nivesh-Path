@@ -10,6 +10,10 @@ const config = {
   redisUrl: process.env.REDIS_URL || "",
   aiServiceUrl: (process.env.AI_SERVICE_URL || "http://localhost:8001").replace(/\/$/, ""),
   sentryDsn: process.env.SENTRY_DSN || "",
+  // Optional email (contact form) via Resend
+  resendApiKey: process.env.RESEND_API_KEY || "",
+  mailFrom: process.env.MAIL_FROM || "Nivesh-Path <onboarding@resend.dev>",
+  contactToEmail: process.env.CONTACT_TO_EMAIL || "",
   quoteCacheSeconds: Number(process.env.QUOTE_CACHE_SECONDS) || 60,
 };
 

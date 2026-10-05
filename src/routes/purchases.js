@@ -66,6 +66,19 @@ function purchaseRoutes({ Purchase, User, quotes, aiClient }) {
     }
   });
 
+  router.post("/api/portfolio/reset", requireAuth, async (req, res, next) => {
+    try {
+      if ((req.body || {}).confirm !== "RESET") return res.status(400).json({ error: "Type RESET to confirm" });
+      const result = await ledger.reset(req.user.id);
+      if (aiClient && aiClient.deleteMemory) {
+        aiClient.deleteMemory(req.user.id).catch((err) => console.warn("AI memory not cleared:", err.message));
+      }
+      return res.json({ success: true, ...result });
+    } catch (err) {
+      return next(err);
+    }
+  });
+
   return router;
 }
 

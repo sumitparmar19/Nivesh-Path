@@ -4,7 +4,7 @@ const rateLimit = require("express-rate-limit");
 const { buildHoldings } = require("../lib/portfolio");
 const { requireAuth } = require("../middleware/auth");
 
-function aiRoutes({ Purchase, quotes, aiClient }) {
+function aiRoutes({ Purchase, Analysis, quotes, aiClient }) {
   const router = express.Router();
 
   // Each analysis is a paid LLM call, so cap it per user.
@@ -39,13 +39,54 @@ function aiRoutes({ Purchase, quotes, aiClient }) {
         };
       });
 
+      const riskProfile = ["conservative", "moderate", "aggressive"].includes(body.risk_profile) ? body.risk_profile : "moderate";
+      const question = body.question ? String(body.question).slice(0, 1000) : undefined;
       const result = await aiClient.analyzePortfolio({
         user_id: req.user.id,
         holdings: enriched,
-        question: body.question || undefined,
-        risk_profile: body.risk_profile || "moderate",
+        question,
+        risk_profile: riskProfile,
       });
-      res.json(result);
+
+      // Save the analysis so the user can reopen it later; a save failure never hides the answer.
+      let analysisId;
+      if (Analysis) {
+        try {
+          const saved = await Analysis.create({ userId: req.user.id, question, riskProfile, holdings: enriched, result });
+          analysisId = String(saved._id);
+        } catch (err) {
+          console.warn("Analysis not saved:", err.message);
+        }
+      }
+      res.json({ ...result, analysisId });
+    } catch (err) {
+      next(err);
+    }
+  });
+
+  // Saved analyses, newest first (summary fields only; open one for the full result).
+  router.get("/api/ai/history", requireAuth, async (req, res, next) => {
+    try {
+      if (!Analysis) return res.json([]);
+      const rows = await Analysis.find({ userId: req.user.id }).sort({ createdAt: -1 }).limit(30).lean();
+      res.json(rows.map((a) => ({
+        id: String(a._id),
+        createdAt: a.createdAt,
+        question: a.question || null,
+        riskProfile: a.riskProfile,
+        result: { insight: a.result && a.result.insight ? { risk_level: a.result.insight.risk_level, summary: a.result.insight.summary } : null },
+      })));
+    } catch (err) {
+      next(err);
+    }
+  });
+
+  router.get("/api/ai/history/:id", requireAuth, async (req, res, next) => {
+    try {
+      if (!Analysis || !/^[a-f0-9]{24}$/i.test(req.params.id)) return res.status(404).json({ error: "Analysis not found" });
+      const a = await Analysis.findOne({ _id: req.params.id, userId: req.user.id });
+      if (!a) return res.status(404).json({ error: "Analysis not found" });
+      res.json({ id: String(a._id), createdAt: a.createdAt, question: a.question || null, riskProfile: a.riskProfile, holdings: a.holdings, result: a.result });
     } catch (err) {
       next(err);
     }

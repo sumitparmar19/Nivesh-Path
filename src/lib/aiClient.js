@@ -29,6 +29,7 @@ function createAiClient({ fetchImpl = fetch, baseUrl = config.aiServiceUrl, time
     health: () => request("GET", "/health", undefined, 5000),
     memory: (userId) => request("GET", memoryPath(userId), undefined, 8000),
     rebuildMemory: (userId) => request("POST", `${memoryPath(userId)}/rebuild`, undefined, 30000),
+    deleteMemory: (userId) => request("DELETE", memoryPath(userId), undefined, 10000),
   };
 }
 

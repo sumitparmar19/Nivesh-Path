@@ -16,6 +16,12 @@ function publicUser(user) {
     city: user.city || "",
     address: user.address || "",
     cashBalance: user.cashBalance ?? 100000,
+    settings: {
+      theme: (user.settings && user.settings.theme) || "light",
+      language: (user.settings && user.settings.language) || "English",
+      notifications: user.settings ? user.settings.notifications !== false : true,
+    },
+    createdAt: user.createdAt,
   };
 }
 
@@ -79,4 +85,4 @@ function authRoutes({ User }) {
   return router;
 }
 
-module.exports = { authRoutes };
+module.exports = { authRoutes, publicUser };

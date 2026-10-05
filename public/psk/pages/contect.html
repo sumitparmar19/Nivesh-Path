@@ -1,10 +1,13 @@
 <!DOCTYPE html>
+<!-- Contact: a form that is saved to MongoDB and emailed to the owner (POST /api/contact), plus the
+     owner's real links. Works with or without login. -->
 <html lang="en">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Contact Us</title>
-    <link rel="stylesheet" href="style.css">
+    <title>Contact | Nivesh-Path</title>
+    <meta name="description" content="Send feedback or a question about Nivesh-Path.">
+    <link rel="stylesheet" href="/psk/css/style.css">
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Plus+Jakarta+Sans:wght@600;700;800&display=swap" rel="stylesheet">
@@ -13,83 +16,52 @@
     <link rel="icon" href="/psk/finallogo.png">
 </head>
 <body>
-    <!-- <header>
-        <nav>
-            <ul>
-                <li><a href="../index.html">Home</a></li>
-                <li><a href="about.html">About</a></li>
-                <li><a href="contect.html">Contact</a></li>
-            </ul>
-        </nav>
-    </header> -->
     <nav class="navbar">
-        <a href="../../index.html" class="logo">
-            <img src="/psk/finallogo.png" alt="Nivesh Path logo">
-            <span class="logo-text"></span>
-        </a>
+        <a href="/" class="logo"><img src="/psk/finallogo.png" alt="Nivesh-Path home"></a>
         <div class="nav-links" data-np-nav></div>
     </nav>
 
-
-    <section class="contact-section">
-        <div class="contact-info">
-            <h2>Contact Information</h2>
-            <br><br>
-            <p>Say something to start a live chat!</p>
-            <ul>
-                <br><br><br>
-                <!-- Phone Number with Icon -->
-                <li><img src="phon.png" alt="Phone Icon" class="icon"> phone : +1012 3456 789</li>
-                <br><br><br>
-                <!-- Email with Icon -->
-                <li><img src="mail.jpg" alt="Email Icon" class="icon"> email : demo@gmail.com</li>
-                <br><br><br>
-                <!-- Address with Icon -->
-                <li><img src="address.jpg" alt="Location Icon" class="icon"> location : 132 Dartmouth Street, Boston, MA 02156, USA</li>
-            </ul>
-            <br><br>
-
-            <!-- Social Media Icons with Images -->
-            <div class="social-icons">
-                <a href="https://www.github.com/" target="_blank"><img src="git2.png" alt="GitHub"></a><br><br><br><br>
-                <a href="https://www.instagram.com/" target="_blank"><img src="Instagram_logo_2022.svg.png" alt="Instagram"></a><br><br><br><br>
-                <a href="https://www.linkedin.com/in/" target="_blank"><img src="linkdin .png" alt= "LinkedIn"></a><br><br><br><br>
-                <a href="https://wa.me/" target="_blank"><img src="WhatsApp.svg.png" alt="WhatsApp"></a>
+    <main class="np-doc">
+        <header class="np-page-head">
+            <div>
+                <p class="np-eyebrow">Contact</p>
+                <h1>Get in touch</h1>
+                <p class="np-lede">Feedback, a bug, or a question about the project? Your message goes straight to Sumit.</p>
             </div>
-        </div>
+        </header>
 
-        <div class="contact-form">
-            <h2>Contact Us</h2>
-            <p>Any questions or remarks? Just write us a message!</p>
-            <form action="#" method="post">
-                <div class="form-group">
-                    <input type="text" name="first_name" placeholder="First Name" required>
-                    <input type="text" name="last_name" placeholder="Last Name" required>
+        <div class="np-grid-2">
+            <form class="np-card np-card-pad np-form" id="contactForm" novalidate>
+                <div class="np-form-grid">
+                    <label>Your name<input name="name" autocomplete="name" maxlength="100" required></label>
+                    <label>Your email<input name="email" type="email" autocomplete="email" maxlength="200" required></label>
+                    <label class="np-span-2">Topic
+                        <select name="subject" class="np-select">
+                            <option>Feedback</option>
+                            <option>Bug report</option>
+                            <option>Question</option>
+                            <option>Hiring / collaboration</option>
+                        </select>
+                    </label>
+                    <label class="np-span-2">Message<textarea name="message" rows="6" maxlength="5000" required placeholder="What's on your mind?"></textarea></label>
                 </div>
-                <div class="form-group">
-                    <input type="email" name="email" placeholder="Email" required>
-                    <input type="tel" name="phone" placeholder="Phone Number">
-                </div>
-                <div class="form-group">
-                    <label>Select Subject:</label>
-                    <div class="radio-options"><br>
-                        <label><input type="radio" name="subject" value="General Inquiry" checked> General Inquiry</label><br>
-                        <label><input type="radio" name="subject" value="Support"> Support</label><br>
-                        <label><input type="radio" name="subject" value="Feedback"> Feedback</label><br>
-                    </div>
-                </div>
-                
-                <div class="form-group">
-                    <textarea name="message" placeholder="Write your message..." rows="5" required></textarea>
-                </div>
-                <button type="submit">Send Message</button>
+                <button type="submit" class="np-btn"><i class="fas fa-paper-plane"></i> Send message</button>
             </form>
-        </div>
-    </section>
 
+            <aside class="np-card np-card-pad">
+                <h2 style="margin:0 0 12px;font-size:1.15rem">Other ways to reach me</h2>
+                <ul class="np-checks">
+                    <li><span><i class="fab fa-github"></i> GitHub</span><b><a class="np-link" href="https://github.com/sumitparmar19" target="_blank" rel="noopener">sumitparmar19</a></b></li>
+                    <li><span><i class="fab fa-linkedin"></i> LinkedIn</span><b><a class="np-link" href="https://www.linkedin.com/in/sumit-parmar-07a544278" target="_blank" rel="noopener">Sumit Parmar</a></b></li>
+                    <li><span><i class="fas fa-circle-question"></i> Common questions</span><b><a class="np-link" href="/psk/pages/about.html#faq">FAQ</a></b></li>
+                </ul>
+                <p class="np-muted" style="margin:14px 0 0;font-size:.88rem">Messages are stored securely and only read by the project owner.</p>
+            </aside>
+        </div>
+    </main>
 
     <footer data-np-footer></footer>
-    <script src="../js/main.js"></script>
     <script src="/assets/nivesh.js" defer></script>
+    <script src="/psk/js/contact.js" defer></script>
 </body>
 </html>
