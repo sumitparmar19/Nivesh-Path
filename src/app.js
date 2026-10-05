@@ -15,6 +15,28 @@ const { authRoutes } = require("./routes/auth");
 const { optionalAuth } = require("./middleware/auth");
 const aiRoutes = require("./routes/ai");
 
+const LEGACY_PAGES = {
+  "/index.html": "/AAPL.html",
+  "/Nvidia.html": "/NVDA.html",
+  "/Tesla.html": "/TSLA.html",
+  "/Microsoft.html": "/MSFT.html",
+  "/Amazone.html": "/AMZN.html",
+  "/Walmart.html": "/WMT.html",
+  "/Nike.html": "/NKE.html",
+  "/Uber.html": "/UBER.html",
+  "/Starbucks.html": "/SBUX.html",
+  "/Netflix.html": "/NFLX.html",
+  "/Goldman.html": "/GS.html",
+  "/Oracle.html": "/ORCL.html",
+  "/dashboard1.html": "/portfolio.html",
+  "/success.html": "/portfolio.html",
+  "/cancel.html": "/portfolio.html",
+  "/demo.html": "/search.html",
+  "/psk/pages/products.html": "/psk/pages/about.html",
+  "/psk/pages/pricing.html": "/psk/pages/about.html#faq",
+  "/psk/pages/support.html": "/psk/pages/contect.html",
+};
+
 function createApp(deps = {}) {
   const Purchase = deps.Purchase || require("../models/Stock1");
   const User = deps.User || require("./models/User");
@@ -64,7 +86,11 @@ function createApp(deps = {}) {
   app.use(authRoutes({ User }));
   app.use(aiRoutes({ Purchase, quotes, aiClient }));
 
-  app.use(express.static(path.join(__dirname, "..", "public")));
+  // Old page URLs (company-name pages, removed marketing pages) keep working via permanent redirects.
+  app.get("/", (req, res) => res.redirect(302, "/psk/index.html"));
+  app.get(Object.keys(LEGACY_PAGES), (req, res) => res.redirect(301, LEGACY_PAGES[req.path]));
+
+  app.use(express.static(path.join(__dirname, "..", "public"), { index: false, dotfiles: "deny" }));
 
   app.use("/api", (req, res) => res.status(404).json({ error: "Not found" }));
 

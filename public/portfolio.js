@@ -12,16 +12,8 @@
   let leaving = false;
   window.addEventListener("beforeunload", () => { leaving = true; });
 
-  // Company pages that exist for each ticker (Apple has no page yet, so it falls back to search).
-  const PAGES = {
-    NVDA: "Nvidia", TSLA: "Tesla", MSFT: "Microsoft", AMZN: "Amazone", WMT: "Walmart", NKE: "Nike",
-    UBER: "Uber", SBUX: "Starbucks", NFLX: "Netflix", GS: "Goldman", ORCL: "Oracle",
-  };
-  const NAMES = {
-    AAPL: "Apple", NVDA: "NVIDIA", TSLA: "Tesla", MSFT: "Microsoft", AMZN: "Amazon", WMT: "Walmart", NKE: "Nike",
-    UBER: "Uber", SBUX: "Starbucks", NFLX: "Netflix", GS: "Goldman Sachs", ORCL: "Oracle",
-  };
-  const pageFor = (symbol) => (PAGES[symbol] ? `/${PAGES[symbol]}.html` : "/search.html");
+  const NAMES = Object.fromEntries(NP.stocks.map((s) => [s.symbol, s.name]));
+  const pageFor = (symbol) => NP.stockUrl(symbol);
 
   // Categorical palette in fixed order (validated light/dark steps); cash is a neutral, not a series.
   const dark = () => document.body.classList.contains("dark-mode");

@@ -16,38 +16,16 @@
 </head>
 <body>
     <nav class="navbar">
-        <a href="/psk/index.html" class="logo">
+        <a href="/" class="logo">
             <img src="/psk/finallogo.png" alt="Nivesh Path logo">
         </a>
-        <div class="nav-links">
-            <a href="/index.html">Stocks</a>
-            <a href="/advisor.html">AI Advisor</a>
-            <a href="/portfolio.html">Portfolio</a>
-            <a href="/psk/pages/about.html">About</a>
-            <a href="/psk/pages/products.html">Products</a>
-            <a href="/psk/pages/pricing.html">Pricing</a>
-            <a href="/psk/pages/support.html">Support</a>
-            <a href="/psk/pages/login.html" id="login-link">Login</a>
-            <a href="/psk/pages/user-dashboard.html" id="dashboard-link" style="display: none;" aria-label="Account">
-                <i class="fas fa-user-circle"></i>
-            </a>
-        </div>
+        <div class="nav-links" data-np-nav></div>
     </nav>
 
     <div class="main">
         <div class="nav1">
             <div class="sidebar">
-                <div class="nav-menu">
-                    <a href="/search.html" class="nav-item"><i class="fas fa-house"></i><span>Home</span></a>
-                    <a href="/psk/pages/user-dashboard.html" class="nav-item"><i class="fas fa-user-circle"></i><span>Account</span></a>
-                    <a href="/transactions.html" class="nav-item"><i class="fas fa-wallet"></i><span>Transactions</span></a>
-                    <a href="/advisor.html" class="nav-item"><i class="fas fa-wand-magic-sparkles"></i><span>AI Advisor</span></a>
-                    <a href="/portfolio.html" class="nav-item"><i class="fas fa-chart-pie"></i><span>Portfolio</span></a>
-                    <a href="/whats-new.html" class="nav-item"><i class="fas fa-gift"></i><span>What's new</span></a>
-                    <a href="/psk/pages/contect.html" class="nav-item"><i class="fas fa-comment-dots"></i><span>Contact Us</span></a>
-                    <a href="/index.html" class="nav-item"><i class="fas fa-chart-line"></i><span>Insights</span></a>
-                    <a href="/psk/pages/about.html" class="nav-item"><i class="fas fa-life-ring"></i><span>About Us</span></a>
-                </div>
+                <div class="nav-menu" data-np-sidebar></div>
             </div>
         </div>
 
@@ -129,7 +107,7 @@
                     </ul>
                     <div class="np-try">
                         <a class="np-btn np-btn--sm" href="/portfolio.html"><i class="fas fa-chart-pie"></i> Open portfolio</a>
-                        <a class="np-btn np-btn--ghost np-btn--sm" href="/Tesla.html">Place a trade</a>
+                        <a class="np-btn np-btn--ghost np-btn--sm" href="/TSLA.html">Place a trade</a>
                         <a class="np-btn np-btn--ghost np-btn--sm" href="/transactions.html">Transactions</a>
                     </div>
                 </article>
@@ -172,11 +150,11 @@
             </div>
 
             <p class="np-muted" style="text-align:center;font-size:.85rem;margin:4px 0 8px">Nivesh-Path is a paper-trading and learning tool. Insights are educational, not financial advice.</p>
+            <footer data-np-footer></footer>
         </section>
     </div>
 
     <script src="/assets/nivesh.js" defer></script>
     <script src="/whats-new.js" defer></script>
-    <script src="/psk/js/main.js"></script>
 </body>
 </html>

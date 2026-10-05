@@ -1,0 +1,125 @@
+<!DOCTYPE html>
+<!-- Stock page for MSFT: live quote, embedded chart, key stats, company profile, news, the user's
+     position and Buy/Sell. Generated from one template so every stock page is identical in layout;
+     all data comes from /api/stocks/MSFT/* via /assets/stock-page.js. -->
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Microsoft (MSFT) stock price, chart &amp; trade | Nivesh-Path</title>
+    <meta name="description" content="Microsoft Corporation (MSFT) live price, chart, key stats and news. Paper-trade MSFT with virtual cash on Nivesh-Path.">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Plus+Jakarta+Sans:wght@600;700;800&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
+    <link rel="stylesheet" href="/assets/stock.css">
+    <link rel="stylesheet" href="/assets/nivesh.css">
+    <link rel="icon" href="/psk/finallogo.png">
+</head>
+<body data-symbol="MSFT" data-exchange="NASDAQ" data-name="Microsoft">
+    <nav class="navbar">
+        <a href="/" class="logo"><img src="/psk/finallogo.png" alt="Nivesh-Path home"></a>
+        <div class="nav-links" data-np-nav></div>
+    </nav>
+
+    <div class="main">
+        <div class="nav1">
+            <div class="sidebar">
+                <div class="nav-menu" data-np-sidebar></div>
+            </div>
+        </div>
+
+        <header class="np-stock-head">
+            <div class="np-stock-id">
+                <span class="np-stock-logo"><img src="/img/microsoft-logo-png-2395.png" alt="" id="stockLogo"></span>
+                <div>
+                    <h1><span id="stockTitle">Microsoft</span> <span class="np-muted">MSFT</span></h1>
+                    <p class="np-muted" id="stockMeta">Microsoft Corporation · NASDAQ</p>
+                </div>
+            </div>
+            <div class="np-stock-quote">
+                <strong id="headPrice">$—</strong>
+                <span id="headChange" class="np-muted">—</span>
+                <button type="button" class="np-watch" id="watchBtn" aria-pressed="false"><i class="far fa-star"></i> <span>Watch</span></button>
+            </div>
+        </header>
+
+        <div class="graph" id="Image">
+            <div id="graphContainer"></div>
+            <button class="bar-button" type="button" id="chartToggle" aria-label="Switch chart type" title="Switch chart type">
+                <span class="bar"></span><span class="bar"></span><span class="bar"></span><span class="bar"></span><span class="bar"></span>
+            </button>
+        </div>
+
+        <div class="buy" id="buyBox">
+            <div class="para">
+                <div class="para1">
+                    <div class="input-group">
+                        <label for="price">Price</label>
+                        <input type="number" id="price" placeholder="Fetching price…" readonly name="price">
+                    </div>
+                    <div class="input-group">
+                        <label for="quantity">Quantity</label>
+                        <input type="number" id="quantity" placeholder="Enter quantity" name="quantity">
+                    </div>
+                    <div class="input-group">
+                        <label for="total">Total</label>
+                        <input type="number" id="total" readonly name="total">
+                    </div>
+                </div>
+                <div class="sell">
+                    <button id="buyBtn" type="button">Buy</button>
+                    <button id="sellBtn" type="button">Sell</button>
+                </div>
+            </div>
+            <div class="np-position" id="position">
+                <h3>Your position</h3>
+                <p class="np-muted" id="positionText">Log in to see your MSFT shares.</p>
+            </div>
+        </div>
+
+        <section class="performance">
+            <h1>Today</h1>
+            <div class="info">
+                <span class="float-left">Day low: <span id="dayLow">—</span></span>
+                <span class="float-right">Day high: <span id="dayHigh">—</span></span>
+            </div>
+            <div class="stock-bar">
+                <div class="bar-line"></div>
+                <div class="ticker" id="ticker"></div>
+                <div class="open-marker" id="openMarker"></div>
+            </div>
+            <div class="live-price">Live price: <span id="livePrice">—</span></div>
+            <div class="val">
+                <div><div class="label">Open</div><div class="value" id="open">—</div></div>
+                <div><div class="label">Previous close</div><div class="value" id="prevClose">—</div></div>
+                <div><div class="label">Change</div><div class="value" id="dayChange">—</div></div>
+            </div>
+        </section>
+
+        <section class="bar1">
+            <h2>Key stats</h2>
+            <div class="np-keystats" id="keyStats"><p class="np-muted">Loading key stats…</p></div>
+            <p class="np-muted np-source">Source: Finnhub · updated hourly</p>
+        </section>
+
+        <section class="about">
+            <h2>About <span id="aboutTitle">Microsoft</span></h2>
+            <div class="np-profile" id="profile"><p class="np-muted">Loading company profile…</p></div>
+            <h2 class="np-news-title">Latest news</h2>
+            <ul class="np-news" id="news"><li class="np-muted">Loading news…</li></ul>
+        </section>
+
+        <section class="similar">
+            <h2>More stocks</h2>
+            <div class="np-stock-list" id="moreStocks"></div>
+        </section>
+
+        <footer data-np-footer></footer>
+    </div>
+
+    <script src="/assets/nivesh.js" defer></script>
+    <script src="/assets/trade.js" defer></script>
+    <script src="/assets/stock-page.js" defer></script>
+</body>
+</html>
