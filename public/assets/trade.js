@@ -78,6 +78,7 @@
         "Order filled"
       );
       showCash(data.newBalance);
+      document.dispatchEvent(new CustomEvent("np:trade", { detail: { symbol: symbol, type: type } }));
       qtyEl.value = "";
     } catch (err) {
       NP.toast(err.message, "error", "Order not placed");

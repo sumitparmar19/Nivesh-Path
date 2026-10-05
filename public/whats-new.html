@@ -16,38 +16,16 @@
 </head>
 <body>
     <nav class="navbar">
-        <a href="/psk/index.html" class="logo">
+        <a href="/" class="logo">
             <img src="/psk/finallogo.png" alt="Nivesh Path logo">
         </a>
-        <div class="nav-links">
-            <a href="/index.html">Stocks</a>
-            <a href="/advisor.html">AI Advisor</a>
-            <a href="/portfolio.html">Portfolio</a>
-            <a href="/psk/pages/about.html">About</a>
-            <a href="/psk/pages/products.html">Products</a>
-            <a href="/psk/pages/pricing.html">Pricing</a>
-            <a href="/psk/pages/support.html">Support</a>
-            <a href="/psk/pages/login.html" id="login-link">Login</a>
-            <a href="/psk/pages/user-dashboard.html" id="dashboard-link" style="display: none;" aria-label="Account">
-                <i class="fas fa-user-circle"></i>
-            </a>
-        </div>
+        <div class="nav-links" data-np-nav></div>
     </nav>
 
     <div class="main">
         <div class="nav1">
             <div class="sidebar">
-                <div class="nav-menu">
-                    <a href="/search.html" class="nav-item"><i class="fas fa-house"></i><span>Home</span></a>
-                    <a href="/psk/pages/user-dashboard.html" class="nav-item"><i class="fas fa-user-circle"></i><span>Account</span></a>
-                    <a href="/transactions.html" class="nav-item"><i class="fas fa-wallet"></i><span>Transactions</span></a>
-                    <a href="/advisor.html" class="nav-item"><i class="fas fa-wand-magic-sparkles"></i><span>AI Advisor</span></a>
-                    <a href="/portfolio.html" class="nav-item"><i class="fas fa-chart-pie"></i><span>Portfolio</span></a>
-                    <a href="/whats-new.html" class="nav-item"><i class="fas fa-gift"></i><span>What's new</span></a>
-                    <a href="/psk/pages/contect.html" class="nav-item"><i class="fas fa-comment-dots"></i><span>Contact Us</span></a>
-                    <a href="/index.html" class="nav-item"><i class="fas fa-chart-line"></i><span>Insights</span></a>
-                    <a href="/psk/pages/about.html" class="nav-item"><i class="fas fa-life-ring"></i><span>About Us</span></a>
-                </div>
+                <div class="nav-menu" data-np-sidebar></div>
             </div>
         </div>
 
@@ -91,7 +69,7 @@
                         <span class="np-chip">DigitalOcean</span><span class="np-chip">Jest + pytest</span>
                     </div>
                     <p class="np-muted" style="margin:16px 0 0;line-height:1.6;font-size:.92rem">
-                        Every change runs 60+ automated tests before it can reach this site, and each deploy rebuilds the AI's memory from the database automatically.
+                        Every change runs 90+ automated tests before it can reach this site, and each deploy rebuilds the AI's memory from the database automatically.
                     </p>
                 </div>
             </div>
@@ -100,6 +78,26 @@
                 <article class="np-card np-card-pad np-release np-reveal-me">
                     <div class="np-release-head">
                         <span class="np-pill">New</span><span class="np-pill np-pill--muted">Latest update · Oct 2026</span>
+                    </div>
+                    <h2>50+ stocks, real stock data, and everything saved to your account</h2>
+                    <p>Every page now does something real: more stocks, real company data, a watchlist, and settings that follow you to any device.</p>
+                    <ul class="np-feature-list">
+                        <li><i class="fas fa-circle-check"></i><span><b>50 stocks and ETFs, plus any US ticker.</b> Browse by sector on Markets or search any NYSE/NASDAQ ticker and trade it.</span></li>
+                        <li><i class="fas fa-circle-check"></i><span><b>Real stock data.</b> Key stats (P/E, 52-week range, market cap), company profile and the latest news on every stock page.</span></li>
+                        <li><i class="fas fa-circle-check"></i><span><b>Watchlist.</b> Star any stock and follow it on your new Watchlist page.</span></li>
+                        <li><i class="fas fa-circle-check"></i><span><b>Your account, saved.</b> Profile, theme and password are stored in your account; reset your paper money to $100,000 or delete your account any time.</span></li>
+                        <li><i class="fas fa-circle-check"></i><span><b>AI analyses are saved.</b> Reopen any past analysis on the Advisor page.</span></li>
+                    </ul>
+                    <div class="np-try">
+                        <a class="np-btn np-btn--sm" href="/search.html"><i class="fas fa-chart-line"></i> Open Markets</a>
+                        <a class="np-btn np-btn--ghost np-btn--sm" href="/watchlist.html">Watchlist</a>
+                        <a class="np-btn np-btn--ghost np-btn--sm" href="/psk/pages/user-dashboard.html">Account</a>
+                    </div>
+                </article>
+
+                <article class="np-card np-card-pad np-release np-reveal-me">
+                    <div class="np-release-head">
+                        <span class="np-pill np-pill--muted">AI memory · Oct 2026</span>
                     </div>
                     <h2>AI memory that survives every update</h2>
                     <p>The advisor's memory of your trades used to be wiped whenever the site was updated. Now your trades live in the database, and the AI's memory is rebuilt from them automatically.</p>
@@ -117,7 +115,7 @@
 
                 <article class="np-card np-card-pad np-release np-reveal-me">
                     <div class="np-release-head">
-                        <span class="np-pill">New</span><span class="np-pill np-pill--muted">Phase 2A · Oct 2026</span>
+                        <span class="np-pill np-pill--muted">Phase 2A · Oct 2026</span>
                     </div>
                     <h2>Your own account with $100,000 of virtual cash</h2>
                     <p>Nivesh-Path is now a real paper-trading platform: every user has a private account and a cash balance that moves with each trade.</p>
@@ -129,7 +127,7 @@
                     </ul>
                     <div class="np-try">
                         <a class="np-btn np-btn--sm" href="/portfolio.html"><i class="fas fa-chart-pie"></i> Open portfolio</a>
-                        <a class="np-btn np-btn--ghost np-btn--sm" href="/Tesla.html">Place a trade</a>
+                        <a class="np-btn np-btn--ghost np-btn--sm" href="/TSLA.html">Place a trade</a>
                         <a class="np-btn np-btn--ghost np-btn--sm" href="/transactions.html">Transactions</a>
                     </div>
                 </article>
@@ -163,7 +161,7 @@
                     <h2>On the roadmap</h2>
                     <p>Next up: the features that make Nivesh-Path a coach for your own trading behavior.</p>
                     <div class="np-roadmap">
-                        <div><span class="np-pill np-pill--muted">2B</span><strong>Faster React app</strong><span>The core pages rebuilt in React + TypeScript, with a page for every stock.</span></div>
+                        <div><span class="np-pill np-pill--muted">2B</span><strong>Faster React app</strong><span>The core pages rebuilt in React + TypeScript.</span></div>
                         <div><span class="np-pill np-pill--muted">2C</span><strong>Behavioral Mirror</strong><span>Your "Trading DNA": panic sells, FOMO buys and holding habits, found in your own trades.</span></div>
                         <div><span class="np-pill np-pill--muted">2D</span><strong>Pre-trade check</strong><span>A quick gut-check before you buy or sell, plus portfolio stress tests.</span></div>
                         <div><span class="np-pill np-pill--muted">2E</span><strong>News + AI chat</strong><span>Market news linked to your holdings and a chat that knows your portfolio.</span></div>
@@ -172,11 +170,11 @@
             </div>
 
             <p class="np-muted" style="text-align:center;font-size:.85rem;margin:4px 0 8px">Nivesh-Path is a paper-trading and learning tool. Insights are educational, not financial advice.</p>
+            <footer data-np-footer></footer>
         </section>
     </div>
 
     <script src="/assets/nivesh.js" defer></script>
     <script src="/whats-new.js" defer></script>
-    <script src="/psk/js/main.js"></script>
 </body>
 </html>

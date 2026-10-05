@@ -130,7 +130,21 @@ function createLedger({ User, Purchase, quotes }) {
     };
   }
 
-  return { execute, summary };
+  // "Start over": delete the user's trades and put the wallet back to $100,000 (serialised with trades).
+  async function reset(userId) {
+    return withUserLock(String(userId), async () => {
+      const removed = await Purchase.deleteMany({ userId });
+      const user = await User.findOneAndUpdate(
+        { _id: userId },
+        { $set: { cashBalance: STARTING_CASH, totalDeposited: STARTING_CASH } },
+        { new: true }
+      );
+      if (!user) throw httpError(401, "Account not found. Please log in again.");
+      return { cashBalance: STARTING_CASH, tradesRemoved: (removed && removed.deletedCount) || 0 };
+    });
+  }
+
+  return { execute, summary, reset };
 }
 
 module.exports = { createLedger, STARTING_CASH };

@@ -49,6 +49,22 @@
 - Advisor page shows how many trades the AI remembers; login/signup now land on `/portfolio.html`.
 - **2B must port these two pages** to React (`/portfolio`, `/whats-new`) along with the 5 core pages.
 
+### Site audit sprints 1-3 (done, before 2B) - decisions from the audit review
+- **Sprint 1 cleanup:** deleted Products/Pricing/Support/success/cancel/demo/footer pages and the bolt.new prototype files
+  (+ ~150 MB of videos); removed other people's names, photos, testimonials and false claims; one shared layout from
+  nivesh.js; 12 stock pages generated from one template, named by ticker (old URLs 301); Markets rebuilt with our own cards
+  (no TradingView navigation); landing/About (+5-question FAQ) rewritten; fake social login and Forgot password removed.
+- **Sprint 2 data:** profile, settings (theme), password, avatar (initials SVG), reset, delete, watchlist, analyses
+  history and contact messages all persist in MongoDB, with Account/Contact/Watchlist/Advisor pages wired to them.
+  Language/notifications are stored but not shown in the UI (nothing uses them yet). Email reset + photo upload -> 2F.
+- **Sprint 3 data API:** `/api/stocks/*` via `src/lib/marketData.js` (quote 60s, profile 24h, metrics/news/search 1h
+  cache). Curated list = 50 (planner's 46 + INTC, CRM, KO, PEP). `/stock.html?symbol=` opens any US ticker already, so 2B's
+  `/stock/:symbol` route only needs to replace that page. Run `node scripts/check-finnhub.js` to see if the key's plan
+  includes candles; until then the stock page embeds the TradingView chart (inside our page, never as a link).
+- **Walmart moved from NYSE to NASDAQ** (Dec 2025): TradingView needs `NASDAQ:WMT`.
+- **2B must port:** Markets, stock page, Portfolio, Transactions, Advisor (+history), Watchlist, Account, What's new,
+  About, Contact, login/signup - all backends already exist.
+
 ### Known risks to handle in later phases
 1. **Cold start** for the Behavioral Mirror: new users have no history -> add a demo account with realistic
    seeded trades and **CSV import** of real broker history (Robinhood / Webull / Zerodha) in Phase 2C.

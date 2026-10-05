@@ -21,37 +21,30 @@
             </div>
             <h2>Create your account</h2>
             <p class="np-auth-sub">Start investing smarter in under a minute.</p>
-            <form id="signupForm">
-                <div class="form-group">
-                    <label for="mobile">Mobile number</label>
-                    <input type="tel" id="mobile" required>
-                </div>
-                <div class="form-group">
-                    <label for="password">Password</label>
-                    <input type="password" id="password" required>
-                </div>
+            <form id="signupForm" novalidate>
                 <div class="form-group">
                     <label for="name">Full name</label>
-                    <input type="text" id="name" required>
+                    <input type="text" id="name" autocomplete="name" placeholder="Your name" required>
                 </div>
                 <div class="form-group">
                     <label for="email">Email</label>
-                    <input type="email" id="email" required>
+                    <input type="email" id="email" autocomplete="email" placeholder="you@example.com" required>
+                </div>
+                <div class="form-group">
+                    <label for="mobile">Mobile number</label>
+                    <input type="tel" id="mobile" autocomplete="tel" placeholder="Mobile number" required>
+                </div>
+                <div class="form-group">
+                    <label for="password">Password</label>
+                    <input type="password" id="password" autocomplete="new-password" placeholder="At least 6 characters" minlength="6" required>
                 </div>
                 <button type="submit" class="submit-button">Create account</button>
             </form>
-            <p class="login-text">Already have an account? <a href="login.html">Login now</a></p>
-            <div class="social-links">
-                <a href="https://x.com/i/flow/login?input_flow_data=%7B%22requested_variant%22%3A%22eyIiOiIiLCJteCI6IjIifQ%3D%3D%22%7D" class="social-icon"><i class="fab fa-twitter"></i></a>
-                <a href="https://www.facebook.com/login.php/?login_attempt=1&display=popup" class="social-icon"><i class="fab fa-facebook-f"></i></a>
-                <a href="https://www.instagram.com/accounts/login/?hl=en" class="social-icon"><i class="fab fa-instagram"></i></a>
-                <a href="https://www.linkedin.com/login" class="social-icon"><i class="fab fa-linkedin-in"></i></a>
-                <a href="https://web.telegram.org/k/" class="social-icon"><i class="fab fa-telegram"></i></a>
-            </div>
+            <p class="login-text">Already have an account? <a href="login.html">Log in</a></p>
         </div>
     </div>
     
-    <script src="../js/signup.js"></script>
     <script src="/assets/nivesh.js" defer></script>
+    <script src="../js/signup.js" defer></script>
 </body>
 </html>
