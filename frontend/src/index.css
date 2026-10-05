@@ -1,0 +1,43 @@
+/* Tailwind layers + the design tokens (RGB triplets) behind tailwind.config.js colours, light and dark. */
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+:root {
+  --brand-50: 236 253 243;
+  --brand-100: 209 250 223;
+  --bg: 246 248 251;
+  --surface: 255 255 255;
+  --surface-2: 248 250 252;
+  --line: 226 232 240;
+  --ink: 15 23 42;
+  --ink-2: 51 65 85;
+  --muted: 100 116 139;
+  --up: 21 128 61;
+  --down: 220 38 38;
+  color-scheme: light;
+}
+.dark {
+  --brand-50: 20 83 45;
+  --brand-100: 22 101 52;
+  --bg: 11 18 32;
+  --surface: 17 26 43;
+  --surface-2: 15 23 38;
+  --line: 37 48 65;
+  --ink: 229 231 235;
+  --ink-2: 203 213 225;
+  --muted: 148 163 184;
+  --up: 74 222 128;
+  --down: 248 113 113;
+  color-scheme: dark;
+}
+.dark .text-brand-700 { color: #86efac; }
+
+html { -webkit-text-size-adjust: 100%; }
+body { @apply bg-bg font-sans text-ink antialiased; }
+:focus-visible { outline: 2px solid #16a34a; outline-offset: 2px; }
+input, select, textarea { @apply rounded-xl border-line bg-surface text-ink placeholder:text-muted focus:border-brand-600 focus:ring-brand-600; }
+.tabular { font-variant-numeric: tabular-nums; }
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after { animation-duration: 0.01ms !important; transition-duration: 0.01ms !important; }
+}
