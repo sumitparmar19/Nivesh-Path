@@ -141,7 +141,7 @@ values and tick **Encrypt** on each one:
 
 | Component | Variables |
 |---|---|
-| web | `MONGO_URL`, `FINNHUB_API_KEY`, `JWT_SECRET` (required in production), `SENTRY_DSN` (optional) |
+| web | `MONGO_URL`, `FINNHUB_API_KEY`, `JWT_SECRET` (required in production), `SENTRY_DSN` (optional), `RESEND_API_KEY` + `CONTACT_TO_EMAIL` (optional, contact-form email) |
 | ai | `ANTHROPIC_API_KEY`, `MONGO_URL` (same value as web), `SENTRY_DSN` (optional) |
 
 `AI_SERVICE_URL`, `PUBLIC_BASE_URL` and `CLAUDE_MODEL` are already filled in by the spec.

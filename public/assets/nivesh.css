@@ -1067,7 +1067,8 @@ body .main > .np-stock-head { grid-column: 1; display: flex; align-items: center
 .np-pos-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
 .np-pos-grid > span { display: grid; gap: 2px; font-size: 0.76rem; color: var(--np-muted); text-transform: uppercase; letter-spacing: 0.04em; }
 .np-pos-grid strong { font-size: 0.98rem; color: var(--np-ink); text-transform: none; letter-spacing: 0; font-variant-numeric: tabular-nums; }
-.np-keystats, .np-facts { display: grid; grid-template-columns: repeat(auto-fill, minmax(170px, 1fr)); gap: 12px; }
+.np-keystats, .np-facts { display: grid; grid-template-columns: repeat(auto-fill, minmax(150px, 1fr)); gap: 12px; }
+@media (max-width: 420px) { .np-keystats, .np-facts { grid-template-columns: 1fr 1fr; } }
 .np-keystats > div, .np-facts > div { display: grid; gap: 4px; padding: 12px 14px; border-radius: var(--np-radius-sm); background: var(--np-surface-2); border: 1px solid var(--np-line); min-width: 0; }
 .np-keystats span, .np-facts span { font-size: 0.74rem; text-transform: uppercase; letter-spacing: 0.05em; color: var(--np-muted); }
 .np-keystats strong, .np-facts strong { font-size: 1rem; color: var(--np-ink); font-variant-numeric: tabular-nums; overflow-wrap: anywhere; }
@@ -1175,3 +1176,7 @@ body .main > .np-stock-head { grid-column: 1; display: flex; align-items: center
 .np-watch-row { display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: 8px; align-items: center; }
 .np-icon-btn { width: 40px; height: 40px; border-radius: 10px; border: 1px solid var(--np-line); background: var(--np-surface); color: var(--np-muted); cursor: pointer; }
 .np-icon-btn:hover { color: var(--np-red); border-color: rgba(220, 38, 38, 0.3); background: var(--np-red-50); }
+body #buyBox #total { background: var(--np-surface-2); color: var(--np-ink); }
+.np-popular { grid-template-columns: repeat(6, minmax(0, 1fr)); }
+@media (max-width: 1280px) { .np-popular { grid-template-columns: repeat(3, minmax(0, 1fr)); } }
+@media (max-width: 560px) { .np-popular { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
