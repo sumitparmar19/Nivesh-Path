@@ -160,6 +160,19 @@ def memory_status(
     return _memory_status(user_id, vectors, patterns)
 
 
+@app.delete("/api/ai/memory/{user_id}")
+def delete_memory(
+    user_id: str = Path(..., max_length=128),
+    vectors: VectorService = Depends(get_vector_service),
+) -> dict[str, bool]:
+    """Forget a user's indexed trades (called when they reset or delete their paper account)."""
+    try:
+        return {"deleted": vectors.delete_user(user_id)}
+    except Exception as exc:
+        logger.exception("Memory delete failed")
+        raise HTTPException(status_code=500, detail="Could not delete memory") from exc
+
+
 @app.post("/api/ai/memory/{user_id}/rebuild", response_model=MemoryStatus)
 def rebuild_memory(
     user_id: str = Path(..., max_length=128),
