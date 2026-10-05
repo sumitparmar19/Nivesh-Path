@@ -18,6 +18,7 @@ const { accountRoutes } = require("./routes/account");
 const watchlistRoutes = require("./routes/watchlist");
 const contactRoutes = require("./routes/contact");
 const { createMailer } = require("./lib/mailer");
+const { createMarketData } = require("./lib/marketData");
 
 const LEGACY_PAGES = {
   "/index.html": "/AAPL.html",
@@ -44,7 +45,9 @@ const LEGACY_PAGES = {
 function createApp(deps = {}) {
   const Purchase = deps.Purchase || require("../models/Stock1");
   const User = deps.User || require("./models/User");
-  const quotes = deps.quotes || createQuoteService({ cache: deps.cache || createCache() });
+  const cache = deps.cache || createCache();
+  const quotes = deps.quotes || createQuoteService({ cache });
+  const marketData = deps.marketData || createMarketData({ cache, quotes, fetchImpl: deps.fetchImpl });
   const aiClient = deps.aiClient || createAiClient();
   const Analysis = deps.Analysis || require("./models/Analysis");
   const Watchlist = deps.Watchlist || require("./models/Watchlist");
@@ -89,7 +92,7 @@ function createApp(deps = {}) {
   });
 
   app.use(optionalAuth);
-  app.use(stockRoutes({ quotes }));
+  app.use(stockRoutes({ quotes, marketData }));
   app.use(purchaseRoutes({ Purchase, User, quotes, aiClient }));
   app.use(authRoutes({ User }));
   app.use(accountRoutes({ User, Purchase, Watchlist, Analysis, aiClient }));

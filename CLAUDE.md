@@ -21,6 +21,10 @@ Live: https://nivesh-path-vzeak.ondigitalocean.app (custom domain pending) · Re
       (`ai-service/startup.py`) + lazily per user; `behavioral_patterns` collection (`PatternStore`) for 2C results
 - [x] **Feature UI** - `/portfolio.html` (cash, holdings, allocation, recent trades, AI memory panel; replaces the
       dashboard1 mock-up), `/whats-new.html` (release notes + live `/api/status`), AI memory strip on the advisor
+- [x] **Audit sprints 1-3** (site audit decisions): fake/copied pages and other people's names removed, one shared
+      layout, 12 ticker pages from one template + `/stock.html?symbol=` for any ticker, Markets/Watchlist/Account/Contact
+      real; every user value saved to MongoDB (profile, settings, password, watchlist, analyses, contact, reset, delete);
+      `/api/stocks/*` Finnhub data API (quote, profile, metrics, news, search, curated 50, candles)
 - [ ] **Phase 2B - next:** React 18 + TypeScript + Tailwind migration of 5 core pages (+ dynamic `/stock/:symbol`)
 - [ ] 2C Behavioral Mirror · 2D Pre-trade check + stress test · 2E news pipeline + AI chat · 2F cloud/observability
 
@@ -34,12 +38,19 @@ src/
   lib/ledger.js      # virtual cash ledger: atomic buy/sell, per-user lock, portfolio summary
   lib/               # cache (Redis or memory), quotes (Finnhub), portfolio math, aiClient
   models/User.js     # users (bcryptjs hash, cashBalance, totalDeposited)
-  routes/            # stocks (quotes), purchases (trades + portfolio), auth (register/login/me), ai (proxy)
+  routes/            # stocks (/api/stocks/*), purchases (trades, portfolio, reset), auth, account (/api/me*),
+                     #   watchlist, contact, ai (proxy + history)
+  lib/marketData.js  # Finnhub: quote, profile, metrics, news, search, candles (cached); CURATED list in config.js
+  lib/mailer.js      # Resend email (optional)
+  models/            # User (+settings), Analysis, Watchlist, Message
 models/Stock1.js     # Trade model "Purchase": userId, name(=ticker), price, quantity, total, transactionType
-public/              # static UI served by Express (company pages, markets, transactions, advisor,
-                     #   portfolio.html dashboard, whats-new.html release notes + live status)
-public/assets/       # design system on EVERY page: nivesh.css, nivesh.js (toasts, NP.authFetch session helpers), trade.js
-public/psk/          # marketing site + login/signup (served at /psk/...)
+public/              # static UI served by Express: search.html (Markets), <TICKER>.html stock pages (generated),
+                     #   stock.html?symbol= (any ticker), portfolio, transactions, advisor, watchlist, whats-new
+public/psk/pages/    # about (+FAQ), contect (contact form), login, signup, user-dashboard (Account)
+scripts/             # gen-stock-pages.py + stock-page.template.html (regenerate the 12 stock pages), check-finnhub.js
+public/assets/       # nivesh.css, nivesh.js (shared navbar/sidebar/footer, toasts, NP.authFetch, NP.stocks), trade.js,
+                     #   stock-page.js (all stock pages), stock.css
+public/psk/          # landing (index.html), about, contact, login/signup, account (served at /psk/...)
 psk/                 # older copy of marketing site + bolt React/TS starter (NOT served)
 ai-service/          # Python FastAPI AI service (port 8001, internal only)
   services/llm_service.py         # LangChain prompt + Anthropic SDK structured output
@@ -60,6 +71,10 @@ docs/                # PHASE1_REPORT.md, PHASE2_PLAN.md, DEPLOYMENT.md
 - `POST /api/ai/analyze-portfolio` -> FastAPI with `user_id`; `POST /api/ai/transactions` (FastAPI) indexes trades per user
 - `GET /api/ai/memory` (trades in Mongo vs indexed in Chroma) · `POST /api/ai/memory/rebuild` (re-index caller's trades)
 - `GET /api/status` - public: web, db, AI service, model, memory-rebuild status (no user data)
+- Account: `PATCH /api/me` · `GET/PATCH /api/me/settings` · `POST /api/me/password` · `GET /api/me/avatar` · `DELETE /api/me`
+  ({password, confirm:"DELETE"}) · `POST /api/portfolio/reset` ({confirm:"RESET"}) · `GET/POST/DELETE /api/watchlist`
+- `GET /api/ai/history` · `GET /api/ai/history/:id` (every analysis is saved) · `POST /api/contact` (public, rate-limited)
+- Public data: `GET /api/stocks/curated|search?q=|quotes?symbols=` · `GET /api/stocks/:symbol/quote|profile|metrics|news|candles`
 - `GET /search`, `GET /stock/:symbol` - public cached Finnhub quotes (key never sent to the browser)
 
 ## Stack
@@ -83,7 +98,10 @@ docs/                # PHASE1_REPORT.md, PHASE2_PLAN.md, DEPLOYMENT.md
 - Durable AI data (behavioral patterns etc.) goes to MongoDB via `PatternStore`; ChromaDB is wiped on every deploy
 - Don't do arithmetic in the LLM - compute numbers in code and pass them in
 - UI (until React): pages include fonts + `/assets/nivesh.css` in <head> and `/assets/nivesh.js` (defer) before </body>;
-  protected calls use `NP.authFetch`; stock pages set `<body data-symbol="TICKER">` and load `/assets/trade.js`
+  navbar/sidebar/footer are placeholders (`data-np-nav`, `data-np-sidebar`, `data-np-footer`) filled by nivesh.js - never
+  copy menu or footer markup into a page; protected calls use `NP.authFetch`; link to stocks with `NP.stockUrl(symbol)`
+- Stock pages: edit `scripts/stock-page.template.html` and run `python3 scripts/gen-stock-pages.py`; never hand-edit `<TICKER>.html`
+- No fake content: no placeholder people, testimonials, numbers, prices or links to `#`; a button must do something or not exist
 - Store trades by ticker (AAPL, TSLA...), never company names
 - Every shipped feature must be visible in the UI and get an entry on `public/whats-new.html`
 - At the end of a session, update "Current progress" above and the notes in `docs/PHASE2_PLAN.md`

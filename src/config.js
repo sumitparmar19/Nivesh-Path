@@ -17,7 +17,7 @@ const config = {
   quoteCacheSeconds: Number(process.env.QUOTE_CACHE_SECONDS) || 60,
 };
 
-// Symbols shown on the dashboard, with display names used for Stripe checkout.
+// The 12 stocks with their own page (/<TICKER>.html); used for dashboard quotes.
 const STOCKS = {
   AAPL: "Apple Inc.",
   NVDA: "NVIDIA Corporation",
@@ -32,6 +32,18 @@ const STOCKS = {
   GS: "The Goldman Sachs Group, Inc.",
   ORCL: "Oracle Corporation",
 };
+
+// Curated stocks and ETFs shown on Markets, by sector. Any other NYSE/NASDAQ ticker works through search.
+const CURATED = [
+  { category: "Big Tech", stocks: [["AAPL", "Apple"], ["MSFT", "Microsoft"], ["NVDA", "NVIDIA"], ["GOOGL", "Alphabet"], ["AMZN", "Amazon"], ["META", "Meta Platforms"], ["TSLA", "Tesla"], ["AMD", "AMD"], ["ORCL", "Oracle"], ["INTC", "Intel"], ["CRM", "Salesforce"]] },
+  { category: "Finance", stocks: [["JPM", "JPMorgan Chase"], ["GS", "Goldman Sachs"], ["BAC", "Bank of America"], ["MS", "Morgan Stanley"], ["V", "Visa"], ["MA", "Mastercard"], ["PYPL", "PayPal"]] },
+  { category: "Retail & Consumer", stocks: [["WMT", "Walmart"], ["COST", "Costco"], ["TGT", "Target"], ["HD", "Home Depot"], ["NKE", "Nike"], ["SBUX", "Starbucks"], ["MCD", "McDonald's"], ["KO", "Coca-Cola"], ["PEP", "PepsiCo"]] },
+  { category: "Media & Entertainment", stocks: [["NFLX", "Netflix"], ["DIS", "Disney"], ["SPOT", "Spotify"], ["RBLX", "Roblox"], ["EA", "Electronic Arts"]] },
+  { category: "Transport", stocks: [["UBER", "Uber"], ["LYFT", "Lyft"], ["FDX", "FedEx"], ["UPS", "UPS"], ["F", "Ford"]] },
+  { category: "Healthcare", stocks: [["JNJ", "Johnson & Johnson"], ["PFE", "Pfizer"], ["UNH", "UnitedHealth"], ["ABBV", "AbbVie"], ["LLY", "Eli Lilly"]] },
+  { category: "Energy", stocks: [["XOM", "Exxon Mobil"], ["CVX", "Chevron"], ["COP", "ConocoPhillips"]] },
+  { category: "ETFs", stocks: [["SPY", "SPDR S&P 500 ETF"], ["QQQ", "Invesco QQQ (Nasdaq-100)"], ["VTI", "Vanguard Total Stock Market ETF"], ["IWM", "iShares Russell 2000 ETF"], ["DIA", "SPDR Dow Jones ETF"]] },
+].map((c) => ({ category: c.category, stocks: c.stocks.map(([symbol, name]) => ({ symbol, name })) }));
 
 // Older pages stored company names instead of tickers; map them so holdings and quotes still work.
 const NAME_TO_SYMBOL = {
@@ -56,4 +68,4 @@ function toSymbol(name) {
   return NAME_TO_SYMBOL[key] || key;
 }
 
-module.exports = { config, STOCKS, toSymbol };
+module.exports = { config, STOCKS, CURATED, toSymbol };
