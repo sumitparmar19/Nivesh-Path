@@ -6,7 +6,7 @@
 
 ## Implementation notes (read first)
 
-**Status:** Phase 2A done ✅ · next: Phase 2B (React + TypeScript migration)
+**Status:** Phase 2A done ✅ · Phase 2B done ✅ (React app, staged rollout) · next: Phase 2C (Behavioral Mirror)
 
 ### Decisions / deviations from the plan
 - **Branch:** sessions push to the branch they are assigned (e.g. `claude/...`), merged via PR, instead of `feat/*` names.
@@ -64,6 +64,30 @@
 - **Walmart moved from NYSE to NASDAQ** (Dec 2025): TradingView needs `NASDAQ:WMT`.
 - **2B must port:** Markets, stock page, Portfolio, Transactions, Advisor (+history), Watchlist, Account, What's new,
   About, Contact, login/signup - all backends already exist.
+
+### Phase 2B - React app (done)
+- **Where:** `frontend/` (Vite 5 + React 18 + TypeScript strict + Tailwind 3, React Router 6, Zustand, TanStack Query,
+  Recharts). Built to `frontend/dist` (assets under `/static`, so they never clash with legacy `/assets`) and served by
+  the same Express app/Docker image - no second component, no CORS. The Dockerfile builds it in a first stage.
+- **All 12 pages ported** (not only the plan's 5): Landing, Login, Register, Portfolio, Transactions, Advisor (+history,
+  delete), Stock `/stock/:symbol` (any US ticker), Markets, Watchlist, Account, What's new, About (+FAQ), Contact, 404.
+- **Staged rollout:** `src/spa.js` lists each React route with the legacy URLs it replaces; those 301 to it. Setting
+  `REACT_DISABLED=/markets,/stock` (env, no code change) rolls a route back to its legacy HTML page. With no build
+  (`frontend/dist` missing) the old site is served unchanged. Unknown page URLs get the React 404 screen with status 404;
+  `/api/*` is never swallowed. Legacy pages in `public/` stay as the rollback until 2B has run live for a while.
+- **Removed routes that clashed with React URLs:** the old JSON `GET /stock/:symbol`, `GET /stock`, `/api/get-api-key`,
+  and the `GET /transactions` alias (use `/api/transactions`). Added `DELETE /api/ai/history/:id`.
+- **Auth is shared** with the legacy pages: same `localStorage` keys (`token`, `niveshPathUser`, `niveshPathTheme`).
+  Theme: light by default, follows the account's saved setting, toggle saves to `PATCH /api/me/settings`.
+- **Price chart:** our own Recharts chart when `/api/stocks/:symbol/candles` reports `available: true`, otherwise the
+  official TradingView embed inside the page (decided automatically - no need to wait for `check-finnhub.js`).
+- **Tests:** Vitest + Testing Library, 75 tests in 14 files (>= 5 per page); Playwright smoke test
+  `frontend/e2e/smoke.spec.ts` (sign up -> $100k -> search -> buy -> portfolio -> transactions -> advisor -> logout)
+  runs in CI against MongoDB + the real AI service (rule-based, no key) + `FAKE_MARKET_DATA=1`.
+- **`FAKE_MARKET_DATA=1`** (`src/lib/fakeMarket.js`): stable made-up prices so CI needs no Finnhub key;
+  `server.js` refuses to start with it when `NODE_ENV=production`.
+- **Not done (later):** delete the legacy pages in `public/` once React has been live without rollbacks; WebSocket
+  prices (2E); measured Lighthouse numbers before quoting any in a resume.
 
 ### Known risks to handle in later phases
 1. **Cold start** for the Behavioral Mirror: new users have no history -> add a demo account with realistic
