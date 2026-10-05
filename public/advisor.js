@@ -90,9 +90,9 @@
       <div class="table-scroll"><table class="positions">
         <thead><tr><th>Symbol</th><th>Value</th><th>P/L</th><th>Weight</th></tr></thead><tbody>${positions}</tbody>
       </table></div>
-      ${data.relevant_history.length ? `<h3><i class="fas fa-brain"></i> From your trade history</h3>
+      ${(data.relevant_history || []).length ? `<h3><i class="fas fa-brain"></i> From your trade history</h3>
         <p class="history-note">The advisor looked up these ${data.relevant_history.length} past trades of yours before answering.</p><ul class="history">${data.relevant_history.map((h) => `<li>${esc(h)}</li>`).join("")}</ul>` : ""}
-      <p class="disclaimer">${esc(data.disclaimer)}</p>`;
+      <p class="disclaimer">${esc(data.disclaimer || "Educational insights only - not financial advice.")}</p>`;
   }
 
   form.addEventListener("submit", async (e) => {
@@ -118,6 +118,7 @@
       const data = await res.json();
       if (!res.ok) throw new Error(data.error || "Analysis failed");
       render(data);
+      loadHistory(data.analysisId);
     } catch (err) {
       errorEl.textContent = err.message || "Something went wrong. Please try again.";
     } finally {
@@ -145,8 +146,55 @@
     }
   }
 
+  // ---------- Past analyses (saved per user in MongoDB) ----------
+  const historyList = document.getElementById("historyList");
+  async function loadHistory(activeId) {
+    try {
+      const res = await window.NP.authFetch("/api/ai/history");
+      if (!res.ok) throw new Error();
+      const items = await res.json();
+      if (!items.length) {
+        historyList.innerHTML = '<li class="np-muted">No analyses yet. Run one above and it will be saved here.</li>';
+        return;
+      }
+      historyList.innerHTML = items
+        .map((a) => {
+          const when = new Date(a.createdAt).toLocaleString(undefined, { dateStyle: "medium", timeStyle: "short" });
+          const risk = a.result && a.result.insight ? a.result.insight.risk_level : "";
+          return `<li><button type="button" data-id="${esc(a.id)}" class="${a.id === activeId ? "is-active" : ""}">
+            <span class="badge risk-${esc(risk)}">${esc(risk || "n/a")}</span>
+            <span>${esc(a.question || (a.result && a.result.insight ? a.result.insight.summary : "Portfolio analysis"))}</span>
+            <small>${esc(when)}</small></button></li>`;
+        })
+        .join("");
+    } catch {
+      historyList.innerHTML = '<li class="np-muted">History is unavailable right now.</li>';
+    }
+  }
+  historyList.addEventListener("click", async (e) => {
+    const btn = e.target.closest("button[data-id]");
+    if (!btn) return;
+    try {
+      const res = await window.NP.authFetch(`/api/ai/history/${encodeURIComponent(btn.dataset.id)}`);
+      if (!res.ok) throw new Error();
+      const a = await res.json();
+      render(a.result);
+      historyList.querySelectorAll("button").forEach((b) => b.classList.toggle("is-active", b === btn));
+      results.scrollIntoView({ behavior: "smooth", block: "start" });
+    } catch {
+      window.NP.toast("Couldn't open that analysis.", "error");
+    }
+  });
+  document.getElementById("questionChips").addEventListener("click", (e) => {
+    const chip = e.target.closest(".np-chip");
+    if (!chip) return;
+    document.getElementById("question").value = chip.textContent;
+    form.requestSubmit();
+  });
+
   document.getElementById("addRowBtn").addEventListener("click", () => addRow());
   document.getElementById("reloadBtn").addEventListener("click", loadHoldings);
   loadHoldings();
   loadMemory();
+  loadHistory();
 })();

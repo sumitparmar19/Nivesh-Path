@@ -1018,3 +1018,165 @@ body .stock-bar, body .info { max-width: 100%; box-sizing: border-box; }
 .np-announce .np-new-badge { margin: 0; }
 .np-announce:hover { transform: translateY(-1px); }
 .np-welcome[hidden], .np-memory-strip[hidden] { display: none; }
+
+/* ==========================================================================
+   Shared layout pieces rendered by nivesh.js (footer, account avatar in the top bar)
+   ========================================================================== */
+.np-footer { margin: 28px 0 0; padding: 36px clamp(16px, 4vw, 40px) 22px; border-top: 1px solid var(--np-line);
+  background: var(--np-surface); color: var(--np-ink-2); border-radius: var(--np-radius); box-sizing: border-box; grid-column: 1 / -1; }
+body > .np-footer { border-radius: 0; margin-top: 40px; }
+.np-footer-inner { display: grid; grid-template-columns: minmax(0, 1.6fr) repeat(2, minmax(0, 1fr)); gap: 28px; max-width: 1100px; margin: 0 auto; }
+@media (max-width: 720px) { .np-footer-inner { grid-template-columns: 1fr 1fr; } .np-footer-brand { grid-column: 1 / -1; } }
+.np-footer-brand img { height: 44px; width: auto; }
+.np-footer-brand p { margin: 10px 0 0; color: var(--np-muted); font-size: 0.9rem; line-height: 1.6; max-width: 320px; }
+.np-footer nav { display: grid; align-content: start; gap: 4px; }
+.np-footer h4 { margin: 0 0 6px; font-size: 0.78rem; text-transform: uppercase; letter-spacing: 0.08em; color: var(--np-ink); }
+.np-footer nav a { color: var(--np-muted); text-decoration: none; font-size: 0.9rem; line-height: 1.9; width: fit-content; }
+.np-footer nav a:hover { color: var(--np-brand-600); }
+.np-footer-bottom { max-width: 1100px; margin: 24px auto 0; padding-top: 16px; border-top: 1px solid var(--np-line); text-align: center;
+  font-size: 0.84rem; color: var(--np-muted); }
+.np-nav-avatar { width: 36px; height: 36px; border-radius: 50%; display: inline-grid !important; place-items: center; padding: 0 !important;
+  background: var(--np-brand); color: #fff !important; font-weight: 700; font-size: 0.85rem; text-decoration: none; }
+.np-nav-avatar:hover { background: var(--np-brand-600) !important; }
+.navbar .nav-links .np-btn { color: #fff; margin-left: 4px; }
+.navbar .nav-links .np-btn:hover { color: #fff; }
+
+/* ==========================================================================
+   Stock page (one template for every ticker) + stock rows used on Markets and stock pages
+   ========================================================================== */
+body .main > .np-stock-head { grid-column: 1; display: flex; align-items: center; justify-content: space-between; gap: 16px; flex-wrap: wrap; }
+.np-stock-id { display: flex; align-items: center; gap: 14px; min-width: 0; }
+.np-stock-id h1 { margin: 0; font-size: clamp(1.4rem, 2.6vw, 1.9rem); }
+.np-stock-id h1 .np-muted { font-size: 0.6em; font-weight: 600; margin-left: 4px; }
+.np-stock-id p { margin: 2px 0 0; font-size: 0.88rem; }
+.np-stock-logo { flex: 0 0 auto; width: 40px; height: 40px; border-radius: 10px; background: #fff; border: 1px solid var(--np-line);
+  display: grid; place-items: center; overflow: hidden; }
+.np-stock-id .np-stock-logo { width: 52px; height: 52px; border-radius: 14px; }
+.np-stock-logo img { max-width: 72%; max-height: 72%; object-fit: contain; }
+.np-stock-quote { display: flex; align-items: baseline; gap: 12px; flex-wrap: wrap; }
+.np-stock-quote strong { font-family: var(--np-display); font-size: clamp(1.5rem, 2.8vw, 2rem); color: var(--np-ink); font-variant-numeric: tabular-nums; }
+.np-stock-quote > span { font-weight: 600; font-variant-numeric: tabular-nums; }
+.np-watch { align-self: center; display: inline-flex; align-items: center; gap: 6px; padding: 8px 14px; border-radius: 99px; cursor: pointer;
+  border: 1px solid var(--np-line); background: var(--np-surface); color: var(--np-ink-2); font-weight: 600; font-size: 0.88rem; }
+.np-watch:hover { border-color: var(--np-brand-100); color: var(--np-brand-700); }
+.np-watch.is-on { background: #fef3c7; border-color: #fcd34d; color: #92400e; }
+.np-watch.is-on i { color: #d97706; }
+.np-position { margin-top: 18px; padding-top: 14px; border-top: 1px solid var(--np-line); }
+.np-position h3 { margin: 0 0 8px; font-size: 0.95rem; }
+.np-position p { margin: 0; font-size: 0.9rem; line-height: 1.5; }
+.np-pos-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+.np-pos-grid > span { display: grid; gap: 2px; font-size: 0.76rem; color: var(--np-muted); text-transform: uppercase; letter-spacing: 0.04em; }
+.np-pos-grid strong { font-size: 0.98rem; color: var(--np-ink); text-transform: none; letter-spacing: 0; font-variant-numeric: tabular-nums; }
+.np-keystats, .np-facts { display: grid; grid-template-columns: repeat(auto-fill, minmax(150px, 1fr)); gap: 12px; }
+@media (max-width: 420px) { .np-keystats, .np-facts { grid-template-columns: 1fr 1fr; } }
+.np-keystats > div, .np-facts > div { display: grid; gap: 4px; padding: 12px 14px; border-radius: var(--np-radius-sm); background: var(--np-surface-2); border: 1px solid var(--np-line); min-width: 0; }
+.np-keystats span, .np-facts span { font-size: 0.74rem; text-transform: uppercase; letter-spacing: 0.05em; color: var(--np-muted); }
+.np-keystats strong, .np-facts strong { font-size: 1rem; color: var(--np-ink); font-variant-numeric: tabular-nums; overflow-wrap: anywhere; }
+.np-facts a { color: var(--np-brand-600); }
+.np-source { margin: 12px 0 0; font-size: 0.8rem; }
+.np-news-title { margin-top: 24px !important; }
+.np-news { list-style: none; margin: 0; padding: 0; display: grid; gap: 4px; }
+.np-news a { display: grid; gap: 4px; padding: 12px 0; border-bottom: 1px dashed var(--np-line); text-decoration: none; color: var(--np-ink); }
+.np-news li:last-child a { border-bottom: 0; }
+.np-news a:hover strong { color: var(--np-brand-600); }
+.np-news strong { font-weight: 600; line-height: 1.45; }
+.np-news span { font-size: 0.8rem; }
+.np-news i { font-size: 0.7rem; margin-left: 4px; }
+.np-stock-list { display: grid; gap: 8px; }
+.np-stock-row { display: grid; grid-template-columns: 40px minmax(0, 1fr) auto; align-items: center; gap: 14px; padding: 12px 14px;
+  border-radius: var(--np-radius-sm); border: 1px solid var(--np-line); background: var(--np-surface); text-decoration: none; color: var(--np-ink);
+  transition: border-color 0.2s, transform 0.2s var(--np-ease), box-shadow 0.2s; }
+.np-stock-row:hover { border-color: var(--np-brand-100); transform: translateY(-1px); box-shadow: var(--np-shadow-sm); }
+.np-stock-name { display: grid; min-width: 0; }
+.np-stock-name strong { font-size: 0.98rem; }
+.np-stock-name small { color: var(--np-muted); font-size: 0.8rem; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.np-stock-price { display: grid; justify-items: end; font-variant-numeric: tabular-nums; }
+.np-stock-price small { font-size: 0.8rem; font-weight: 600; }
+@media (max-width: 900px) { body .main > .np-stock-head { margin-top: 16px !important; } }
+.np-stock-logo--text { font-size: 0.7rem; font-weight: 800; color: var(--np-brand-700); background: var(--np-brand-50); letter-spacing: 0.02em; }
+/* Markets page */
+.np-market-search { position: relative; }
+.np-search--lg { width: 100%; box-sizing: border-box; padding: 14px 18px; font-size: 1.02rem; border-radius: 14px; }
+.np-search--lg input { font-size: 1.02rem; width: 100%; }
+.np-search-results { position: absolute; left: 0; right: 0; top: calc(100% + 6px); z-index: 40; list-style: none; margin: 0; padding: 6px;
+  background: var(--np-surface); border: 1px solid var(--np-line); border-radius: 14px; box-shadow: var(--np-shadow-lg); max-height: 360px; overflow: auto; }
+.np-search-results a { display: grid; grid-template-columns: 70px minmax(0, 1fr) auto; gap: 12px; align-items: center; padding: 10px 12px;
+  border-radius: 10px; text-decoration: none; color: var(--np-ink); }
+.np-search-results a:hover, .np-search-results a.is-active { background: var(--np-brand-50); }
+.np-search-results span { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; color: var(--np-ink-2); }
+.np-search-results small { color: var(--np-muted); font-size: 0.75rem; }
+.np-search-empty { padding: 12px; }
+.np-popular { display: grid; grid-template-columns: repeat(auto-fill, minmax(190px, 1fr)); gap: 14px; }
+.np-pop-card { display: grid; gap: 8px; padding: 16px; border-radius: var(--np-radius); background: var(--np-surface); border: 1px solid var(--np-line);
+  box-shadow: var(--np-shadow-sm); text-decoration: none; color: var(--np-ink); transition: transform 0.2s var(--np-ease), box-shadow 0.2s, border-color 0.2s; }
+.np-pop-card:hover { transform: translateY(-2px); box-shadow: var(--np-shadow); border-color: var(--np-brand-100); }
+.np-pop-top { display: flex; align-items: center; gap: 10px; }
+.np-pop-top > span:last-child { display: grid; }
+.np-pop-top small { color: var(--np-muted); font-size: 0.8rem; }
+.np-pop-price { font-family: var(--np-display); font-size: 1.4rem; font-variant-numeric: tabular-nums; }
+.np-pop-card > span:last-child { font-weight: 600; font-size: 0.88rem; font-variant-numeric: tabular-nums; }
+.np-segment--wrap { flex-wrap: wrap; }
+/* Landing */
+.np-hero-cta { display: flex; gap: 12px; justify-content: center; flex-wrap: wrap; margin-top: 8px; }
+.np-hero-cta .cta-button { text-decoration: none; display: inline-flex; align-items: center; }
+.np-landing { max-width: 1120px; margin: 0 auto; padding: 0 16px 24px; display: grid; gap: 36px; }
+.np-strip { display: flex; gap: 10px; overflow-x: auto; padding: 4px 2px 10px; scrollbar-width: thin; }
+.np-strip a { flex: 0 0 auto; display: inline-flex; gap: 8px; align-items: baseline; padding: 10px 14px; border-radius: 99px;
+  background: var(--np-surface); border: 1px solid var(--np-line); text-decoration: none; color: var(--np-ink); font-variant-numeric: tabular-nums; }
+.np-strip a:hover { border-color: var(--np-brand-100); }
+.np-strip small { font-weight: 600; }
+.np-landing-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(260px, 1fr)); gap: 18px; }
+.np-landing-grid .feature-card { display: grid; gap: 10px; align-content: start; text-align: left; }
+.np-landing-grid .feature-card h3, .np-landing-grid .feature-card p { margin: 0; }
+.np-steps { padding: 28px; border-radius: 22px; background: var(--np-surface); border: 1px solid var(--np-line); box-shadow: var(--np-shadow-sm); }
+.np-steps h2 { margin: 0 0 12px; }
+.np-steps ol { margin: 0 0 14px; padding-left: 20px; display: grid; gap: 10px; color: var(--np-ink-2); line-height: 1.55; }
+/* Content pages (About, Contact) */
+.np-doc { max-width: 960px; margin: 0 auto; padding: calc(var(--np-nav-h) + 24px) 16px 8px; display: grid; gap: 20px; box-sizing: border-box; }
+.np-doc .np-card h2 { margin: 0 0 12px; font-size: 1.25rem; }
+.np-doc .np-card p { line-height: 1.65; color: var(--np-ink-2); }
+.np-doc details { border-top: 1px solid var(--np-line); padding: 14px 0; }
+.np-doc details:first-of-type { border-top: 0; }
+.np-doc summary { cursor: pointer; font-weight: 600; color: var(--np-ink); }
+.np-doc details p { margin: 10px 0 0; }
+/* Account page */
+.np-account-head { display: grid; grid-template-columns: auto minmax(0, 1fr) auto; gap: 18px; align-items: center; }
+@media (max-width: 600px) { .np-account-head { grid-template-columns: auto minmax(0, 1fr); } .np-account-head > button { grid-column: 1 / -1; } }
+.np-account-head h1 { margin: 2px 0; }
+.np-avatar { width: 72px; height: 72px; border-radius: 50%; background: var(--np-brand-50); }
+.np-stack { display: grid; gap: 20px; align-content: start; }
+.np-form { display: grid; gap: 16px; align-content: start; }
+.np-form-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 12px 14px; }
+@media (max-width: 560px) { .np-form-grid { grid-template-columns: 1fr; } }
+.np-form-grid label, .np-dialog label { display: grid; gap: 6px; font-size: 0.82rem; font-weight: 600; color: var(--np-ink-2); }
+.np-form-grid input, .np-dialog input { padding: 10px 12px; border-radius: 10px; border: 1px solid var(--np-line); background: var(--np-surface);
+  color: var(--np-ink); font: inherit; font-weight: 400; font-size: 0.95rem; }
+.np-form-grid input:focus, .np-dialog input:focus { outline: 2px solid var(--np-brand); border-color: transparent; }
+.np-span-2 { grid-column: 1 / -1; }
+.np-form > .np-btn { justify-self: start; }
+.np-saved { font-size: 0.82rem; }
+.np-setting { display: flex; align-items: center; justify-content: space-between; gap: 16px; flex-wrap: wrap; }
+.np-setting > div:first-child { display: grid; gap: 4px; max-width: 560px; }
+.np-setting span { font-size: 0.88rem; }
+.np-danger { border-color: rgba(220, 38, 38, 0.3) !important; }
+.np-danger h2 i { color: var(--np-red) !important; }
+.np-dialog { border: 0; border-radius: 18px; padding: 24px; width: min(420px, calc(100vw - 32px)); box-sizing: border-box;
+  background: var(--np-surface); color: var(--np-ink); box-shadow: var(--np-shadow-lg); }
+.np-dialog::backdrop { background: rgba(15, 23, 42, 0.5); }
+.np-dialog form { display: grid; gap: 14px; }
+.np-dialog h2 { margin: 0; font-size: 1.2rem; }
+.np-dialog p { margin: 0; }
+.np-dialog-actions { display: flex; justify-content: flex-end; gap: 10px; }
+.np-form-grid textarea, .np-select { padding: 10px 12px; border-radius: 10px; border: 1px solid var(--np-line); background: var(--np-surface);
+  color: var(--np-ink); font: inherit; font-weight: 400; font-size: 0.95rem; resize: vertical; }
+.np-form-grid textarea:focus, .np-select:focus { outline: 2px solid var(--np-brand); border-color: transparent; }
+.np-doc .np-grid-2 { align-items: start; }
+/* Watchlist */
+.np-add-watch { display: flex; gap: 8px; }
+.np-watch-row { display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: 8px; align-items: center; }
+.np-icon-btn { width: 40px; height: 40px; border-radius: 10px; border: 1px solid var(--np-line); background: var(--np-surface); color: var(--np-muted); cursor: pointer; }
+.np-icon-btn:hover { color: var(--np-red); border-color: rgba(220, 38, 38, 0.3); background: var(--np-red-50); }
+body #buyBox #total { background: var(--np-surface-2); color: var(--np-ink); }
+.np-popular { grid-template-columns: repeat(6, minmax(0, 1fr)); }
+@media (max-width: 1280px) { .np-popular { grid-template-columns: repeat(3, minmax(0, 1fr)); } }
+@media (max-width: 560px) { .np-popular { grid-template-columns: repeat(2, minmax(0, 1fr)); } }

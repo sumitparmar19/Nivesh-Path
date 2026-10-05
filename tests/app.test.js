@@ -8,6 +8,7 @@ const jwt = require("jsonwebtoken");
 const { createApp } = require("../src/app");
 const { buildHoldings } = require("../src/lib/portfolio");
 const { MemoryCache } = require("../src/lib/cache");
+const { createMarketData } = require("../src/lib/marketData");
 
 // --- Minimal in-memory Mongo model supporting the operators the app uses ---
 function matches(doc, filter = {}) {
@@ -24,7 +25,12 @@ function matches(doc, filter = {}) {
 }
 function applyUpdate(doc, update) {
   for (const [k, v] of Object.entries(update.$inc || {})) doc[k] = (doc[k] || 0) + v;
-  Object.assign(doc, update.$set || {});
+  for (const [k, v] of Object.entries(update.$set || {})) {
+    const keys = k.split(".");
+    let target = doc;
+    keys.slice(0, -1).forEach((key) => { target = target[key] = target[key] || {}; });
+    target[keys[keys.length - 1]] = v;
+  }
 }
 function fakeModel(initial = [], defaults = {}) {
   const rows = initial.map((r, i) => ({ _id: `seed${i}`, ...r }));
@@ -46,6 +52,16 @@ function fakeModel(initial = [], defaults = {}) {
       if (!doc) return null;
       applyUpdate(doc, update);
       return doc;
+    },
+    deleteMany: async (filter) => {
+      const before = rows.length;
+      for (let i = rows.length - 1; i >= 0; i--) if (matches(rows[i], filter)) rows.splice(i, 1);
+      return { deletedCount: before - rows.length };
+    },
+    deleteOne: async (filter) => {
+      const i = rows.findIndex((r) => matches(r, filter));
+      if (i >= 0) rows.splice(i, 1);
+      return { deletedCount: i >= 0 ? 1 : 0 };
     },
     updateOne: async (filter, update) => {
       const doc = rows.find((r) => matches(r, filter));
@@ -74,11 +90,17 @@ function setup(overrides = {}) {
         user_id: userId, indexed_trades: 1, durable_storage: true,
         index: { status: "ok", users: 2, transactions: 5, seconds: 0.4 }, patterns: [],
       })),
+      deleteMemory: jest.fn(async () => ({ deleted: true })),
       rebuildMemory: jest.fn(async (userId) => ({
         user_id: userId, indexed_trades: 2, durable_storage: true,
         index: { status: "ok", users: 2, transactions: 5, seconds: 0.4 }, patterns: [],
       })),
     },
+    Analysis: fakeModel(),
+    Watchlist: fakeModel([], { addedAt: new Date() }),
+    Message: fakeModel(),
+    mailer: { enabled: true, send: jest.fn(async () => true) },
+    contactTo: "owner@example.com",
     ...overrides,
   };
   return { app: createApp(deps), deps };
@@ -105,10 +127,40 @@ describe("health and static", () => {
     expect(res.body.status).toBe("ok");
   });
 
-  test("serves the dashboard and advisor pages", async () => {
+  test("serves the landing, markets, stock and advisor pages", async () => {
     const { app } = setup();
-    expect((await request(app).get("/")).status).toBe(200);
-    expect((await request(app).get("/advisor.html")).status).toBe(200);
+    const root = await request(app).get("/");
+    expect(root.status).toBe(302);
+    expect(root.headers.location).toBe("/psk/index.html");
+    for (const page of ["/psk/index.html", "/search.html", "/TSLA.html", "/stock.html", "/advisor.html", "/psk/pages/about.html"]) {
+      expect((await request(app).get(page)).status).toBe(200);
+    }
+  });
+
+  test("old company-name URLs redirect to ticker pages", async () => {
+    const { app } = setup();
+    const res = await request(app).get("/Amazone.html");
+    expect(res.status).toBe(301);
+    expect(res.headers.location).toBe("/AMZN.html");
+    expect((await request(app).get("/index.html")).headers.location).toBe("/AAPL.html");
+    expect((await request(app).get("/psk/pages/pricing.html")).status).toBe(301);
+  });
+
+  test("prototype source and config files are not served", async () => {
+    const { app } = setup();
+    for (const file of ["/psk/package.json", "/psk/src/App.tsx", "/psk/.niveshpath/prompt", "/psk/public/user-dashboard/index.html", "/footer.html"]) {
+      expect((await request(app).get(file)).status).toBeGreaterThanOrEqual(400);
+    }
+  });
+
+  test("no page names other people or the copied Groww footer", () => {
+    const fs = require("fs");
+    const path = require("path");
+    const walk = (dir) => fs.readdirSync(dir, { withFileTypes: true }).flatMap((e) =>
+      e.isDirectory() ? walk(path.join(dir, e.name)) : /\.(html|js|css)$/.test(e.name) ? [path.join(dir, e.name)] : []);
+    for (const file of walk(path.join(__dirname, "..", "public"))) {
+      expect([file, /dhrumil|viraj|harsh parekh|dhruval|groww/i.test(fs.readFileSync(file, "utf8"))]).toEqual([file, false]);
+    }
   });
 
   test("never leaks the Finnhub key", async () => {
@@ -130,6 +182,15 @@ describe("protected routes require a valid JWT", () => {
     ["get", "/api/me"],
     ["get", "/api/ai/memory"],
     ["post", "/api/ai/memory/rebuild"],
+    ["patch", "/api/me"],
+    ["patch", "/api/me/settings"],
+    ["post", "/api/me/password"],
+    ["delete", "/api/me"],
+    ["get", "/api/me/avatar"],
+    ["get", "/api/watchlist"],
+    ["post", "/api/watchlist"],
+    ["post", "/api/portfolio/reset"],
+    ["get", "/api/ai/history"],
   ];
   test.each(routes)("%s %s without a token -> 401", async (method, path) => {
     const res = await request(setup().app)[method](path).send({});
@@ -374,6 +435,138 @@ describe("AI memory and status", () => {
   });
 });
 
+describe("account data is saved to the database", () => {
+  test("profile edits persist and are only the caller's", async () => {
+    const { app, deps } = setup();
+    const a = await newUser(app);
+    const b = await newUser(app);
+    const res = await request(app).patch("/api/me").set(auth(a)).send({ name: "Asha K", city: "Buffalo", country: "USA", nickname: "ak", passwordHash: "x" });
+    expect(res.status).toBe(200);
+    expect(res.body).toMatchObject({ name: "Asha K", city: "Buffalo", country: "USA", nickname: "ak" });
+    expect((await request(app).get("/api/me").set(auth(a))).body.city).toBe("Buffalo");
+    expect((await request(app).get("/api/me").set(auth(b))).body.city).toBe("");
+    expect(deps.User.rows.find((u) => String(u._id) === a.id).passwordHash).not.toBe("x");
+  });
+
+  test("email/mobile must stay unique and valid", async () => {
+    const { app } = setup();
+    const a = await newUser(app);
+    const b = await newUser(app);
+    expect((await request(app).patch("/api/me").set(auth(a)).send({ email: b.email })).status).toBe(409);
+    expect((await request(app).patch("/api/me").set(auth(a)).send({ email: "not-an-email" })).status).toBe(400);
+    expect((await request(app).patch("/api/me").set(auth(a)).send({ email: "New@Mail.com" })).body.email).toBe("new@mail.com");
+  });
+
+  test("settings persist and come back on login", async () => {
+    const { app } = setup();
+    const a = await newUser(app);
+    expect((await request(app).patch("/api/me/settings").set(auth(a)).send({ theme: "dark", notifications: false })).body)
+      .toMatchObject({ theme: "dark", notifications: false });
+    expect((await request(app).patch("/api/me/settings").set(auth(a)).send({ theme: "purple" })).status).toBe(400);
+    const login = await request(app).post("/api/login").send({ mobile: a.mobile, password: a.password });
+    expect(login.body.user.settings).toMatchObject({ theme: "dark", notifications: false });
+  });
+
+  test("password change checks the current password", async () => {
+    const { app } = setup();
+    const a = await newUser(app);
+    expect((await request(app).post("/api/me/password").set(auth(a)).send({ currentPassword: "wrong", newPassword: "newpass1" })).status).toBe(403);
+    expect((await request(app).post("/api/me/password").set(auth(a)).send({ currentPassword: a.password, newPassword: "newpass1" })).status).toBe(200);
+    expect((await request(app).post("/api/login").send({ mobile: a.mobile, password: a.password })).status).toBe(401);
+    expect((await request(app).post("/api/login").send({ email: a.email, password: "newpass1" })).status).toBe(200);
+  });
+
+  test("initials avatar is an SVG", async () => {
+    const { app } = setup();
+    const a = await newUser(app);
+    await request(app).patch("/api/me").set(auth(a)).send({ name: "Sumit Parmar" });
+    const res = await request(app).get("/api/me/avatar").set(auth(a)).buffer(true)
+      .parse((r, cb) => { let d = ""; r.on("data", (c) => { d += c; }); r.on("end", () => cb(null, d)); });
+    expect(res.headers["content-type"]).toContain("image/svg+xml");
+    expect(res.body).toContain(">SP</text>");
+  });
+
+  test("watchlist add, list, remove and isolation", async () => {
+    const { app } = setup();
+    const a = await newUser(app);
+    const b = await newUser(app);
+    expect((await request(app).post("/api/watchlist").set(auth(a)).send({ symbol: "tsla" })).status).toBe(201);
+    expect((await request(app).post("/api/watchlist").set(auth(a)).send({ symbol: "TSLA" })).status).toBe(200);
+    expect((await request(app).post("/api/watchlist").set(auth(a)).send({ symbol: "bad symbol!" })).status).toBe(400);
+    await request(app).post("/api/watchlist").set(auth(a)).send({ symbol: "XOM" });
+    expect((await request(app).get("/api/watchlist").set(auth(a))).body.map((w) => w.symbol).sort()).toEqual(["TSLA", "XOM"]);
+    expect((await request(app).get("/api/watchlist").set(auth(b))).body).toEqual([]);
+    expect((await request(app).delete("/api/watchlist/TSLA").set(auth(b))).body.removed).toBe(false);
+    expect((await request(app).delete("/api/watchlist/TSLA").set(auth(a))).body.removed).toBe(true);
+  });
+
+  test("reset puts cash back to $100k and clears only the caller's trades", async () => {
+    const { app, deps } = setup();
+    const a = await newUser(app);
+    const b = await newUser(app);
+    await buy(app, a, "TSLA", 5);
+    await buy(app, b, "AAPL", 2);
+    expect((await request(app).post("/api/portfolio/reset").set(auth(a)).send({})).status).toBe(400);
+    const res = await request(app).post("/api/portfolio/reset").set(auth(a)).send({ confirm: "RESET" });
+    expect(res.body).toMatchObject({ success: true, cashBalance: 100000, tradesRemoved: 1 });
+    expect((await request(app).get("/api/transactions").set(auth(a))).body).toEqual([]);
+    expect((await request(app).get("/api/transactions").set(auth(b))).body).toHaveLength(1);
+    expect((await request(app).get("/api/portfolio/cash-balance").set(auth(a))).body.cashBalance).toBe(100000);
+    expect(deps.aiClient.deleteMemory).toHaveBeenCalledWith(a.id);
+  });
+
+  test("delete account removes the user and all their data", async () => {
+    const { app, deps } = setup();
+    const a = await newUser(app);
+    const b = await newUser(app);
+    await buy(app, a, "NVDA", 1);
+    await buy(app, b, "NVDA", 1);
+    await request(app).post("/api/watchlist").set(auth(a)).send({ symbol: "NVDA" });
+    await request(app).post("/api/ai/analyze-portfolio").set(auth(a)).send({});
+    expect((await request(app).delete("/api/me").set(auth(a)).send({ password: a.password })).status).toBe(400);
+    expect((await request(app).delete("/api/me").set(auth(a)).send({ password: "wrong", confirm: "DELETE" })).status).toBe(403);
+    expect((await request(app).delete("/api/me").set(auth(a)).send({ password: a.password, confirm: "DELETE" })).status).toBe(200);
+    expect((await request(app).get("/api/me").set(auth(a))).status).toBe(401);
+    expect(deps.Purchase.rows.filter((r) => String(r.userId) === a.id)).toHaveLength(0);
+    expect(deps.Watchlist.rows).toHaveLength(0);
+    expect(deps.Analysis.rows).toHaveLength(0);
+    expect(deps.Purchase.rows.filter((r) => String(r.userId) === b.id)).toHaveLength(1);
+    expect(deps.aiClient.deleteMemory).toHaveBeenCalledWith(a.id);
+  });
+
+  test("each AI analysis is saved and only its owner can reopen it", async () => {
+    const { app } = setup();
+    const a = await newUser(app);
+    const b = await newUser(app);
+    await buy(app, a, "MSFT", 2);
+    const run = await request(app).post("/api/ai/analyze-portfolio").set(auth(a)).send({ question: "Am I diversified?", risk_profile: "aggressive" });
+    expect(run.body.analysisId).toBeTruthy();
+    const list = await request(app).get("/api/ai/history").set(auth(a));
+    expect(list.body).toHaveLength(1);
+    expect(list.body[0]).toMatchObject({ id: run.body.analysisId, question: "Am I diversified?", riskProfile: "aggressive" });
+    expect((await request(app).get(`/api/ai/history/${run.body.analysisId}`).set(auth(a))).body.result.ok).toBe(true);
+    expect((await request(app).get(`/api/ai/history/${run.body.analysisId}`).set(auth(b))).status).toBe(404);
+    expect((await request(app).get("/api/ai/history").set(auth(b))).body).toEqual([]);
+  });
+
+  test("contact messages are saved and emailed, no login needed", async () => {
+    const { app, deps } = setup();
+    expect((await request(app).post("/api/contact").send({ name: "Visitor", email: "nope", message: "hi" })).status).toBe(400);
+    const res = await request(app).post("/api/contact").send({ name: "Visitor", email: "v@x.com", subject: "Hello", message: "Nice project" });
+    expect(res.status).toBe(201);
+    expect(res.body).toEqual({ success: true, emailed: true });
+    expect(deps.Message.rows[0]).toMatchObject({ name: "Visitor", email: "v@x.com", message: "Nice project", emailed: true });
+    expect(deps.mailer.send).toHaveBeenCalledWith(expect.objectContaining({ to: "owner@example.com", replyTo: "v@x.com" }));
+  });
+
+  test("contact still saves when email is not configured or fails", async () => {
+    const { app, deps } = setup({ mailer: { enabled: true, send: async () => false } });
+    const res = await request(app).post("/api/contact").send({ name: "V", email: "v@x.com", message: "Hi" });
+    expect(res.body).toEqual({ success: true, emailed: false });
+    expect(deps.Message.rows).toHaveLength(1);
+  });
+});
+
 describe("portfolio math and quotes", () => {
   test("buildHoldings nets sells against average cost", () => {
     const holdings = buildHoldings([
@@ -402,5 +595,109 @@ describe("portfolio math and quotes", () => {
     await svc.getQuote("AAPL");
     expect(fetchImpl).toHaveBeenCalledTimes(1);
     await expect(svc.getQuote("not a symbol!")).rejects.toMatchObject({ status: 400 });
+  });
+});
+
+describe("stock data API (Finnhub, cached)", () => {
+  const FINNHUB = {
+    "/stock/profile2": (p) => (p.get("symbol") === "AAPL"
+      ? { name: "Apple Inc", logo: "https://static.example/AAPL.png", finnhubIndustry: "Technology", exchange: "NASDAQ NMS", country: "US", ipo: "1980-12-12", marketCapitalization: 3500000, weburl: "https://www.apple.com/" }
+      : {}),
+    "/stock/metric": () => ({ metric: { marketCapitalization: 3500000, peTTM: 35.2, epsTTM: 6.4, "52WeekHigh": 260, "52WeekLow": 170, beta: 1.2, currentDividendYieldTTM: 0.45, "10DayAverageTradingVolume": 51.3 } }),
+    "/company-news": () => [
+      { headline: "Old", url: "https://n.example/1", source: "A", datetime: 100 },
+      { headline: "Bad link", url: "javascript:alert(1)", source: "X", datetime: 999 },
+      ...Array.from({ length: 6 }, (_, i) => ({ headline: `New ${i}`, url: `https://n.example/n${i}`, source: "B", datetime: 200 + i })),
+    ],
+    "/search": () => ({ result: [
+      { symbol: "XOMA", description: "XOMA ROYALTY", type: "Common Stock" },
+      { symbol: "XOM", description: "EXXON MOBIL CORP", type: "Common Stock" },
+      { symbol: "XOM.SW", description: "EXXON (Swiss)", type: "Common Stock" },
+      { symbol: "XOMW", description: "Warrant", type: "Warrant" },
+    ] }),
+    "/stock/candle": () => "FORBIDDEN",
+  };
+  function fakeFinnhub() {
+    const calls = [];
+    const fetchImpl = jest.fn(async (url) => {
+      const u = new URL(url);
+      calls.push(u.pathname);
+      const body = FINNHUB[u.pathname.replace("/api/v1", "")](u.searchParams);
+      if (body === "FORBIDDEN") return { ok: false, status: 403, json: async () => ({}) };
+      return { ok: true, status: 200, json: async () => body };
+    });
+    return { fetchImpl, calls };
+  }
+  const fakeQuotes = { getQuote: async (s) => (s === "ZZZZ" ? { c: 0 } : { c: 101.5, d: 1.5, dp: 1.5, o: 100, h: 102, l: 99, pc: 100, t: 1759600000 }) };
+  const market = () => {
+    const f = fakeFinnhub();
+    return { md: createMarketData({ cache: new MemoryCache(), quotes: fakeQuotes, fetchImpl: f.fetchImpl, apiKey: "secret-finnhub-key" }), ...f };
+  };
+
+  test("quote is normalised; unknown and invalid symbols fail cleanly", async () => {
+    const { md } = market();
+    expect(await md.quote("aapl")).toMatchObject({ symbol: "AAPL", price: 101.5, changePercent: 1.5, prevClose: 100 });
+    await expect(md.quote("ZZZZ")).rejects.toMatchObject({ status: 404 });
+    await expect(md.quote("bad sym")).rejects.toMatchObject({ status: 400 });
+  });
+
+  test("profile is mapped and cached for 24h; ETFs fall back to the curated name", async () => {
+    const { md, calls } = market();
+    const p = await md.profile("AAPL");
+    expect(p).toMatchObject({ name: "Apple Inc", industry: "Technology", website: "https://www.apple.com/", marketCap: 3500000 });
+    await md.profile("AAPL");
+    expect(calls.filter((c) => c.endsWith("/stock/profile2"))).toHaveLength(1);
+    expect(await md.profile("SPY")).toMatchObject({ symbol: "SPY", name: "SPDR S&P 500 ETF" });
+    await expect(md.profile("ABCD")).rejects.toMatchObject({ status: 404 });
+  });
+
+  test("key stats come from Finnhub basic financials", async () => {
+    const { md } = market();
+    expect(await md.metrics("AAPL")).toEqual({
+      symbol: "AAPL", marketCap: 3500000, peTTM: 35.2, epsTTM: 6.4, week52High: 260, week52Low: 170, beta: 1.2, dividendYield: 0.45, avgVolume10d: 51.3,
+    });
+  });
+
+  test("news: newest 5, only http(s) links", async () => {
+    const { md } = market();
+    const items = await md.news("AAPL");
+    expect(items).toHaveLength(5);
+    expect(items[0].headline).toBe("New 5");
+    expect(items.some((n) => n.url.startsWith("javascript"))).toBe(false);
+  });
+
+  test("search keeps US stocks, exact ticker first", async () => {
+    const { md } = market();
+    const results = await md.search("xom");
+    expect(results.map((r) => r.symbol)).toEqual(["XOM", "XOMA"]);
+    await expect(md.search("")).rejects.toMatchObject({ status: 400 });
+  });
+
+  test("candles report unavailable instead of failing when the plan lacks them", async () => {
+    const { md } = market();
+    expect(await md.candles("AAPL")).toMatchObject({ symbol: "AAPL", available: false });
+  });
+
+  test("routes: curated list of 50, batch quotes, and the API key never leaks", async () => {
+    const { md } = market();
+    const { app } = setup({ marketData: md });
+    const curated = await request(app).get("/api/stocks/curated");
+    expect(curated.body.reduce((n, c) => n + c.stocks.length, 0)).toBe(50);
+    expect(curated.body.map((c) => c.category)).toContain("ETFs");
+    const q = await request(app).get("/api/stocks/quotes?symbols=AAPL,MSFT,ZZZZ");
+    expect(Object.keys(q.body).sort()).toEqual(["AAPL", "MSFT"]);
+    const many = Array.from({ length: 21 }, (_, i) => `A${String.fromCharCode(65 + i)}`).join(",");
+    expect((await request(app).get(`/api/stocks/quotes?symbols=${many}`)).status).toBe(400);
+    for (const path of ["/api/stocks/AAPL/profile", "/api/stocks/AAPL/metrics", "/api/stocks/AAPL/news", "/api/stocks/search?q=xom"]) {
+      const res = await request(app).get(path);
+      expect(res.status).toBe(200);
+      expect(JSON.stringify(res.body)).not.toContain("secret-finnhub-key");
+    }
+  });
+
+  test("without a Finnhub key the data routes answer 503, not crash", async () => {
+    const md = createMarketData({ cache: new MemoryCache(), quotes: fakeQuotes, fetchImpl: jest.fn(), apiKey: "" });
+    const { app } = setup({ marketData: md });
+    expect((await request(app).get("/api/stocks/AAPL/profile")).status).toBe(503);
   });
 });

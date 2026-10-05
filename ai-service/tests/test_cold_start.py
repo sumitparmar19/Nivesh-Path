@@ -203,3 +203,13 @@ def test_manual_rebuild_needs_mongo(vectors: VectorService) -> None:
         "index": body["index"],
         "patterns": [],
     }
+
+
+def test_delete_memory_forgets_only_that_user(db: Any, vectors: VectorService) -> None:
+    trades = TradeStore(db)
+    rebuild_vector_index(vectors, trades)
+    client, _ = build_app(vectors, trades)
+    assert client.delete(f"/api/ai/memory/{ALICE}").json() == {"deleted": True}
+    assert vectors.count(str(ALICE)) == 0
+    assert vectors.count(str(BOB)) == 1
+    assert client.delete(f"/api/ai/memory/{ALICE}").json() == {"deleted": False}

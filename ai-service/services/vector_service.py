@@ -125,6 +125,14 @@ class VectorService:
         """True when the user's collection exists and holds at least one trade."""
         return self.count(user_id) > 0
 
+    def delete_user(self, user_id: str) -> bool:
+        """Forget one user's trades (account reset or deletion); returns False if there was nothing to delete."""
+        try:
+            self._client.delete_collection(collection_name_for(user_id))
+            return True
+        except Exception:  # collection did not exist
+            return False
+
     def clear(self) -> None:
         """Drop every per-user collection (used to simulate a cold start in tests)."""
         prefix = f"{COLLECTION_NAME}_user_"

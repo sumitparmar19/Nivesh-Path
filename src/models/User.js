@@ -11,6 +11,12 @@ const userSchema = new mongoose.Schema(
     country: { type: String, default: "India" },
     city: String,
     address: String,
+    // Preferences saved per account so they follow the user to every device.
+    settings: {
+      theme: { type: String, enum: ["light", "dark"], default: "light" },
+      language: { type: String, default: "English", maxlength: 40 },
+      notifications: { type: Boolean, default: true },
+    },
     // Virtual paper-trading wallet (Phase 2A): buys debit it, sells credit it.
     cashBalance: { type: Number, default: 100000, min: 0 },
     totalDeposited: { type: Number, default: 100000 },

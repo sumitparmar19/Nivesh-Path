@@ -1,10 +1,11 @@
 <!DOCTYPE html>
+<!-- Account: the signed-in user's profile, theme, password, paper-account reset and account deletion.
+     Every value is saved to MongoDB through /api/me*, so it is the same on every device. -->
 <html lang="en">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>User Dashboard - Nivesh Path</title>
-    <link rel="stylesheet" href="../css/style.css">
+    <title>Account | Nivesh-Path</title>
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Plus+Jakarta+Sans:wght@600;700;800&display=swap" rel="stylesheet">
@@ -13,263 +14,108 @@
     <link rel="icon" href="/psk/finallogo.png">
 </head>
 <body>
-    <div class="app-container">
-        <!-- Sidebar -->
-        <div class="sidebar">
-            <a href="../index.html" class="main-logo">
-                <img src="/psk/finallogo.png" alt="Nivesh Path">
-                <span class="logo-text"></span>
-            </a>
-            
-            <nav class="nav-menu">
-                <a href="../../search.html" class="nav-item">
-                    <i class="fas fa-home"></i>
-                    <span>Home</span>
-                </a>
-                <a href="../../transactions.html" class="nav-item">
-                    <i class="fas fa-exchange-alt"></i>
-                    <span>Transactions</span>
-                </a>
-          <a href="/advisor.html" class="nav-item">
-            <i class="fas fa-wand-magic-sparkles"></i>
-            <span>AI Advisor</span>
-          </a>
-          <a href="/portfolio.html" class="nav-item"><i class="fas fa-chart-pie"></i><span>Portfolio</span></a>
-          <a href="/whats-new.html" class="nav-item"><i class="fas fa-gift"></i><span>What's new</span></a>
-                <a href="../../index.html" class="nav-item">
-                    <i class="fas fa-chart-line"></i>
-                    <span>market</span>
-                </a>
-                <a href="contect.html" class="nav-item">
-                    <i class="fas fa-wallet"></i>
-                    <span>contactUs</span>
-                </a>
-                <a href="user-dashboard.html" class="nav-item">
-                    <i class="fas fa-cog"></i>
-                    <span>Settings</span>
-                </a>
-            </nav>
+    <nav class="navbar">
+        <a href="/" class="logo">
+            <img src="/psk/finallogo.png" alt="Nivesh Path logo">
+        </a>
+        <div class="nav-links" data-np-nav></div>
+    </nav>
 
-            <div class="sidebar-footer">
-                <a href="#" class="nav-item">
-                    <i class="fas fa-question-circle"></i>
-                    <span>Help</span>
-                </a>
-                <a href="#" class="nav-item" id="logout-btn">
-                    <i class="fas fa-sign-out-alt"></i>
-                    <span>Log Out</span>
-                </a>
+    <div class="main">
+        <div class="nav1">
+            <div class="sidebar">
+                <div class="nav-menu" data-np-sidebar></div>
             </div>
         </div>
 
-        <!-- Main Content -->
-        <div class="main-content">
-            <!-- Top Bar -->
-            <!-- Top Bar Image -->
-<div class="top-bar"> 
-    <div class="search-bar">
-        <i class="fas fa-search"></i>
-        <input type="text" placeholder="Search..." class="search-input">
-    </div>
-    <div class="user-menu">
-        <div class="notification-icon">
-            <i class="fas fa-bell"></i>
-        </div>
-        <div class="user-profile">
-            <img src="ps.jpg" 
-                 alt="Profile" 
-                 id="profile-image-top">
-        </div>
-    </div>
-</div>
-
-<!-- Profile Content -->
-<div class="profile-section">
-    <div class="profile-picture-container">
-        <div class="profile-picture">
-            <img src="ps.jpg" 
-                 alt="Profile" 
-                 id="profile-image-center">
-        </div>
-        <label class="edit-profile-button" for="profile-image-input">
-            <i class="fas fa-edit"></i>
-            <input type="file" id="profile-image-input" accept="image/*" style="display: none;">
-        </label>
-    </div>
-    <h1 class="profile-name" id="profile-name">Guest investor</h1>
-    <p class="profile-contact" id="profile-contact">Log in to see your profile</p>
-</div>
 
 
-            <!-- Settings Section -->
-            <div class="settings-container">
-                <div class="settings-card">
-                    <div class="settings-item" id="edit-profile-btn">
-                        <div class="settings-item-left">
-                            <i class="fas fa-user-edit"></i>
-                            <span data-translate="editProfile">Edit profile information</span>
-                        </div>
-                        <i class="fas fa-chevron-right"></i>
+        <section class="np-page">
+            <header class="np-account-head np-card np-card-pad">
+                <img class="np-avatar" id="avatar" src="" alt="" width="72" height="72">
+                <div>
+                    <p class="np-eyebrow">Account</p>
+                    <h1 id="accountName">Your account</h1>
+                    <p class="np-lede" id="accountMeta">Loading…</p>
+                </div>
+                <button type="button" class="np-btn np-btn--ghost" id="logoutBtn"><i class="fas fa-right-from-bracket"></i> Log out</button>
+            </header>
+
+            <div class="np-grid-2">
+                <form class="np-card np-card-pad np-form" id="profileForm" novalidate>
+                    <div class="np-card-head"><h2><i class="fas fa-id-card"></i> Profile</h2><span class="np-muted np-saved" id="profileSaved"></span></div>
+                    <div class="np-form-grid">
+                        <label>Full name<input name="name" autocomplete="name" maxlength="100" required></label>
+                        <label>Nickname<input name="nickname" maxlength="60" placeholder="Optional"></label>
+                        <label>Email<input name="email" type="email" autocomplete="email" maxlength="200" required></label>
+                        <label>Mobile<input name="mobile" type="tel" autocomplete="tel" maxlength="20" required></label>
+                        <label>Country<input name="country" autocomplete="country-name" maxlength="60"></label>
+                        <label>City<input name="city" autocomplete="address-level2" maxlength="60"></label>
+                        <label class="np-span-2">Address<input name="address" autocomplete="street-address" maxlength="200" placeholder="Optional"></label>
                     </div>
-                    
-                    <div class="settings-item" id="notification-toggle">
-                        <div class="settings-item-left">
-                            <i class="fas fa-bell"></i>
-                            <span data-translate="notifications">Notifications</span>
-                        </div>
-                        <div class="toggle-container">
-                            <span class="settings-value on" id="notification-status" data-translate="on">ON</span>
-                            <div class="toggle-switch active">
-                                <div class="toggle-switch-handle"></div>
+                    <button type="submit" class="np-btn">Save profile</button>
+                </form>
+
+                <div class="np-stack">
+                    <section class="np-card np-card-pad">
+                        <div class="np-card-head"><h2><i class="fas fa-palette"></i> Appearance</h2></div>
+                        <div class="np-setting">
+                            <div><strong>Theme</strong><span class="np-muted">Saved to your account, so it follows you to every device.</span></div>
+                            <div class="np-segment" role="radiogroup" aria-label="Theme" id="themeSwitch">
+                                <button type="button" data-theme="light" role="radio">Light</button>
+                                <button type="button" data-theme="dark" role="radio">Dark</button>
                             </div>
                         </div>
-                    </div>
-                    
-                    <div class="settings-item" id="language-selector">
-                        <div class="settings-item-left">
-                            <i class="fas fa-globe"></i>
-                            <span data-translate="language">Language</span>
-                        </div>
-                        <div class="settings-value-container">
-                            <span class="settings-value" id="selected-language">English</span>
-                            <i class="fas fa-chevron-right"></i>
-                        </div>
-                    </div>
-                </div>
+                    </section>
 
-                <div class="settings-card">
-                    <div class="settings-item">
-                        <div class="settings-item-left">
-                            <i class="fas fa-shield-alt"></i>
-                            <span data-translate="security">Security</span>
+                    <form class="np-card np-card-pad np-form" id="passwordForm" novalidate>
+                        <div class="np-card-head"><h2><i class="fas fa-shield-halved"></i> Security</h2></div>
+                        <div class="np-form-grid">
+                            <label class="np-span-2">Current password<input name="currentPassword" type="password" autocomplete="current-password" required></label>
+                            <label>New password<input name="newPassword" type="password" autocomplete="new-password" minlength="6" required></label>
+                            <label>Repeat new password<input name="confirmPassword" type="password" autocomplete="new-password" minlength="6" required></label>
                         </div>
-                        <i class="fas fa-chevron-right"></i>
-                    </div>
-                    
-                    <div class="settings-item" id="theme-toggle">
-                        <div class="settings-item-left">
-                            <i class="fas fa-moon"></i>
-                            <span data-translate="theme">Theme</span>
-                        </div>
-                        <div class="toggle-container">
-                            <span class="settings-value" id="theme-status" data-translate="lightMode">Light mode</span>
-                            <div class="toggle-switch">
-                                <div class="toggle-switch-handle"></div>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-
-                <div class="settings-card">
-                    <div class="settings-item">
-                        <div class="settings-item-left">
-                            <i class="fas fa-question-circle"></i>
-                            <span data-translate="helpSupport">Help & Support</span>
-                        </div>
-                        <i class="fas fa-chevron-right"></i>
-                    </div>
-                    
-                    <div class="settings-item">
-                        <div class="settings-item-left">
-                            <i class="fas fa-envelope"></i>
-                            <span data-translate="contactUs">Contact us</span>
-                        </div>
-                        <i class="fas fa-chevron-right"></i>
-                    </div>
-                    
-                    <div class="settings-item">
-                        <div class="settings-item-left">
-                            <i class="fas fa-lock"></i>
-                            <span data-translate="privacyPolicy">Privacy policy</span>
-                        </div>
-                        <i class="fas fa-chevron-right"></i>
-                    </div>
+                        <button type="submit" class="np-btn np-btn--ghost">Change password</button>
+                    </form>
                 </div>
             </div>
-        </div>
+
+            <section class="np-card np-card-pad">
+                <div class="np-card-head"><h2><i class="fas fa-rotate-left"></i> Paper account</h2></div>
+                <div class="np-setting">
+                    <div><strong>Start over with $100,000</strong>
+                        <span class="np-muted">Deletes all your trades and resets your cash to $100,000. Your profile, watchlist and saved analyses stay.</span></div>
+                    <button type="button" class="np-btn np-btn--ghost" id="resetBtn">Reset paper account</button>
+                </div>
+            </section>
+
+            <section class="np-card np-card-pad np-danger">
+                <div class="np-card-head"><h2><i class="fas fa-triangle-exclamation"></i> Delete account</h2></div>
+                <div class="np-setting">
+                    <div><strong>Permanently delete your account</strong>
+                        <span class="np-muted">Removes your profile, trades, watchlist, saved analyses and AI memory. This can't be undone.</span></div>
+                    <button type="button" class="np-btn np-btn--danger" id="deleteBtn">Delete account</button>
+                </div>
+            </section>
+
+            <footer data-np-footer></footer>
+        </section>
     </div>
 
-    <!-- Edit Profile Modal -->
-    <div class="modal" id="edit-profile-modal">
-        <div class="modal-content">
-            <div class="modal-header">
-                <h2 data-translate="editProfileTitle">Edit Profile</h2>
-                <button class="close-modal">&times;</button>
+    <dialog class="np-dialog" id="confirmDialog">
+        <form method="dialog" id="confirmForm">
+            <h2 id="confirmTitle">Are you sure?</h2>
+            <p class="np-muted" id="confirmText"></p>
+            <label id="confirmPasswordLabel">Password<input type="password" id="confirmPassword" autocomplete="current-password"></label>
+            <label>Type <b id="confirmWord">RESET</b> to confirm<input id="confirmInput" autocomplete="off"></label>
+            <div class="np-dialog-actions">
+                <button type="button" class="np-btn np-btn--ghost" id="confirmCancel">Cancel</button>
+                <button type="submit" class="np-btn np-btn--danger" id="confirmOk" disabled>Confirm</button>
             </div>
-            <div class="modal-body">
-                <div class="form-group">
-                    <label for="edit-name" data-translate="name">Name</label>
-                    <input type="text" id="edit-name">
-                </div>
-                <div class="form-group">
-                    <label for="edit-nickname" data-translate="nickname">Nickname</label>
-                    <input type="text" id="edit-nickname">
-                </div>
-                <div class="form-group">
-                    <label for="edit-email" data-translate="email">Email</label>
-                    <input type="email" id="edit-email">
-                </div>
-                <div class="form-group">
-                    <label for="edit-phone" data-translate="phone">Phone</label>
-                    <input type="tel" id="edit-phone">
-                </div>
-                <div class="form-group">
-                    <label for="edit-country" data-translate="country">Country</label>
-                    <input type="text" id="edit-country">
-                </div>
-                <div class="form-group">
-                    <label for="edit-city" data-translate="city">City</label>
-                    <input type="text" id="edit-city">
-                </div>
-                <div class="form-group">
-                    <label for="edit-address" data-translate="address">Address</label>
-                    <input type="text" id="edit-address">
-                </div>
-            </div>
-            <div class="modal-footer">
-                <button class="cancel-btn" data-translate="cancel">Cancel</button>
-                <button class="save-btn" data-translate="save">Save</button>
-            </div>
-        </div>
-    </div>
+        </form>
+    </dialog>
 
-    <!-- Language Selection Modal -->
-    <div class="modal" id="language-modal">
-        <div class="modal-content">
-            <div class="modal-header">
-                <h2 data-translate="selectLanguage">Select Language</h2>
-                <button class="close-modal">&times;</button>
-            </div>
-            <div class="modal-body">
-                <div class="language-options">
-                    <div class="language-option selected" data-language="English">
-                        <span>English</span>
-                        <div class="language-selected-indicator"></div>
-                    </div>
-                    <div class="language-option" data-language="Hindi">
-                        <span>Hindi</span>
-                    </div>
-                    <div class="language-option" data-language="Spanish">
-                        <span>Spanish</span>
-                    </div>
-                    <div class="language-option" data-language="French">
-                        <span>French</span>
-                    </div>
-                    <div class="language-option" data-language="German">
-                        <span>German</span>
-                    </div>
-                    <div class="language-option" data-language="Chinese">
-                        <span>Chinese</span>
-                    </div>
-                    <div class="language-option" data-language="Japanese">
-                        <span>Japanese</span>
-                    </div>
-                </div>
-            </div>
-        </div>
-    </div>
-
-    <script src="../js/dashboard.js"></script>
     <script src="/assets/nivesh.js" defer></script>
+    <script src="/psk/js/account.js" defer></script>
 </body>
 </html>

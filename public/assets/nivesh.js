@@ -79,6 +79,19 @@
     }
     return res;
   }
+  // Store the session after login/sign-up, plus the account's saved settings (so the theme follows the user).
+  function saveSession(token, user) {
+    user = user || {};
+    try {
+      localStorage.setItem("token", token);
+      localStorage.setItem("niveshPathUser", JSON.stringify({
+        isLoggedIn: true, token: token, id: user.id, name: user.name, email: user.email, mobile: user.mobile,
+      }));
+      var settings = user.settings || {};
+      if (settings.theme) localStorage.setItem("niveshPathTheme", settings.theme);
+      if (settings.language) localStorage.setItem("niveshPathLanguage", settings.language);
+    } catch (e) {}
+  }
   function logout() {
     clearSession();
     toast("You have been logged out.", "info", "Signed out");
@@ -86,13 +99,107 @@
   }
   getToken(); // drop an expired session before other scripts read it
 
-  window.NP = { toast: toast, authFetch: authFetch, getToken: getToken, isLoggedIn: function () { return !!getToken(); }, logout: logout, loginUrl: loginUrl };
+  // The stocks that have a page on the site (one template, /<TICKER>.html). Every list links through this.
+  var STOCK_PAGES = [
+    ["AAPL", "Apple", "Apple Inc.", "/img/Apple-Logo-PNG1.png"],
+    ["NVDA", "NVIDIA", "NVIDIA Corporation", "/img/nvidia.png"],
+    ["TSLA", "Tesla", "Tesla, Inc.", "/img/icons8-tesla-48.png"],
+    ["MSFT", "Microsoft", "Microsoft Corporation", "/img/microsoft-logo-png-2395.png"],
+    ["AMZN", "Amazon", "Amazon.com, Inc.", "/img/1688364728amazon-icon-black.png"],
+    ["WMT", "Walmart", "Walmart Inc.", "/img/Walmart-Logo-PNG-Image.png"],
+    ["NKE", "Nike", "NIKE, Inc.", "/img/pngimg.com%20-%20nike_PNG18.png"],
+    ["UBER", "Uber", "Uber Technologies, Inc.", "/img/1659777758uber-app-icon.png"],
+    ["SBUX", "Starbucks", "Starbucks Corporation", "/img/Starbucks-Logo-PNG4.png"],
+    ["NFLX", "Netflix", "Netflix, Inc.", "/img/pngimg.com%20-%20netflix_PNG10.png"],
+    ["GS", "Goldman Sachs", "The Goldman Sachs Group, Inc.", "/img/goldman-sachs-new-2022-seeklogo.svg"],
+    ["ORCL", "Oracle", "Oracle Corporation", "/img/image_processing20210620-25815-3aus89.png"],
+  ].map(function (s) { return { symbol: s[0], name: s[1], company: s[2], logo: s[3], url: "/" + s[0] + ".html" }; });
+  function stockPage(symbol) {
+    var up = String(symbol || "").toUpperCase();
+    for (var i = 0; i < STOCK_PAGES.length; i++) if (STOCK_PAGES[i].symbol === up) return STOCK_PAGES[i];
+    return null;
+  }
+  function stockUrl(symbol) {
+    var page = stockPage(symbol);
+    return page ? page.url : "/stock.html?symbol=" + encodeURIComponent(String(symbol || "").toUpperCase());
+  }
+
+  window.NP = {
+    toast: toast, authFetch: authFetch, getToken: getToken, isLoggedIn: function () { return !!getToken(); },
+    logout: logout, loginUrl: loginUrl, saveSession: saveSession, stocks: STOCK_PAGES, stockPage: stockPage, stockUrl: stockUrl,
+  };
   window.alert = function (msg) { toast(String(msg)); };
   try {
     var pending = JSON.parse(sessionStorage.getItem("np-toast") || "null");
     sessionStorage.removeItem("np-toast");
     if (pending && Date.now() - pending.at < 5000) setTimeout(function () { toast(pending.m, pending.k, pending.t); }, 250);
   } catch (e) {}
+
+  // ---------- Shared layout: one top bar, one sidebar and one footer for every page ----------
+  // Pages leave empty placeholders (data-np-nav / data-np-sidebar / data-np-footer); this is the only copy.
+  var OWNER = {
+    name: "Sumit Parmar",
+    github: "https://github.com/sumitparmar19",
+    linkedin: "https://www.linkedin.com/in/sumit-parmar-07a544278",
+  };
+  var SIDEBAR = [
+    ["/search.html", "fa-chart-line", "Markets"],
+    ["/portfolio.html", "fa-chart-pie", "Portfolio"],
+    ["/transactions.html", "fa-receipt", "Transactions"],
+    ["/advisor.html", "fa-wand-magic-sparkles", "AI Advisor"],
+    ["/watchlist.html", "fa-star", "Watchlist"],
+    ["/whats-new.html", "fa-gift", "What's new"],
+    ["/psk/pages/user-dashboard.html", "fa-user-circle", "Account"],
+  ];
+  var TOPNAV = [
+    ["/search.html", "Markets"],
+    ["/portfolio.html", "Portfolio"],
+    ["/advisor.html", "AI Advisor"],
+    ["/whats-new.html", "What's new"],
+    ["/psk/pages/about.html", "About"],
+  ];
+  function esc(s) {
+    return String(s == null ? "" : s).replace(/[&<>"']/g, function (c) {
+      return { "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c];
+    });
+  }
+  function initials(name) {
+    var parts = String(name || "").trim().split(/\s+/).filter(Boolean);
+    return ((parts[0] || "?")[0] + (parts.length > 1 ? parts[parts.length - 1][0] : "")).toUpperCase();
+  }
+  function storedUser() {
+    try { return JSON.parse(localStorage.getItem("niveshPathUser") || "{}"); } catch (e) { return {}; }
+  }
+  function renderLayout() {
+    var loggedIn = !!getToken();
+    document.querySelectorAll("[data-np-sidebar]").forEach(function (menu) {
+      menu.innerHTML = SIDEBAR.map(function (item) {
+        return '<a href="' + item[0] + '" class="nav-item"><i class="fas ' + item[1] + '"></i><span>' + item[2] + "</span></a>";
+      }).join("");
+    });
+    document.querySelectorAll("[data-np-nav]").forEach(function (links) {
+      var user = storedUser();
+      var account = loggedIn
+        ? '<a href="/psk/pages/user-dashboard.html" class="np-nav-avatar" aria-label="Your account" title="' + esc(user.name || "Account") + '">' + esc(initials(user.name || user.email)) + "</a>"
+        : '<a href="/psk/pages/login.html" class="np-nav-login">Log in</a><a href="/psk/pages/signup.html" class="np-btn np-btn--sm">Sign up</a>';
+      links.innerHTML = TOPNAV.map(function (item) { return '<a href="' + item[0] + '">' + item[1] + "</a>"; }).join("") + account;
+    });
+    document.querySelectorAll("[data-np-footer]").forEach(function (footer) {
+      footer.className = "np-footer";
+      footer.innerHTML =
+        '<div class="np-footer-inner">' +
+        '<div class="np-footer-brand"><a href="/" aria-label="Nivesh-Path home"><img src="/psk/finallogo.png" alt="Nivesh-Path"></a>' +
+        "<p>Paper-trade US stocks with $100,000 of virtual cash and an AI coach that learns from your own trades.</p></div>" +
+        '<nav aria-label="Product"><h4>Product</h4><a href="/search.html">Markets</a><a href="/portfolio.html">Portfolio</a>' +
+        '<a href="/transactions.html">Transactions</a><a href="/advisor.html">AI Advisor</a><a href="/watchlist.html">Watchlist</a><a href="/whats-new.html">What\'s new</a></nav>' +
+        '<nav aria-label="Project"><h4>Project</h4><a href="/psk/pages/about.html">About &amp; FAQ</a><a href="/psk/pages/contect.html">Contact</a>' +
+        '<a href="' + OWNER.github + '" target="_blank" rel="noopener">GitHub</a><a href="' + OWNER.linkedin + '" target="_blank" rel="noopener">LinkedIn</a></nav>' +
+        "</div>" +
+        '<div class="np-footer-bottom">&copy; ' + new Date().getFullYear() + " Nivesh-Path &middot; A project by " + esc(OWNER.name) +
+        " &middot; Educational, not financial advice</div>";
+    });
+  }
+  renderLayout();
 
   // ---------- Navbar: hamburger on small screens ----------
   var nav = document.querySelector(".navbar");
