@@ -2,7 +2,6 @@
 .github
 node_modules
 ai-service
-psk
 tests
 docs
 coverage

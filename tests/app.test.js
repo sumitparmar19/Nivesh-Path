@@ -153,6 +153,12 @@ describe("health and static", () => {
     }
   });
 
+  test("the old psk/ prototype folder is gone from the repo", () => {
+    const fs = require("fs");
+    const path = require("path");
+    expect(fs.existsSync(path.join(__dirname, "..", "psk"))).toBe(false);
+  });
+
   test("no page names other people or the copied Groww footer", () => {
     const fs = require("fs");
     const path = require("path");

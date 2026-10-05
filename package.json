@@ -44,12 +44,10 @@
     ],
     "testPathIgnorePatterns": [
       "/node_modules/",
-      "/psk/",
       "/public/",
       "/ai-service/"
     ],
     "modulePathIgnorePatterns": [
-      "<rootDir>/psk/",
       "<rootDir>/public/",
       "<rootDir>/ai-service/"
     ]

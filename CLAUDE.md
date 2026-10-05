@@ -51,7 +51,6 @@ scripts/             # gen-stock-pages.py + stock-page.template.html (regenerate
 public/assets/       # nivesh.css, nivesh.js (shared navbar/sidebar/footer, toasts, NP.authFetch, NP.stocks), trade.js,
                      #   stock-page.js (all stock pages), stock.css
 public/psk/          # landing (index.html), about, contact, login/signup, account (served at /psk/...)
-psk/                 # older copy of marketing site + bolt React/TS starter (NOT served)
 ai-service/          # Python FastAPI AI service (port 8001, internal only)
   services/llm_service.py         # LangChain prompt + Anthropic SDK structured output
   services/vector_service.py      # ChromaDB RAG, one collection per user (transactions_user_<id>) - a cache only
