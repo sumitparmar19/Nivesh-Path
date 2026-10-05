@@ -25,14 +25,20 @@ Live: https://nivesh-path-vzeak.ondigitalocean.app (custom domain pending) · Re
       layout, 12 ticker pages from one template + `/stock.html?symbol=` for any ticker, Markets/Watchlist/Account/Contact
       real; every user value saved to MongoDB (profile, settings, password, watchlist, analyses, contact, reset, delete);
       `/api/stocks/*` Finnhub data API (quote, profile, metrics, news, search, curated 50, candles)
-- [ ] **Phase 2B - next:** React 18 + TypeScript + Tailwind migration of 5 core pages (+ dynamic `/stock/:symbol`)
-- [ ] 2C Behavioral Mirror · 2D Pre-trade check + stress test · 2E news pipeline + AI chat · 2F cloud/observability
+- [x] **Phase 2B** - React 18 + TS + Tailwind app in `frontend/` (all 12 pages + `/stock/:symbol` for any ticker),
+      served by Express with a staged rollout (`src/spa.js`, `REACT_DISABLED` rollback), Vitest (75) + Playwright smoke in CI
+- [ ] **2C Behavioral Mirror - next** · 2D Pre-trade check + stress test · 2E news pipeline + AI chat · 2F cloud/observability
 
 ## Layout
 ```
 server.js            # Node entry: refuses to start in production without JWT_SECRET; Mongo; optional Sentry
+frontend/            # React 18 + TS + Tailwind (Vite). src/pages (one per route), src/components, src/lib/api.ts (typed
+                     #   client), src/types (API shapes), src/store (Zustand), src/config (FEATURED stocks, RELEASES);
+                     #   tests in __tests__ (Vitest), e2e/smoke.spec.ts (Playwright). Builds to frontend/dist
 src/
   app.js             # createApp(deps) - Express app, deps injectable for tests
+  spa.js             # serves frontend/dist: React routes + 301s from the legacy URLs they replace; REACT_DISABLED rollback
+  lib/fakeMarket.js  # FAKE_MARKET_DATA=1 made-up prices for CI browser tests (refused in production)
   config.js          # env config, STOCKS list, toSymbol() name->ticker
   middleware/auth.js # requireAuth (401) / optionalAuth - req.user = { id, email }
   lib/ledger.js      # virtual cash ledger: atomic buy/sell, per-user lock, portfolio summary
@@ -44,14 +50,13 @@ src/
   lib/mailer.js      # Resend email (optional)
   models/            # User (+settings), Analysis, Watchlist, Message
 models/Stock1.js     # Trade model "Purchase": userId, name(=ticker), price, quantity, total, transactionType
-public/              # static UI served by Express: search.html (Markets), <TICKER>.html stock pages (generated),
+public/              # LEGACY static UI (rollback while React is live; its URLs 301 to React routes): search.html (Markets), <TICKER>.html stock pages (generated),
                      #   stock.html?symbol= (any ticker), portfolio, transactions, advisor, watchlist, whats-new
 public/psk/pages/    # about (+FAQ), contect (contact form), login, signup, user-dashboard (Account)
 scripts/             # gen-stock-pages.py + stock-page.template.html (regenerate the 12 stock pages), check-finnhub.js
 public/assets/       # nivesh.css, nivesh.js (shared navbar/sidebar/footer, toasts, NP.authFetch, NP.stocks), trade.js,
                      #   stock-page.js (all stock pages), stock.css
 public/psk/          # landing (index.html), about, contact, login/signup, account (served at /psk/...)
-psk/                 # older copy of marketing site + bolt React/TS starter (NOT served)
 ai-service/          # Python FastAPI AI service (port 8001, internal only)
   services/llm_service.py         # LangChain prompt + Anthropic SDK structured output
   services/vector_service.py      # ChromaDB RAG, one collection per user (transactions_user_<id>) - a cache only
@@ -75,15 +80,19 @@ docs/                # PHASE1_REPORT.md, PHASE2_PLAN.md, DEPLOYMENT.md
   ({password, confirm:"DELETE"}) · `POST /api/portfolio/reset` ({confirm:"RESET"}) · `GET/POST/DELETE /api/watchlist`
 - `GET /api/ai/history` · `GET /api/ai/history/:id` (every analysis is saved) · `POST /api/contact` (public, rate-limited)
 - Public data: `GET /api/stocks/curated|search?q=|quotes?symbols=` · `GET /api/stocks/:symbol/quote|profile|metrics|news|candles`
-- `GET /search`, `GET /stock/:symbol` - public cached Finnhub quotes (key never sent to the browser)
+- `GET /search` - public cached quotes for the 12 featured stocks · `DELETE /api/ai/history/:id`
+- Page URLs (`/portfolio`, `/stock/:symbol`, ...) belong to the React app - never add a non-`/api` GET route that clashes
 
 ## Stack
-- Frontend: static HTML/CSS/JS + design system (React/TS migration is Phase 2B)
+- Frontend: React 18, TypeScript (strict), Tailwind 3, Vite 5, React Router 6, TanStack Query 5, Zustand, Recharts, Vitest,
+  Playwright; legacy static HTML in `public/` kept as rollback
 - Backend: Node 22, Express 4, MongoDB (Mongoose), Redis cache (optional), JWT (jsonwebtoken + bcryptjs), Helmet, rate limiting
 - AI: FastAPI, LangChain (`langchain-core`), Anthropic Python SDK, ChromaDB; model from `CLAUDE_MODEL` (now `claude-opus-5-5`)
 
 ## Commands
 - Backend: `npm install && npm run dev` (port 3000); tests `npm test`
+- Frontend: `cd frontend && npm install && npm run dev` (port 5173, proxies /api to :3000); `npm test`, `npm run typecheck`,
+  `npm run build` (Express then serves it on :3000); `npm run e2e` against a server started with `FAKE_MARKET_DATA=1`
 - AI service: `cd ai-service && python -m venv .venv && .venv/bin/pip install -r requirements-dev.txt && .venv/bin/uvicorn main:app --port 8001`; tests `.venv/bin/pytest -q`
 - Everything: `cp .env.example .env` then `docker compose up --build`
 
@@ -97,11 +106,13 @@ docs/                # PHASE1_REPORT.md, PHASE2_PLAN.md, DEPLOYMENT.md
 - Keep commits small and descriptive; run `npm test` and `pytest` before pushing; never break CI
 - Durable AI data (behavioral patterns etc.) goes to MongoDB via `PatternStore`; ChromaDB is wiped on every deploy
 - Don't do arithmetic in the LLM - compute numbers in code and pass them in
-- UI (until React): pages include fonts + `/assets/nivesh.css` in <head> and `/assets/nivesh.js` (defer) before </body>;
+- UI: new UI work goes in `frontend/` (React). Types in `src/types` must match the real API; API calls only through
+  `src/lib/api.ts`; >= 5 Vitest tests per page; new release notes go in `frontend/src/config/releases.ts`
+- Legacy pages (rollback only): pages include fonts + `/assets/nivesh.css` in <head> and `/assets/nivesh.js` (defer) before </body>;
   navbar/sidebar/footer are placeholders (`data-np-nav`, `data-np-sidebar`, `data-np-footer`) filled by nivesh.js - never
   copy menu or footer markup into a page; protected calls use `NP.authFetch`; link to stocks with `NP.stockUrl(symbol)`
 - Stock pages: edit `scripts/stock-page.template.html` and run `python3 scripts/gen-stock-pages.py`; never hand-edit `<TICKER>.html`
 - No fake content: no placeholder people, testimonials, numbers, prices or links to `#`; a button must do something or not exist
 - Store trades by ticker (AAPL, TSLA...), never company names
-- Every shipped feature must be visible in the UI and get an entry on `public/whats-new.html`
+- Every shipped feature must be visible in the UI and get an entry on What's new (`frontend/src/config/releases.ts`)
 - At the end of a session, update "Current progress" above and the notes in `docs/PHASE2_PLAN.md`
