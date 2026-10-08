@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import logging
 import threading
+from datetime import datetime, timezone
 from collections.abc import AsyncIterator
 from contextlib import asynccontextmanager
 from functools import lru_cache
@@ -17,10 +18,13 @@ from config import get_settings
 from schemas import (
     AnalyzePortfolioRequest,
     AnalyzePortfolioResponse,
+    BehaviorRequest,
+    BehaviorResponse,
     IndexStatus,
     IngestTransactionsRequest,
     MemoryStatus,
 )
+from services.behavior_coach import rule_based_coaching
 from services.llm_service import LLMService, LLMUnavailableError
 from services.mongo_store import PatternStore, TradeStore, connect
 from services.portfolio_analytics import compute_metrics, rule_based_insight
@@ -89,7 +93,7 @@ app = FastAPI(
 app.add_middleware(
     CORSMiddleware,
     allow_origins=settings.allowed_origins,
-    allow_methods=["GET", "POST"],
+    allow_methods=["GET", "POST", "DELETE"],
     allow_headers=["*"],
 )
 
@@ -164,9 +168,12 @@ def memory_status(
 def delete_memory(
     user_id: str = Path(..., max_length=128),
     vectors: VectorService = Depends(get_vector_service),
+    patterns: PatternStore | None = Depends(get_pattern_store),
 ) -> dict[str, bool]:
-    """Forget a user's indexed trades (called when they reset or delete their paper account)."""
+    """Forget a user's indexed trades and stored behavior results (reset or account deletion)."""
     try:
+        if patterns is not None:
+            patterns.delete_user(user_id)
         return {"deleted": vectors.delete_user(user_id)}
     except Exception as exc:
         logger.exception("Memory delete failed")
@@ -232,3 +239,53 @@ def analyze_portfolio(
         model=model,
         relevant_history=[d.page_content for d in history],
     )
+
+
+COACH_KEY = "coach_insight"
+
+
+@app.post("/api/ai/behavior/{user_id}", response_model=BehaviorResponse)
+def analyze_behavior(
+    body: BehaviorRequest,
+    user_id: str = Path(..., max_length=128),
+    llm: LLMService = Depends(get_llm_service),
+    patterns: PatternStore | None = Depends(get_pattern_store),
+) -> BehaviorResponse:
+    """Behavioral Mirror coaching: explain the user's detected habits (panic sells, FOMO buys, concentration).
+
+    All numbers come pre-computed from the Node detectors. Claude only writes the words; without a key or on
+    any API failure a rule-based coach answers instead. With nothing to analyse, Claude is not called at all.
+    The result (and a per-type count summary) is saved to PatternStore so it survives deploys.
+    """
+    coaching, ai_generated, model = rule_based_coaching(body), False, None
+    if body.events:
+        try:
+            coaching, model = llm.generate_behavior_coaching(body)
+            ai_generated = True
+        except LLMUnavailableError as exc:
+            logger.warning("Using rule-based behavior coaching: %s", exc)
+
+    result = BehaviorResponse(
+        **coaching.model_dump(), ai_generated=ai_generated, model=model, created_at=datetime.now(timezone.utc).isoformat()
+    )
+    if patterns is not None:
+        try:
+            patterns.upsert(user_id, COACH_KEY, result.model_dump())
+            for pattern_type, count in body.counts.items():
+                latest = next((e.model_dump() for e in body.events if e.pattern_type == pattern_type), None)
+                patterns.upsert(user_id, pattern_type, {"count": count, "latest": latest})
+        except Exception:
+            logger.exception("Could not save behavior coaching")
+    return result
+
+
+@app.get("/api/ai/behavior/{user_id}", response_model=BehaviorResponse)
+def last_behavior(
+    user_id: str = Path(..., max_length=128),
+    patterns: PatternStore | None = Depends(get_pattern_store),
+) -> BehaviorResponse:
+    """The last saved Behavioral Mirror coaching for a user (404 if there is none yet)."""
+    saved = patterns.get(user_id, COACH_KEY) if patterns is not None else None
+    if not saved:
+        raise HTTPException(status_code=404, detail="No behavior insight yet")
+    return BehaviorResponse(**saved)
