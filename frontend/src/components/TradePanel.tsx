@@ -7,6 +7,8 @@ import { api } from "../lib/api";
 import { money } from "../lib/format";
 import { useStore } from "../store/useStore";
 import { Button, Card, cx } from "./ui";
+import { BehaviorNote } from "./PatternCard";
+import type { TradeBehavior } from "../types";
 
 export default function TradePanel({ symbol, price, cash, owned }: { symbol: string; price: number | null; cash: number | null; owned: number }) {
   const isAuthenticated = useStore((s) => s.isAuthenticated);
@@ -15,6 +17,7 @@ export default function TradePanel({ symbol, price, cash, owned }: { symbol: str
   const [side, setSide] = useState<"BUY" | "SELL">("BUY");
   const [qty, setQty] = useState("");
   const [message, setMessage] = useState<{ ok: boolean; text: string } | null>(null);
+  const [behavior, setBehavior] = useState<TradeBehavior[]>([]);
 
   const quantity = /^\d+$/.test(qty) ? parseInt(qty, 10) : 0;
   const total = quantity && price ? quantity * price : 0;
@@ -26,7 +29,8 @@ export default function TradePanel({ symbol, price, cash, owned }: { symbol: str
       setMessage({ ok: true, text });
       toast(text, "success", "Order filled");
       setQty("");
-      ["portfolio", "holdings", "transactions", "ai-memory"].forEach((k) => client.invalidateQueries({ queryKey: [k] }));
+      setBehavior(res.behavior ?? []);
+      ["portfolio", "holdings", "transactions", "ai-memory", "patterns", "pattern-summary"].forEach((k) => client.invalidateQueries({ queryKey: [k] }));
     },
     onError: (err: Error) => setMessage({ ok: false, text: err.message }),
   });
@@ -34,6 +38,7 @@ export default function TradePanel({ symbol, price, cash, owned }: { symbol: str
   function submit(e: FormEvent) {
     e.preventDefault();
     setMessage(null);
+    setBehavior([]);
     if (quantity > 0) trade.mutate();
   }
 
@@ -76,6 +81,7 @@ export default function TradePanel({ symbol, price, cash, owned }: { symbol: str
               {message.text}
             </p>
           )}
+          <BehaviorNote items={behavior} />
           <p className="text-center text-xs text-muted">Paper trading with virtual cash. Orders fill instantly at the live price.</p>
         </form>
       )}

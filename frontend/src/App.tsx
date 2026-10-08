@@ -21,6 +21,7 @@ const Landing = lazy(() => import("./pages/Landing"));
 const About = lazy(() => import("./pages/About"));
 const Contact = lazy(() => import("./pages/Contact"));
 const NotFound = lazy(() => import("./pages/NotFound"));
+const BehavioralMirror = lazy(() => import("./pages/BehavioralMirror"));
 
 export const queryClient = new QueryClient({
   defaultOptions: { queries: { staleTime: 60_000, retry: 1, refetchOnWindowFocus: false } },
@@ -62,6 +63,7 @@ export const routes = [
           { path: "/portfolio", element: page(<Portfolio />) },
           { path: "/transactions", element: page(<Transactions />) },
           { path: "/advisor", element: page(<Advisor />) },
+          { path: "/behavioral-mirror", element: page(<BehavioralMirror />) },
           { path: "/watchlist", element: page(<Watchlist />) },
           { path: "/account", element: page(<Account />) },
         ],
