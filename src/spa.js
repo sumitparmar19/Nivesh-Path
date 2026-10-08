@@ -29,6 +29,7 @@ const REACT_ROUTES = [
   { route: "/portfolio", legacy: ["/portfolio.html", "/dashboard1.html", "/success.html", "/cancel.html"] },
   { route: "/transactions", legacy: ["/transactions.html"] },
   { route: "/advisor", legacy: ["/advisor.html"] },
+  { route: "/behavioral-mirror", legacy: [] }, // new in Phase 2C: no legacy page
   {
     route: "/stock/:symbol",
     legacy: ["/stock.html", ...LEGACY_TICKER_PAGES.map((s) => `/${s}.html`), ...Object.keys(OLD_COMPANY_PAGES)],

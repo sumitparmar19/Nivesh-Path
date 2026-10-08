@@ -17,6 +17,9 @@ const aiRoutes = require("./routes/ai");
 const { accountRoutes } = require("./routes/account");
 const watchlistRoutes = require("./routes/watchlist");
 const contactRoutes = require("./routes/contact");
+const patternRoutes = require("./routes/patterns");
+const { createLedger } = require("./lib/ledger");
+const { createBehaviorDetector } = require("./lib/behaviorDetector");
 const { createMailer } = require("./lib/mailer");
 const { createMarketData } = require("./lib/marketData");
 const { mountSpa, mountSpaNotFound } = require("./spa");
@@ -58,6 +61,9 @@ function createApp(deps = {}) {
   const Watchlist = deps.Watchlist || require("./models/Watchlist");
   const Message = deps.Message || require("./models/Message");
   const mailer = deps.mailer || createMailer();
+  const BehaviorEvent = deps.BehaviorEvent || require("./models/BehaviorEvent");
+  const ledger = createLedger({ User, Purchase, quotes });
+  const detector = deps.detector === undefined ? createBehaviorDetector({ BehaviorEvent, marketData, ledger }) : deps.detector;
 
   const app = express();
   app.disable("x-powered-by");
@@ -98,12 +104,13 @@ function createApp(deps = {}) {
 
   app.use(optionalAuth);
   app.use(stockRoutes({ quotes, marketData }));
-  app.use(purchaseRoutes({ Purchase, User, quotes, aiClient }));
+  app.use(purchaseRoutes({ Purchase, User, quotes, aiClient, BehaviorEvent, detector }));
   app.use(authRoutes({ User }));
-  app.use(accountRoutes({ User, Purchase, Watchlist, Analysis, aiClient }));
+  app.use(accountRoutes({ User, Purchase, Watchlist, Analysis, BehaviorEvent, aiClient }));
   app.use(watchlistRoutes({ Watchlist }));
   app.use(contactRoutes({ Message, mailer, contactTo: deps.contactTo }));
   app.use(aiRoutes({ Purchase, Analysis, quotes, aiClient }));
+  app.use(patternRoutes({ BehaviorEvent, Purchase, ledger, aiClient }));
 
   // React app (frontend/dist): enabled routes take over, and the legacy URLs they replace redirect to them.
   app.locals.reactRoutes = mountSpa(app, deps.spa || {});
