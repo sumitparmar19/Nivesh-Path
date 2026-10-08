@@ -5,7 +5,7 @@ const { buildHoldings } = require("../lib/portfolio");
 const { createLedger } = require("../lib/ledger");
 const { requireAuth } = require("../middleware/auth");
 
-function purchaseRoutes({ Purchase, User, quotes, aiClient }) {
+function purchaseRoutes({ Purchase, User, quotes, aiClient, BehaviorEvent, detector }) {
   const router = express.Router();
   const ledger = createLedger({ User, Purchase, quotes });
 
@@ -32,7 +32,17 @@ function purchaseRoutes({ Purchase, User, quotes, aiClient }) {
           .catch((err) => console.warn("AI ingest skipped:", err.message));
       }
 
-      return res.status(201).json({ success: true, newBalance: result.newBalance, transaction: tx, purchase: tx });
+      // Behavioral Mirror: wait at most ~1.5s so the trade panel can show a note; detection keeps running (and
+      // saving) in the background if it takes longer, and it can never fail the trade.
+      let behavior = null;
+      if (detector) {
+        behavior = await detector.detectWithin({ userId: req.user.id, trade: tx, avgCost: result.avgCost }).catch(() => null);
+      }
+
+      return res.status(201).json({
+        success: true, newBalance: result.newBalance, transaction: tx, purchase: tx,
+        behavior: behavior && behavior.map(({ _id, patternType, severity, symbol, facts }) => ({ _id, patternType, severity, symbol, facts })),
+      });
     } catch (err) {
       return next(err);
     }
@@ -70,6 +80,10 @@ function purchaseRoutes({ Purchase, User, quotes, aiClient }) {
     try {
       if ((req.body || {}).confirm !== "RESET") return res.status(400).json({ error: "Type RESET to confirm" });
       const result = await ledger.reset(req.user.id);
+      if (BehaviorEvent) {
+        // Their trades are gone, so are the patterns found in them (best effort: never fail the reset).
+        await BehaviorEvent.deleteMany({ userId: req.user.id }).catch((err) => console.warn("Patterns not cleared:", err.message));
+      }
       if (aiClient && aiClient.deleteMemory) {
         aiClient.deleteMemory(req.user.id).catch((err) => console.warn("AI memory not cleared:", err.message));
       }

@@ -30,6 +30,9 @@ function createAiClient({ fetchImpl = fetch, baseUrl = config.aiServiceUrl, time
     memory: (userId) => request("GET", memoryPath(userId), undefined, 8000),
     rebuildMemory: (userId) => request("POST", `${memoryPath(userId)}/rebuild`, undefined, 30000),
     deleteMemory: (userId) => request("DELETE", memoryPath(userId), undefined, 10000),
+    // Behavioral Mirror coaching insight (numbers computed by the caller) and the last saved one.
+    analyzeBehavior: (userId, payload) => request("POST", `/api/ai/behavior/${encodeURIComponent(userId)}`, payload, 60000),
+    behaviorInsight: (userId) => request("GET", `/api/ai/behavior/${encodeURIComponent(userId)}`, undefined, 8000),
   };
 }
 
