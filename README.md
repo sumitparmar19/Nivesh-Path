@@ -12,6 +12,9 @@ your portfolio's risk, diversification and next steps.
 ![AI Portfolio Advisor](docs/screenshots/ai-advisor.png)
 
 ## Features
+- **Behavioral Mirror:** every trade is checked for panic selling, FOMO buying and overconcentration using the price
+  data at that moment. The trade panel flags it right away, and a dedicated page shows your scores (impulse control,
+  diversification), every detected pattern, and an AI coach that explains your habits with your own trades.
 - **Portfolio AI Advisor:** Claude (`claude-opus-5-5`) returns schema-validated insights: risk
   level, diversification score, strengths, risks, actionable recommendations, and answers to
   free-form questions.
@@ -90,7 +93,8 @@ cd frontend && npm run e2e    # Playwright smoke test against a running server (
 | POST | `/api/ai/analyze-portfolio` | AI analysis; uses stored holdings if none are sent |
 | GET | `/api/portfolio/holdings` | Holdings derived from transactions |
 | GET | `/api/stocks/:symbol/quote\|profile\|metrics\|news\|candles`, `/api/stocks/search?q=` | Cached market data |
-| POST | `/api/store-purchase` | Buy/sell with virtual cash `{symbol, quantity, price, type}` (auth) |
+| POST | `/api/store-purchase` | Buy/sell with virtual cash `{symbol, quantity, price, type}` (auth); response includes detected `behavior` |
+| GET/POST | `/api/patterns`, `/api/patterns/summary`, `/api/patterns/analyze` | Behavioral Mirror: your patterns, scores and AI coaching (auth) |
 | GET | `/api/transactions` · `/api/portfolio/holdings` · `/api/portfolio/cash-balance` | Your trades, holdings, cash and P&L (auth) |
 | POST | `/api/register` · `/api/login` · GET `/api/me` | Auth (JWT) |
 

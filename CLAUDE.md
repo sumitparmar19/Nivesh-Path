@@ -27,7 +27,9 @@ Live: https://nivesh-path-vzeak.ondigitalocean.app (custom domain pending) · Re
       `/api/stocks/*` Finnhub data API (quote, profile, metrics, news, search, curated 50, candles)
 - [x] **Phase 2B** - React 18 + TS + Tailwind app in `frontend/` (all 12 pages + `/stock/:symbol` for any ticker),
       served by Express with a staged rollout (`src/spa.js`, `REACT_DISABLED` rollback), Vitest (75) + Playwright smoke in CI
-- [ ] **2C Behavioral Mirror - next** · 2D Pre-trade check + stress test · 2E news pipeline + AI chat · 2F cloud/observability
+- [x] **Phase 2C Behavioral Mirror** - panic sell / FOMO buy / overconcentration detected after every trade (pure rules in
+      `src/lib/behaviorRules.js`, events in `behavioral_events`), `/api/patterns`, AI coach, `/behavioral-mirror` page
+- [ ] **2D Pre-trade check + stress test - next** (reuse `behaviorRules` before the trade) · 2E news + AI chat · 2F cloud
 
 ## Layout
 ```
@@ -38,7 +40,11 @@ frontend/            # React 18 + TS + Tailwind (Vite). src/pages (one per route
 src/
   app.js             # createApp(deps) - Express app, deps injectable for tests
   spa.js             # serves frontend/dist: React routes + 301s from the legacy URLs they replace; REACT_DISABLED rollback
-  lib/fakeMarket.js  # FAKE_MARKET_DATA=1 made-up prices for CI browser tests (refused in production)
+  lib/fakeMarket.js  # FAKE_MARKET_DATA=1 made-up prices for CI browser tests (refused in production); FOMO/DROP tickers
+  lib/behaviorRules.js    # pure Behavioral Mirror rules (panic, FOMO, concentration, dedup, scores) - reuse in 2D
+  lib/behaviorDetector.js # runs the rules after a trade, saves BehaviorEvent; trade waits <=1.5s, never fails
+  routes/patterns.js      # /api/patterns (list, summary+scores, acknowledge, delete, insight, analyze)
+  models/BehaviorEvent.js # collection `behavioral_events` (NOT behavioral_patterns: that is the AI's PatternStore)
   config.js          # env config, STOCKS list, toSymbol() name->ticker
   middleware/auth.js # requireAuth (401) / optionalAuth - req.user = { id, email }
   lib/ledger.js      # virtual cash ledger: atomic buy/sell, per-user lock, portfolio summary
@@ -79,6 +85,10 @@ docs/                # PHASE1_REPORT.md, PHASE2_PLAN.md, DEPLOYMENT.md
 - Account: `PATCH /api/me` · `GET/PATCH /api/me/settings` · `POST /api/me/password` · `GET /api/me/avatar` · `DELETE /api/me`
   ({password, confirm:"DELETE"}) · `POST /api/portfolio/reset` ({confirm:"RESET"}) · `GET/POST/DELETE /api/watchlist`
 - `GET /api/ai/history` · `GET /api/ai/history/:id` (every analysis is saved) · `POST /api/contact` (public, rate-limited)
+- Behavioral Mirror: `GET /api/patterns?type=&severity=&acknowledged=&limit=` (max 100) · `GET /api/patterns/summary` (counts,
+  unread, scores) · `PATCH /api/patterns/:id/acknowledge` · `POST /api/patterns/acknowledge-all` · `DELETE /api/patterns/:id`
+  · `GET /api/patterns/insight` (last saved) · `POST /api/patterns/analyze` -> FastAPI `POST /api/ai/behavior/{user_id}`;
+  trade responses include `behavior: [...]` (or null if detection took >1.5s)
 - Public data: `GET /api/stocks/curated|search?q=|quotes?symbols=` · `GET /api/stocks/:symbol/quote|profile|metrics|news|candles`
 - `GET /search` - public cached quotes for the 12 featured stocks · `DELETE /api/ai/history/:id`
 - Page URLs (`/portfolio`, `/stock/:symbol`, ...) belong to the React app - never add a non-`/api` GET route that clashes
@@ -104,7 +114,10 @@ docs/                # PHASE1_REPORT.md, PHASE2_PLAN.md, DEPLOYMENT.md
 - Every new file starts with a brief comment explaining what it does and why it exists
 - Never hardcode API keys - environment variables only; `.env` is git-ignored, update `.env.example`
 - Keep commits small and descriptive; run `npm test` and `pytest` before pushing; never break CI
-- Durable AI data (behavioral patterns etc.) goes to MongoDB via `PatternStore`; ChromaDB is wiped on every deploy
+- Durable AI data (coach insight, per-type summaries) goes to MongoDB via `PatternStore`; ChromaDB is wiped on every deploy.
+  Per-trade detections are `BehaviorEvent`s written by Node - never write them into `behavioral_patterns` (unique index)
+- Market data for detectors comes from `marketData.momentum()` (basic financials: 52w high, 5-day return); candles are
+  not on the free Finnhub plan
 - Don't do arithmetic in the LLM - compute numbers in code and pass them in
 - UI: new UI work goes in `frontend/` (React). Types in `src/types` must match the real API; API calls only through
   `src/lib/api.ts`; >= 5 Vitest tests per page; new release notes go in `frontend/src/config/releases.ts`

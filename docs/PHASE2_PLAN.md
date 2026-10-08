@@ -6,7 +6,7 @@
 
 ## Implementation notes (read first)
 
-**Status:** Phase 2A done ✅ · Phase 2B done ✅ (React app, staged rollout) · next: Phase 2C (Behavioral Mirror)
+**Status:** Phase 2A ✅ · Phase 2B ✅ (React app) · Phase 2C ✅ (Behavioral Mirror) · next: Phase 2D (pre-trade check + stress test)
 
 ### Decisions / deviations from the plan
 - **Branch:** sessions push to the branch they are assigned (e.g. `claude/...`), merged via PR, instead of `feat/*` names.
@@ -89,8 +89,36 @@
 - **Not done (later):** delete the legacy pages in `public/` once React has been live without rollbacks; WebSocket
   prices (2E); measured Lighthouse numbers before quoting any in a resume.
 
+### Phase 2C - Behavioral Mirror (done)
+Built from the planner's 2C file as corrected by `docs/PHASE2C_REVIEW.md` (approved) plus three additions.
+- **Rules** (`src/lib/behaviorRules.js`, pure functions, reused by 2D before a trade):
+  - panic sell = SELL after a 5-day return of -5% or worse (low 5%, medium 10%, high 20%); records loss vs average cost;
+  - FOMO buy = BUY within 5% of the 52-week high (low; medium within 3%; high within 2% AND 5-day run-up >= 15%);
+  - overconcentration = one stock > 35% / 50% / 65% of **cash + holdings** (option A: no warning on a small first buy).
+- **Data:** `marketData.momentum()` reads Finnhub basic financials (`52WeekHigh`, `5DayPriceReturnDaily`), cached 1h and
+  shared with key stats. No candles (not on the free plan).
+- **Storage:** Node writes one `BehaviorEvent` per detection to `behavioral_events`. `behavioral_patterns` stays the AI
+  service's `PatternStore` (unique `(user_id, pattern_type)`): it keeps the coach insight (`coach_insight`) and per-type
+  counts. Reset and account deletion remove both.
+- **Dedup:** a new overconcentration event only if none is active for that stock or the severity went up; when the stock
+  falls back to 35% or less (or is sold) its active events get `clearedAt`, so a later re-crossing warns again.
+- **Trade flow:** the trade route waits for detection at most 1.5s (`detectWithin`). If ready, the response has
+  `behavior: [...]` and the trade panel shows a note; if not, `behavior: null` and detection finishes in the background.
+  Detection can never fail a trade (every step is caught and logged; `bufferCommands: false` so a DB outage fails fast).
+- **Scores** (computed in Node, never by the LLM): impulse control = trades without a panic/FOMO flag / all trades (shown
+  only from 3 trades); diversification = 100 - largest stock's share of the account.
+- **AI coach:** FastAPI `POST /api/ai/behavior/{user_id}` (structured output `BehaviorCoaching`: headline, insight,
+  suggestion; facts pre-computed; rule-based fallback; not called when there are no events); `GET` returns the last one.
+- **UI:** `/behavioral-mirror` (scores, AI coach, filterable pattern cards with Got it / Dismiss / Mark all read, how it
+  works), sidebar item with unread count, trade-panel note, "Trading DNA" strip on Portfolio, What's new entry.
+- **Fake mode:** two NEW tickers only (`FOMO` triggers a high FOMO buy, `DROP` a medium panic sell); existing fake prices
+  unchanged. Playwright covers trade -> note -> page -> coach -> mark read.
+- **Limits:** no backfill of panic/FOMO for trades made before 2C (the market situation at that moment wasn't stored).
+- **Tests:** 178 -> 238 (Jest 111, pytest 31, Vitest 94, Playwright 2). Two existing Vitest assertions were updated
+  because the feature changed what they checked (2C left the roadmap; the theme test now finds its PATCH by method).
+
 ### Known risks to handle in later phases
-1. **Cold start** for the Behavioral Mirror: new users have no history -> add a demo account with realistic
+1. **Cold start** for the Behavioral Mirror (still open after 2C): new users have no history -> add a demo account with realistic
    seeded trades and **CSV import** of real broker history (Robinhood / Webull / Zerodha) in Phase 2C.
 2. **Historical data:** panic-sell/FOMO detection needs historical prices + news per trade; Finnhub free tier limits
    candles - confirm a free source before building 2C.
