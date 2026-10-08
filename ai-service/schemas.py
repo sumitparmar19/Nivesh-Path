@@ -123,3 +123,61 @@ class MemoryStatus(BaseModel):
     durable_storage: bool = Field(..., description="True when MongoDB is configured, so memory survives deploys")
     index: IndexStatus
     patterns: list[dict] = Field(default_factory=list, description="Stored behavioral-pattern results (Phase 2C)")
+
+
+# ---------- Behavioral Mirror (Phase 2C) ----------
+PatternType = Literal["panic_sell", "fomo_buy", "overconcentration"]
+Severity = Literal["low", "medium", "high"]
+
+
+class BehaviorEvent(BaseModel):
+    """One detected pattern, with the numbers the Node detectors already computed."""
+
+    pattern_type: PatternType
+    severity: Severity
+    symbol: str = Field(..., max_length=10)
+    facts: dict[str, float | None] = Field(default_factory=dict)
+    created_at: str | None = None
+
+
+class BehaviorScores(BaseModel):
+    """Scores computed in code (0-100, higher is healthier); the AI only explains them."""
+
+    impulseControl: int | None = Field(None, ge=0, le=100)
+    diversification: int = Field(..., ge=0, le=100)
+    tradeCount: int = Field(..., ge=0)
+    flaggedTrades: int = Field(..., ge=0)
+    enoughTrades: bool
+
+
+class LargestPosition(BaseModel):
+    """The biggest single stock as a share of cash + holdings."""
+
+    symbol: str
+    percent: float
+
+
+class BehaviorRequest(BaseModel):
+    """Body of POST /api/ai/behavior/{user_id}."""
+
+    scores: BehaviorScores
+    counts: dict[PatternType, int] = Field(default_factory=dict)
+    largest_position: LargestPosition | None = None
+    events: list[BehaviorEvent] = Field(default_factory=list, max_length=50)
+
+
+class BehaviorCoaching(BaseModel):
+    """Structured output Claude must return for the Behavioral Mirror."""
+
+    headline: str = Field(..., description="One short line naming the user's main habit")
+    insight: str = Field(..., description="2-3 sentences in second person, citing the user's own trades")
+    suggestion: str = Field(..., description="One concrete habit to try on the next trade")
+
+
+class BehaviorResponse(BehaviorCoaching):
+    """Body returned by the /api/ai/behavior endpoints (also saved to PatternStore)."""
+
+    ai_generated: bool
+    model: str | None = None
+    created_at: str
+    disclaimer: str = "Educational insights only - not financial advice."
