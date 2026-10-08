@@ -1,7 +1,7 @@
 // Typed client for every Nivesh-Path endpoint. Components never call fetch() directly: this adds the JWT,
 // turns error bodies into readable messages, and sends a 401 back to the login page.
 import type {
-  AIMemory, AdvisorHolding, AnalysisDetail, AnalysisResult, AnalysisSummary, AuthResponse, Candles, ContactMessage,
+  AIMemory, AdvisorHolding, BehaviorInsight, Pattern, PatternSummary, PatternType, Severity, AnalysisDetail, AnalysisResult, AnalysisSummary, AuthResponse, Candles, ContactMessage,
   CuratedSector, Holding, NewsItem, PortfolioSummary, ProfileUpdate, RawQuote, ResetResult, RiskProfile, SearchResult,
   StockMetrics, StockProfile, StockQuote, SystemStatus, Trade, TradeResult, User, UserSettings, WatchlistItem,
 } from "../types";
@@ -94,6 +94,18 @@ export const api = {
     deleteAnalysis: (id: string) => request<{ deleted: boolean }>(`/api/ai/history/${encodeURIComponent(id)}`, "DELETE"),
     memory: () => request<AIMemory>("/api/ai/memory"),
     rebuildMemory: () => request<AIMemory>("/api/ai/memory/rebuild", "POST"),
+  },
+  patterns: {
+    list: (filter: { type?: PatternType; severity?: Severity; limit?: number } = {}) => {
+      const qs = new URLSearchParams(Object.entries(filter).filter(([, v]) => v !== undefined).map(([k, v]) => [k, String(v)])).toString();
+      return request<{ patterns: Pattern[] }>(`/api/patterns${qs ? `?${qs}` : ""}`);
+    },
+    summary: () => request<PatternSummary>("/api/patterns/summary"),
+    acknowledge: (id: string) => request<{ pattern: Pattern }>(`/api/patterns/${encodeURIComponent(id)}/acknowledge`, "PATCH"),
+    acknowledgeAll: () => request<{ success: boolean }>("/api/patterns/acknowledge-all", "POST"),
+    remove: (id: string) => request<{ deleted: boolean }>(`/api/patterns/${encodeURIComponent(id)}`, "DELETE"),
+    insight: () => request<BehaviorInsight | { insight: null }>("/api/patterns/insight"),
+    analyze: () => request<BehaviorInsight>("/api/patterns/analyze", "POST"),
   },
   watchlist: {
     list: () => request<WatchlistItem[]>("/api/watchlist"),

@@ -41,6 +41,6 @@ describe("What's new", () => {
   it("shows the roadmap", () => {
     mockApi({ "GET /api/status": OK });
     open();
-    expect(screen.getByText("Behavioral Mirror")).toBeInTheDocument();
+    expect(screen.getByText("Pre-trade check")).toBeInTheDocument(); // 2C shipped; 2D is next on the roadmap
   });
 });

@@ -73,6 +73,22 @@ describe("Stock detail", () => {
     expect(calls.find((c) => c.method === "POST")?.body).toEqual({ symbol: "XOM", type: "BUY", quantity: 3, price: 112.4 });
   });
 
+  it("shows a Behavioral Mirror note when the server flags the trade", async () => {
+    mockApi({
+      ...market, ...account,
+      "POST /api/store-purchase": {
+        success: true, newBalance: 88862.8,
+        transaction: { _id: "t9", name: "XOM", price: 112.4, quantity: 3, total: 337.2, transactionType: "buy", timestamp: "2026-10-05T15:00:00Z" },
+        behavior: [{ _id: "b1", patternType: "fomo_buy", severity: "medium", symbol: "XOM", facts: { price: 112.4, week52High: 115, percentFromHigh: 2.26, fiveDayReturn: 4 } }],
+      },
+    });
+    open();
+    await screen.findByTestId("stock-price");
+    await userEvent.type(screen.getByTestId("quantity-input"), "3");
+    await userEvent.click(screen.getByRole("button", { name: /buy 3 xom/i }));
+    expect(await screen.findByTestId("behavior-note")).toHaveTextContent("just 2.3% under its 52-week high of $115.00");
+  });
+
   it("shows server errors like insufficient funds", async () => {
     mockApi({ ...market, ...account, "POST /api/store-purchase": new Response(JSON.stringify({ error: "Insufficient funds: this order costs $1,124,000.00 but you have $89,200.00." }), { status: 400 }) });
     open();
