@@ -8,32 +8,78 @@ const CONCENTRATION_LIMIT = 35; // % of total account value (cash + holdings) in
 const round2 = (n) => Math.round(n * 100) / 100;
 const isNum = (v) => typeof v === "number" && Number.isFinite(v);
 
-/** Selling after the stock fell at least 5% over the last 5 trading days. */
-function panicSell({ side, symbol, price, fiveDayReturn, avgCost }) {
-  if (side !== "sell" || !isNum(fiveDayReturn) || fiveDayReturn > -5) return null;
-  const drop = -fiveDayReturn;
+// Rule version stored on every event; the start-up clean-up re-checks older events with these rules.
+const RULE_VERSION = 2;
+
+// Daily figures (5-day return) can miss today's move, so both are used: the drop is the larger of the two
+// drops and the run-up the larger of the two rises. Taking the larger one never counts today twice.
+function moves({ fiveDayReturn, todayChange }) {
+  const known = [fiveDayReturn, todayChange].filter(isNum);
+  if (!known.length) return { drop: null, runUp: null };
+  return { drop: Math.max(0, -Math.min(...known)), runUp: Math.max(0, Math.max(...known)) };
+}
+
+/**
+ * Panic sell: selling at a loss (below your average cost) after the stock fell at least 5% in 5 days or
+ * today. Selling at or above cost after a dip is taking profit, not panic.
+ */
+function panicSell({ side, symbol, price, fiveDayReturn, todayChange, avgCost, quantity }) {
+  if (side !== "sell" || !isNum(price)) return null;
+  const { drop } = moves({ fiveDayReturn, todayChange });
+  if (drop === null || drop < 5) return null;
+  const knownCost = isNum(avgCost) && avgCost > 0;
+  if (knownCost && price >= avgCost) return null;
   const severity = drop >= 20 ? "high" : drop >= 10 ? "medium" : "low";
-  const facts = { price: round2(price), fiveDayReturn: round2(fiveDayReturn) };
-  if (isNum(avgCost) && avgCost > 0) {
+  const facts = { price: round2(price), drop: round2(drop), fiveDayReturn: isNum(fiveDayReturn) ? round2(fiveDayReturn) : null, todayChange: isNum(todayChange) ? round2(todayChange) : null };
+  if (knownCost) {
     facts.avgCost = round2(avgCost);
     facts.vsCostPct = round2(((price - avgCost) / avgCost) * 100); // negative = sold at a loss
   }
+  if (isNum(quantity)) facts.quantity = quantity;
   return { patternType: "panic_sell", severity, symbol, facts };
 }
 
-/** Buying within 5% of the 52-week high (high severity if it also ran up 15%+ in 5 days). */
-function fomoBuy({ side, symbol, price, week52High, fiveDayReturn }) {
-  if (side !== "buy" || !isNum(week52High) || week52High <= 0 || !isNum(price) || price <= 0) return null;
-  const fromHigh = Math.max(0, ((week52High - price) / week52High) * 100); // a new high counts as 0%
-  if (fromHigh > 5) return null;
-  const runUp = isNum(fiveDayReturn) ? fiveDayReturn : 0;
-  const severity = fromHigh <= 2 && runUp >= 15 ? "high" : fromHigh <= 3 ? "medium" : "low";
-  return {
-    patternType: "fomo_buy",
-    severity,
-    symbol,
-    facts: { price: round2(price), week52High: round2(week52High), percentFromHigh: round2(fromHigh), fiveDayReturn: isNum(fiveDayReturn) ? round2(fiveDayReturn) : null },
+/**
+ * FOMO buy: buying after a real short-term run-up (5%+ in 5 days or today), worse the closer to the
+ * 52-week high:  run-up >= 15% and within 2% of the high -> high;  >= 10% and within 3% -> medium;
+ * >= 5% and within 5% -> low;  >= 15% even further from the high -> low (still chasing a fast move).
+ */
+function fomoBuy({ side, symbol, price, week52High, dayHigh, fiveDayReturn, todayChange, quantity }) {
+  if (side !== "buy" || !isNum(price) || price <= 0) return null;
+  const { runUp } = moves({ fiveDayReturn, todayChange });
+  if (runUp === null || runUp < 5) return null;
+  const highs = [week52High, dayHigh].filter((h) => isNum(h) && h > 0);
+  const high = highs.length ? Math.max(...highs) : null;
+  const fromHigh = high ? Math.max(0, ((high - price) / high) * 100) : null; // a new high counts as 0%
+  let severity = null;
+  if (fromHigh !== null && fromHigh <= 5) {
+    severity = fromHigh <= 2 && runUp >= 15 ? "high" : fromHigh <= 3 && runUp >= 10 ? "medium" : "low";
+  } else if (runUp >= 15) {
+    severity = "low";
+  }
+  if (!severity) return null;
+  const facts = {
+    price: round2(price), runUp: round2(runUp),
+    week52High: high ? round2(high) : null, percentFromHigh: fromHigh === null ? null : round2(fromHigh),
+    fiveDayReturn: isNum(fiveDayReturn) ? round2(fiveDayReturn) : null, todayChange: isNum(todayChange) ? round2(todayChange) : null,
   };
+  if (isNum(quantity)) facts.quantity = quantity;
+  return { patternType: "fomo_buy", severity, symbol, facts };
+}
+
+/**
+ * Re-check an event saved under an older rule version, from its stored facts. Returns the event as the
+ * current rules would grade it, or null if it no longer qualifies. Overconcentration is unchanged.
+ */
+function regrade(event) {
+  const f = event.facts || {};
+  if (event.patternType === "panic_sell") {
+    return panicSell({ side: "sell", symbol: event.symbol, price: f.price, fiveDayReturn: f.fiveDayReturn, todayChange: f.todayChange, avgCost: f.avgCost, quantity: f.quantity });
+  }
+  if (event.patternType === "fomo_buy") {
+    return fomoBuy({ side: "buy", symbol: event.symbol, price: f.price, week52High: f.week52High, fiveDayReturn: f.fiveDayReturn, todayChange: f.todayChange, quantity: f.quantity });
+  }
+  return { patternType: event.patternType, severity: event.severity, symbol: event.symbol, facts: f };
 }
 
 function concentrationSeverity(pct) {
@@ -76,18 +122,26 @@ function shouldRecordConcentration(latestActive, severity) {
 
 /**
  * Behavioral scores (0-100, higher is healthier), computed in code so the AI never does arithmetic.
- * impulseControl: share of trades with no panic/FOMO flag (needs 3+ trades to mean anything).
- * diversification: 100 minus the largest single stock's share of the account.
+ * impulseControl: share of CHECKED trades with no panic/FOMO flag (unflagged / checked); needs 3 checked
+ *   trades. Trades that were never checked (before 2C, or market data down) don't count either way.
+ * diversification: 100 minus the largest single stock's share of the whole account (cash included). The
+ *   Advisor uses the same definition (ai-service portfolio_analytics.diversification_score).
  */
-function scores({ tradeCount, flaggedTrades, largestPercent }) {
-  const enough = tradeCount >= 3;
+function scores({ checkedTrades, flaggedTrades, largestPercent }) {
+  const enough = checkedTrades >= 3;
+  const flagged = Math.min(flaggedTrades, checkedTrades);
   return {
-    impulseControl: enough ? Math.round((1 - Math.min(flaggedTrades, tradeCount) / tradeCount) * 100) : null,
-    diversification: Math.max(0, Math.min(100, Math.round(100 - (largestPercent || 0)))),
-    tradeCount,
-    flaggedTrades,
+    impulseControl: enough ? Math.round(((checkedTrades - flagged) / checkedTrades) * 100) : null,
+    diversification: diversification(largestPercent),
+    checkedTrades,
+    flaggedTrades: flagged,
     enoughTrades: enough,
   };
 }
 
-module.exports = { panicSell, fomoBuy, concentration, shouldRecordConcentration, scores, SEVERITY_RANK, CONCENTRATION_LIMIT };
+/** 100 minus the largest single stock's share (%) of the whole account. */
+function diversification(largestPercent) {
+  return Math.max(0, Math.min(100, Math.round(100 - (largestPercent || 0))));
+}
+
+module.exports = { panicSell, fomoBuy, regrade, concentration, shouldRecordConcentration, scores, diversification, SEVERITY_RANK, CONCENTRATION_LIMIT, RULE_VERSION };
