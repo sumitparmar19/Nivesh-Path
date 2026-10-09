@@ -11,8 +11,11 @@ from functools import lru_cache
 
 from pymongo.database import Database
 
-from fastapi import Depends, FastAPI, HTTPException, Path
+import hmac
+
+from fastapi import Depends, FastAPI, HTTPException, Path, Request
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.responses import JSONResponse, Response
 
 from config import get_settings
 from schemas import (
@@ -28,7 +31,7 @@ from services.behavior_coach import rule_based_coaching
 from services.llm_service import LLMService, LLMUnavailableError
 from services.mongo_store import PatternStore, TradeStore, connect
 from services.portfolio_analytics import compute_metrics, rule_based_insight
-from services.vector_service import VectorService
+from services.vector_service import VectorService, history_lines
 from startup import RebuildReport, rebuild_user, rebuild_vector_index
 
 logging.basicConfig(level=logging.INFO)
@@ -96,6 +99,22 @@ app.add_middleware(
     allow_methods=["GET", "POST", "DELETE"],
     allow_headers=["*"],
 )
+
+
+@app.middleware("http")
+async def require_internal_token(request: Request, call_next):  # type: ignore[no-untyped-def]
+    """When AI_INTERNAL_TOKEN is set, only callers sending it (the Node backend) get through.
+
+    Defence in depth: on DigitalOcean the service has no public route anyway. /health stays open for the
+    platform's health check; nothing there is user data.
+    """
+    token = get_settings().ai_internal_token
+    if token and request.url.path != "/health":
+        sent = request.headers.get("x-internal-token", "")
+        if not hmac.compare_digest(sent.encode(), token.encode()):
+            return JSONResponse(status_code=401, content={"detail": "Missing or invalid internal token"})
+    response: Response = await call_next(request)
+    return response
 
 
 @lru_cache
@@ -211,7 +230,7 @@ def analyze_portfolio(
     always returns a useful answer.
     """
     try:
-        metrics = compute_metrics(body.holdings)
+        metrics = compute_metrics(body.holdings, body.cash_balance)
     except Exception as exc:
         logger.exception("Metric computation failed")
         raise HTTPException(status_code=422, detail="Invalid holdings") from exc
@@ -223,10 +242,13 @@ def analyze_portfolio(
         except Exception:
             logger.exception("Lazy ChromaDB rebuild failed; analysing without history")
 
-    history = vectors.search(body.user_id, body.holdings, body.question)
+    # Most relevant past trades, listed in time order with dates in the user's own time zone.
+    history = history_lines(vectors.search(body.user_id, body.holdings, body.question), body.timezone)
 
     try:
         insight, model = llm.generate_insight(metrics, history, body.risk_profile, body.question)
+        # The score is computed in code (same formula as the Behavioral Mirror); the model may not change it.
+        insight = insight.model_copy(update={"diversification_score": metrics.diversification_score})
         ai_generated = True
     except LLMUnavailableError as exc:
         logger.warning("Using rule-based insight: %s", exc)
@@ -237,7 +259,7 @@ def analyze_portfolio(
         insight=insight,
         ai_generated=ai_generated,
         model=model,
-        relevant_history=[d.page_content for d in history],
+        relevant_history=history,
     )
 
 
@@ -266,7 +288,11 @@ def analyze_behavior(
             logger.warning("Using rule-based behavior coaching: %s", exc)
 
     result = BehaviorResponse(
-        **coaching.model_dump(), ai_generated=ai_generated, model=model, created_at=datetime.now(timezone.utc).isoformat()
+        **coaching.model_dump(),
+        ai_generated=ai_generated,
+        model=model,
+        created_at=datetime.now(timezone.utc).isoformat(),
+        fingerprint=body.fingerprint,
     )
     if patterns is not None:
         try:

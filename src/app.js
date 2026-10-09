@@ -63,7 +63,7 @@ function createApp(deps = {}) {
   const mailer = deps.mailer || createMailer();
   const BehaviorEvent = deps.BehaviorEvent || require("./models/BehaviorEvent");
   const ledger = createLedger({ User, Purchase, quotes });
-  const detector = deps.detector === undefined ? createBehaviorDetector({ BehaviorEvent, marketData, ledger }) : deps.detector;
+  const detector = deps.detector === undefined ? createBehaviorDetector({ BehaviorEvent, Purchase, marketData, ledger }) : deps.detector;
 
   const app = express();
   app.disable("x-powered-by");
@@ -109,8 +109,8 @@ function createApp(deps = {}) {
   app.use(accountRoutes({ User, Purchase, Watchlist, Analysis, BehaviorEvent, aiClient }));
   app.use(watchlistRoutes({ Watchlist }));
   app.use(contactRoutes({ Message, mailer, contactTo: deps.contactTo }));
-  app.use(aiRoutes({ Purchase, Analysis, quotes, aiClient }));
-  app.use(patternRoutes({ BehaviorEvent, Purchase, ledger, aiClient }));
+  app.use(aiRoutes({ Purchase, User, Analysis, quotes, aiClient }));
+  app.use(patternRoutes({ BehaviorEvent, Purchase, ledger, aiClient, detector }));
 
   // React app (frontend/dist): enabled routes take over, and the legacy URLs they replace redirect to them.
   app.locals.reactRoutes = mountSpa(app, deps.spa || {});

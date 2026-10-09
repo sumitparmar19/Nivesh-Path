@@ -11,7 +11,6 @@ import json
 import logging
 
 import anthropic
-from langchain_core.documents import Document
 from langchain_core.messages import SystemMessage
 from langchain_core.prompts import ChatPromptTemplate
 
@@ -25,10 +24,17 @@ SYSTEM_PROMPT = """You are Nivesh-Path's portfolio analyst. You explain a retail
 US-equity portfolio in plain, encouraging language.
 
 Ground every statement in the metrics and transaction history you are given; the \
-numbers are already computed, so do not recalculate them. Judge concentration with \
-the HHI (above 2500 is concentrated) and the largest position's weight. Tailor \
-recommendations to the stated risk profile, keep them specific (name the symbol), \
-and give at most five. If the user asked a question, answer it in `answer`.
+numbers are already computed, so do not recalculate them. Position weights (`weight_pct`) \
+are shares of the WHOLE account, cash included; `invested_weight_pct` is the share of the \
+money invested in stocks only - if you mention it, say so explicitly. A large cash share is \
+the investor's choice, not a risk. Judge concentration only with `concentration_level`, \
+which is already computed from the largest stock's share of the account (over 35% low, \
+50% medium, 65% high; "none" means not concentrated). Set `diversification_score` to the \
+given value. Tailor recommendations to the stated risk profile, keep them specific (name \
+the symbol), and give at most five. If the user asked a question, answer it in `answer`.
+
+This is a paper-trading account with virtual money: no taxes, fees or real money are involved, so never \
+mention tax consequences, tax-loss harvesting or trading costs.
 
 This is educational content, not personalised financial advice; never promise returns."""
 
@@ -51,7 +57,10 @@ see their own habits, using evidence from their own paper trades.
 Use only the facts given; every number is already computed, so never recalculate or invent figures. Speak \
 to the investor in second person ("You tend to..."), cite at least one of their trades by symbol, and be \
 honest but kind. If there are no concerning patterns, say so briefly. The suggestion must be one concrete \
-habit for their next trade. This is educational content, not financial advice; never promise returns."""
+habit for their next trade. This is educational content, not financial advice; never promise returns.
+
+This is a paper-trading account with virtual money: no taxes, fees or real money are involved, so never \
+mention tax consequences, tax-loss harvesting or trading costs."""
 
 BEHAVIOR_HUMAN_PROMPT = """The investor's trading behavior:
 {facts}"""
@@ -84,7 +93,7 @@ class LLMService:
     def generate_insight(
         self,
         metrics: PortfolioMetrics,
-        history: list[Document],
+        history: list[str],
         risk_profile: str,
         question: str | None,
     ) -> tuple[AIInsight, str]:
@@ -95,7 +104,7 @@ class LLMService:
         messages = PROMPT.format_messages(
             risk_profile=risk_profile,
             metrics_json=json.dumps(metrics.model_dump(), indent=2),
-            history="\n".join(f"- {d.page_content}" for d in history) or "- (no history yet)",
+            history="\n".join(f"- {line}" for line in history) or "- (no history yet)",
             question=question or "(none)",
         )
         return self._parse(messages, AIInsight)

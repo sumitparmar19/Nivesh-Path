@@ -10,6 +10,10 @@ const ACTION_TONE = { buy: "brand", hold: "brand", sell: "red", rebalance: "ambe
 export default function InsightView({ data }: { data: AnalysisResult }) {
   const { metrics: m, insight: ins } = data;
   const risk = ins.risk_level;
+  // Weights are shares of the whole account (cash included); analyses saved before Oct 2026 have no cash.
+  const hasCash = typeof m.cash === "number" && typeof m.account_value === "number";
+  const largest = m.positions.find((p) => p.symbol === m.largest_position);
+  const investedPct = largest?.invested_weight_pct;
   return (
     <div data-testid="ai-result" className="grid gap-5">
       <div className="flex flex-wrap gap-2">
@@ -22,16 +26,22 @@ export default function InsightView({ data }: { data: AnalysisResult }) {
           <strong>Your question: </strong>{ins.answer}
         </div>
       )}
-      <div className="grid gap-3 sm:grid-cols-4">
+      <div className="grid gap-3 sm:grid-cols-2">
         {[
-          ["Total value", money(m.total_value), ""],
-          ["Unrealized P/L", pct(m.total_unrealized_pl_pct), tone(m.total_unrealized_pl)],
-          ["Largest position", `${m.largest_position} · ${m.largest_weight_pct.toFixed(0)}%`, ""],
-          ["Diversification", `${ins.diversification_score}/100`, ""],
-        ].map(([label, value, cls]) => (
+          hasCash ? ["Account value", money(m.account_value as number), "", `Cash ${money(m.cash as number)} (${(m.cash_pct ?? 0).toFixed(1)}%)`] : ["Invested value", money(m.total_value), "", ""],
+          ["Unrealized P/L", pct(m.total_unrealized_pl_pct), tone(m.total_unrealized_pl), ""],
+          [
+            "Largest position",
+            `${m.largest_position} · ${m.largest_weight_pct.toFixed(1)}%`,
+            "",
+            hasCash ? `of your account${typeof investedPct === "number" ? ` (${investedPct.toFixed(1)}% of invested money)` : ""}` : "of invested money",
+          ],
+          ["Diversification", `${m.diversification_score ?? ins.diversification_score}/100`, "", "100 minus the largest stock's share of the account"],
+        ].map(([label, value, cls, foot]) => (
           <div key={label} className="rounded-xl border border-line p-3">
             <span className="text-xs text-muted">{label}</span>
             <strong className={cx("block text-lg tabular", cls || "text-ink")}>{value}</strong>
+            {foot && <span className="block text-xs text-muted">{foot}</span>}
           </div>
         ))}
       </div>
@@ -59,7 +69,7 @@ export default function InsightView({ data }: { data: AnalysisResult }) {
       {data.relevant_history.length > 0 && (
         <div>
           <h3 className="mb-1 flex items-center gap-2 font-semibold text-ink"><Brain size={16} className="text-brand-600" /> From your trade history</h3>
-          <p className="mb-2 text-sm text-muted">The advisor looked up these {data.relevant_history.length} past trades of yours before answering.</p>
+          <p className="mb-2 text-sm text-muted">The advisor looked up these {data.relevant_history.length} past trades of yours before answering (oldest first).</p>
           <ul className="grid gap-1 text-sm text-ink-2">{data.relevant_history.map((h) => <li key={h}>· {h}</li>)}</ul>
         </div>
       )}

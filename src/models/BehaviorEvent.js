@@ -13,6 +13,7 @@ const behaviorEventSchema = new mongoose.Schema(
     facts: { type: mongoose.Schema.Types.Mixed, default: {} }, // numbers computed in code, shown in the UI
     acknowledged: { type: Boolean, default: false },
     clearedAt: { type: Date, default: null }, // overconcentration only: set when the position fell back under 35%
+    ruleVersion: { type: Number }, // rules that produced it; older events are re-checked at start-up
   },
   // bufferCommands off: if MongoDB is down, detection fails (and is skipped) at once instead of hanging 10s.
   { timestamps: true, collection: "behavioral_events", bufferCommands: false }

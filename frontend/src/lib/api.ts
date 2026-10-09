@@ -7,6 +7,15 @@ import type {
 } from "../types";
 import { clearSession, readToken } from "./session";
 
+/** The browser's time zone (e.g. "America/Los_Angeles"), so the AI shows dates the way the user sees them. */
+export function browserTimeZone(): string | undefined {
+  try {
+    return Intl.DateTimeFormat().resolvedOptions().timeZone || undefined;
+  } catch {
+    return undefined;
+  }
+}
+
 export class ApiError extends Error {
   constructor(message: string, readonly status: number) {
     super(message);
@@ -88,7 +97,7 @@ export const api = {
   },
   ai: {
     analyze: (holdings: AdvisorHolding[], riskProfile: RiskProfile, question?: string) =>
-      request<AnalysisResult>("/api/ai/analyze-portfolio", "POST", { holdings, risk_profile: riskProfile, question: question || undefined }),
+      request<AnalysisResult>("/api/ai/analyze-portfolio", "POST", { holdings, risk_profile: riskProfile, question: question || undefined, timezone: browserTimeZone() }),
     history: () => request<AnalysisSummary[]>("/api/ai/history"),
     analysis: (id: string) => request<AnalysisDetail>(`/api/ai/history/${encodeURIComponent(id)}`),
     deleteAnalysis: (id: string) => request<{ deleted: boolean }>(`/api/ai/history/${encodeURIComponent(id)}`, "DELETE"),
@@ -105,7 +114,7 @@ export const api = {
     acknowledgeAll: () => request<{ success: boolean }>("/api/patterns/acknowledge-all", "POST"),
     remove: (id: string) => request<{ deleted: boolean }>(`/api/patterns/${encodeURIComponent(id)}`, "DELETE"),
     insight: () => request<BehaviorInsight | { insight: null }>("/api/patterns/insight"),
-    analyze: () => request<BehaviorInsight>("/api/patterns/analyze", "POST"),
+    analyze: () => request<BehaviorInsight>("/api/patterns/analyze", "POST", { timezone: browserTimeZone() }),
   },
   watchlist: {
     list: () => request<WatchlistItem[]>("/api/watchlist"),

@@ -43,8 +43,8 @@ function Scores({ s }: { s: PatternSummary }) {
         <Meter
           label="Impulse control"
           value={sc.impulseControl}
-          help={`${sc.tradeCount - sc.flaggedTrades} of your ${sc.tradeCount} trades had no panic or FOMO flag.`}
-          empty={`Needs at least 3 trades (you have ${sc.tradeCount}).`}
+          help={`${sc.checkedTrades - sc.flaggedTrades} of your ${sc.checkedTrades} checked trades had no panic or FOMO flag.${sc.tradeCount > sc.checkedTrades ? ` ${sc.tradeCount - sc.checkedTrades} older trade(s) weren't checked and don't count.` : ""}`}
+          empty={`Needs 3 checked trades (you have ${sc.checkedTrades}).`}
         />
         <Meter
           label="Diversification"
@@ -90,6 +90,11 @@ function Coach({ hasPatterns, tradeCount }: { hasPatterns: boolean; tradeCount: 
         )}
       />
       {analyze.isError && <ErrorState message={(analyze.error as Error).message} onRetry={() => analyze.mutate()} />}
+      {insight?.stale && !analyze.isPending && (
+        <p role="status" data-testid="coach-stale" className="mb-3 rounded-xl border border-warn/40 bg-amber-500/10 p-3 text-sm text-ink-2">
+          Your patterns changed since this insight. <button type="button" className="font-semibold text-brand-600 hover:underline" onClick={() => analyze.mutate()}>Refresh it</button>
+        </p>
+      )}
       {saved.isLoading ? (
         <Skeleton className="h-20 w-full" />
       ) : insight ? (
@@ -137,6 +142,7 @@ export default function BehavioralMirror() {
   const all = patterns.data?.patterns ?? [];
   const shown = filter === "all" ? all : all.filter((p) => p.patternType === filter);
   const unread = all.filter((p) => !p.acknowledged).length;
+  const read = all.length - unread;
   const busy = acknowledge.isPending || dismiss.isPending || acknowledgeAll.isPending;
 
   return (
@@ -167,6 +173,9 @@ export default function BehavioralMirror() {
             </Button>
           )}
         />
+        {all.length > 0 && (
+          <p className="-mt-2 mb-3 text-sm text-muted" data-testid="read-counts">{unread} new · {read} read</p>
+        )}
         <div role="tablist" aria-label="Filter patterns" className="mb-4 flex flex-wrap gap-2">
           {(["all", ...TYPES] as Filter[]).map((f) => {
             const count = f === "all" ? all.length : all.filter((p) => p.patternType === f).length;

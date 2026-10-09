@@ -10,9 +10,21 @@ export interface Release {
 
 export const RELEASES: Release[] = [
   {
+    title: "Fairer Behavioral Mirror, and an Advisor that counts your cash",
+    tag: "Phase 2C update · Oct 2026",
+    isNew: true,
+    intro: "Fixes from live testing: fewer false alarms, the same numbers on every page, and dates in your own time zone.",
+    points: [
+      ["FOMO needs a real run-up.", "Buying near a high is only flagged after a 5%+ rise (or any 15%+ jump), so ordinary index-fund buys aren't flagged."],
+      ["No panic flag when you sell at a profit.", "Only selling below what you paid after a drop counts. Today's move is checked too."],
+      ["The Advisor sees your whole account.", "Position weights include your cash, and Diversification is the same number as on the Behavioral Mirror."],
+      ["Clearer cards and history.", "Each pattern shows its time and share count, read cards are labelled, and dates follow your time zone."],
+    ],
+    links: [{ to: "/behavioral-mirror", label: "Open Behavioral Mirror" }, { to: "/advisor", label: "AI Advisor" }],
+  },
+  {
     title: "Behavioral Mirror: see your own trading habits",
     tag: "Phase 2C · Oct 2026",
-    isNew: true,
     intro: "Every trade is now checked for the habits that cost investors the most, using the price data at the moment you trade.",
     points: [
       ["Panic sells and FOMO buys.", "Selling after a sharp 5-day drop, or buying right under a 52-week high, is flagged, with the numbers that triggered it."],
