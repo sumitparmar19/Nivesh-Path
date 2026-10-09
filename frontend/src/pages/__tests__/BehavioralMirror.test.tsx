@@ -21,7 +21,7 @@ describe("Behavioral Mirror", () => {
     expect(screen.getByRole("heading", { name: "Behavioral Mirror" })).toBeInTheDocument();
     expect(await screen.findByTestId("score-Impulse control")).toHaveTextContent("60");
     expect(screen.getByRole("meter", { name: "Diversification" })).toHaveAttribute("aria-valuenow", "60");
-    expect(screen.getByText(/3 of your 5 trades had no panic or FOMO flag/)).toBeInTheDocument();
+    expect(screen.getByText(/3 of your 5 checked trades had no panic or FOMO flag\. 1 older trade\(s\) weren't checked/)).toBeInTheDocument();
     expect(screen.getByTestId("count-panic_sell")).toHaveTextContent("1");
   });
 
@@ -29,7 +29,7 @@ describe("Behavioral Mirror", () => {
     mockApi({ ...BASE, "GET /api/patterns/summary": EMPTY_SUMMARY, "GET /api/patterns": { patterns: [] } });
     open();
     expect(await screen.findByText("No patterns detected")).toBeInTheDocument();
-    expect(screen.getByText("Needs at least 3 trades (you have 0).")).toBeInTheDocument();
+    expect(screen.getByText("Needs 3 checked trades (you have 0).")).toBeInTheDocument();
     expect(screen.getByText(/your account is all cash/)).toBeInTheDocument();
     expect(screen.queryByRole("button", { name: /get my insight/i })).not.toBeInTheDocument();
   });
@@ -94,4 +94,20 @@ describe("Behavioral Mirror", () => {
     open();
     expect(await screen.findByText("Internal server error")).toBeInTheDocument();
   });
+
+  it("shows how many patterns are new and read", async () => {
+    mockApi(BASE);
+    open();
+    expect(await screen.findByTestId("read-counts")).toHaveTextContent("2 new · 1 read");
+  });
+
+  it("warns when the saved insight is out of date, and refreshes it", async () => {
+    const { calls } = mockApi({ ...BASE, "GET /api/patterns/insight": { ...INSIGHT, stale: true }, "POST /api/patterns/analyze": { ...INSIGHT, headline: "Fresh headline" } });
+    open();
+    expect(await screen.findByTestId("coach-stale")).toHaveTextContent("Your patterns changed since this insight.");
+    await userEvent.click(screen.getByRole("button", { name: "Refresh it" }));
+    expect(await screen.findByText("Fresh headline")).toBeInTheDocument();
+    expect(calls.find((c) => c.method === "POST" && c.url === "/api/patterns/analyze")?.body).toEqual({ timezone: expect.any(String) });
+  });
 });
+

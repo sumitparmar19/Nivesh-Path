@@ -86,7 +86,7 @@ describe("Stock detail", () => {
     await screen.findByTestId("stock-price");
     await userEvent.type(screen.getByTestId("quantity-input"), "3");
     await userEvent.click(screen.getByRole("button", { name: /buy 3 xom/i }));
-    expect(await screen.findByTestId("behavior-note")).toHaveTextContent("just 2.3% under its 52-week high of $115.00");
+    expect(await screen.findByTestId("behavior-note")).toHaveTextContent("after it rose 4.0% in 5 days, 2.3% under its 52-week high of $115.00");
   });
 
   it("shows server errors like insufficient funds", async () => {
