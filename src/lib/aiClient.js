@@ -1,11 +1,13 @@
 // HTTP client for the Python AI service (FastAPI, ai-service/).
 const { config } = require("../config");
 
-function createAiClient({ fetchImpl = fetch, baseUrl = config.aiServiceUrl, timeoutMs = 120000 } = {}) {
+function createAiClient({ fetchImpl = fetch, baseUrl = config.aiServiceUrl, timeoutMs = 120000, internalToken = config.aiInternalToken } = {}) {
+  // Shared secret the AI service checks when AI_INTERNAL_TOKEN is set (defence in depth: it isn't public).
+  const auth = internalToken ? { "X-Internal-Token": internalToken } : {};
   async function request(method, path, body, ms = timeoutMs) {
     const response = await fetchImpl(`${baseUrl}${path}`, {
       method,
-      headers: { "Content-Type": "application/json" },
+      headers: { "Content-Type": "application/json", ...auth },
       body: body === undefined ? undefined : JSON.stringify(body),
       signal: AbortSignal.timeout(ms),
     });

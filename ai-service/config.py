@@ -21,6 +21,7 @@ class Settings:
     mongo_db_name: str | None
     sentry_dsn: str | None
     allowed_origins: list[str]
+    ai_internal_token: str | None = None
 
 
 @lru_cache
@@ -38,4 +39,5 @@ def get_settings() -> Settings:
         mongo_db_name=os.getenv("MONGO_DB_NAME") or None,
         sentry_dsn=os.getenv("SENTRY_DSN") or None,
         allowed_origins=[o.strip() for o in origins.split(",") if o.strip()],
+        ai_internal_token=os.getenv("AI_INTERNAL_TOKEN") or None,
     )

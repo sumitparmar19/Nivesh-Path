@@ -9,6 +9,8 @@ const config = {
   jwtSecret: process.env.JWT_SECRET || "dev-only-insecure-secret",
   redisUrl: process.env.REDIS_URL || "",
   aiServiceUrl: (process.env.AI_SERVICE_URL || "http://localhost:8001").replace(/\/$/, ""),
+  // Optional shared secret sent to the AI service (it rejects calls without it when set there too).
+  aiInternalToken: process.env.AI_INTERNAL_TOKEN || "",
   sentryDsn: process.env.SENTRY_DSN || "",
   // Optional email (contact form) via Resend
   resendApiKey: process.env.RESEND_API_KEY || "",

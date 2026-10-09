@@ -4,13 +4,13 @@ import { Link } from "react-router-dom";
 import { Check, PieChart, Rocket, TrendingDown, X } from "lucide-react";
 import type { LucideIcon } from "lucide-react";
 import type { Pattern, PatternFacts, PatternType, Severity, TradeBehavior } from "../types";
-import { money, shortDate } from "../lib/format";
+import { dateTime, money } from "../lib/format";
 import { stockPath } from "../config/site";
 import { Badge, Button, cx } from "./ui";
 
 export const PATTERN_META: Record<PatternType, { label: string; icon: LucideIcon; what: string }> = {
-  panic_sell: { label: "Panic sell", icon: TrendingDown, what: "Selling right after a sharp drop, often locking in a loss." },
-  fomo_buy: { label: "FOMO buy", icon: Rocket, what: "Buying near a recent high, after the price already ran up." },
+  panic_sell: { label: "Panic sell", icon: TrendingDown, what: "Selling at a loss (below what you paid) right after a drop of 5% or more, over 5 days or today." },
+  fomo_buy: { label: "FOMO buy", icon: Rocket, what: "Buying after a run-up of 5% or more (over 5 days or today) close to the 52-week high, or after any 15%+ jump." },
   overconcentration: { label: "Overconcentration", icon: PieChart, what: "More than 35% of your whole account in a single stock." },
 };
 
@@ -24,16 +24,25 @@ const pct = (n: number | null | undefined) => (typeof n === "number" ? `${Math.a
 
 /** One sentence explaining the pattern, using only the numbers the server computed. */
 export function explain(type: PatternType, symbol: string, f: PatternFacts): string {
+  // Which window the move came from: today's live move or the 5-day return (the larger one counts).
+  const today = typeof f.todayChange === "number" ? f.todayChange : null;
   if (type === "panic_sell") {
+    const drop = typeof f.drop === "number" ? f.drop : Math.abs(f.fiveDayReturn ?? 0);
+    const when = today !== null && -today >= drop - 0.005 ? "today" : "in 5 days";
     const v = f.vsCostPct;
     const vsCost = typeof v !== "number" ? "" : Math.abs(v) < 0.05 ? " That was about what you paid on average." : ` That was ${pct(v)} ${v < 0 ? "below" : "above"} what you paid on average.`;
-    return `You sold ${symbol} at ${money(f.price ?? 0)} after it fell ${pct(f.fiveDayReturn)} in 5 days.${vsCost}`;
+    return `You sold ${symbol} at ${money(f.price ?? 0)} after it fell ${pct(drop)} ${when}.${vsCost}`;
   }
   if (type === "fomo_buy") {
-    const runUp = typeof f.fiveDayReturn === "number" && f.fiveDayReturn > 0 ? ` after a ${pct(f.fiveDayReturn)} 5-day run-up` : "";
-    return `You bought ${symbol} at ${money(f.price ?? 0)}, just ${pct(f.percentFromHigh)} under its 52-week high of ${money(f.week52High ?? 0)}${runUp}.`;
+    const runUp = typeof f.runUp === "number" ? f.runUp : f.fiveDayReturn ?? 0;
+    const when = today !== null && today >= runUp - 0.005 ? "today" : "in 5 days";
+    const near = typeof f.percentFromHigh === "number" && typeof f.week52High === "number"
+      ? `, ${pct(f.percentFromHigh)} under its 52-week high of ${money(f.week52High)}`
+      : "";
+    return `You bought ${symbol} at ${money(f.price ?? 0)} after it rose ${pct(runUp)} ${when}${near}.`;
   }
-  return `${symbol} was ${pct(f.percentOfAccount)} of your whole account (${money(f.positionValue ?? 0)} of ${money(f.accountValue ?? 0)}).`;
+  const cause = f.fromPriceMove ? " after price changes" : "";
+  return `${symbol} was ${pct(f.percentOfAccount)} of your whole account${cause} (${money(f.positionValue ?? 0)} of ${money(f.accountValue ?? 0)}).`;
 }
 
 export function PatternCard({ pattern, onAcknowledge, onDismiss, busy }: { pattern: Pattern; onAcknowledge: (id: string) => void; onDismiss: (id: string) => void; busy?: boolean }) {
@@ -49,8 +58,11 @@ export function PatternCard({ pattern, onAcknowledge, onDismiss, busy }: { patte
           <div className="flex flex-wrap items-center gap-2">
             <h3 className="font-display font-bold text-ink">{meta.label}</h3>
             <SeverityBadge severity={pattern.severity} />
-            {!pattern.acknowledged && <span className="h-2 w-2 rounded-full bg-down" aria-label="New" />}
-            <time className="ml-auto text-xs text-muted" dateTime={pattern.createdAt}>{shortDate(pattern.createdAt)}</time>
+            {pattern.acknowledged ? <Badge tone="muted">Read</Badge> : <Badge tone="red">New</Badge>}
+            <span className="ml-auto text-xs text-muted" data-testid="pattern-when">
+              <time dateTime={pattern.trade?.timestamp || pattern.createdAt}>{dateTime(pattern.trade?.timestamp || pattern.createdAt)}</time>
+              {pattern.trade ? ` · ${pattern.trade.side === "sell" ? "sold" : "bought"} ${pattern.trade.quantity} share${pattern.trade.quantity === 1 ? "" : "s"}` : pattern.patternType === "overconcentration" && pattern.facts.fromPriceMove ? " · from price changes" : ""}
+            </span>
           </div>
           <p className="mt-1 text-sm text-ink-2">{explain(pattern.patternType, pattern.symbol, pattern.facts)}</p>
           <div className="mt-3 flex flex-wrap items-center gap-2">

@@ -78,7 +78,7 @@ def test_claude_coaches_from_the_users_own_facts(store: PatternStore) -> None:
     assert request["output_format"] is BehaviorCoaching
     prompt = request["messages"][0]["content"]
     # The numbers are passed in, computed by code; the model is told not to recalculate them.
-    assert "TSLA" in prompt and "-12.4%" in prompt and "0.71%" in prompt and "Impulse control score: 50" in prompt
+    assert "TSLA" in prompt and "12.4% drop" in prompt and "0.7% under its 52-week high" in prompt and "Impulse control score: 50" in prompt
     assert "never recalculate" in request["system"]
 
 
@@ -130,4 +130,15 @@ def test_rule_based_coaching_names_the_most_common_pattern() -> None:
     req = BehaviorRequest(**{**BODY, "counts": {"panic_sell": 3, "fomo_buy": 1, "overconcentration": 0}})
     coaching = rule_based_coaching(req)
     assert "sell after sharp drops" in coaching.headline
-    assert describe_event(BehaviorEvent(**EVENTS[0])).startswith("Sold TSLA at $180.5 after a -12.4% 5-day move (-9.75% vs your average cost)")
+    assert describe_event(BehaviorEvent(**EVENTS[0])).startswith("Sold TSLA at $180.5 after a 12.4% drop, 9.8% below your average cost")
+
+
+def test_coach_dates_use_the_users_time_zone_and_prompts_rule_out_taxes(store: PatternStore) -> None:
+    fake = FakeMessages(SimpleNamespace(stop_reason="end_turn", parsed_output=COACHING, model="claude-opus-5-5"))
+    late = {**EVENTS[1], "created_at": "2026-10-09T05:16:00Z"}  # 10:16 PM on Oct 8 in Los Angeles
+    body = {**BODY, "events": [late], "timezone": "America/Los_Angeles", "fingerprint": "abc"}
+    resp = client_for(make_llm(fake), store).post("/api/ai/behavior/u1", json=body).json()
+    prompt = fake.calls[0]["messages"][0]["content"]
+    assert "2026-10-08 10:16 PM" in prompt and "2026-10-09" not in prompt
+    assert "never mention tax" in fake.calls[0]["system"]
+    assert resp["fingerprint"] == "abc"

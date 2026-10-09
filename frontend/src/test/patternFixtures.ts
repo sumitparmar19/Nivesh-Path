@@ -18,14 +18,14 @@ export const SUMMARY: PatternSummary = {
   totalPatterns: 3, unreadCount: 2,
   byType: { panic_sell: 1, fomo_buy: 1, overconcentration: 1 },
   largestPosition: { symbol: "AAPL", percent: 40 },
-  scores: { impulseControl: 60, diversification: 60, tradeCount: 5, flaggedTrades: 2, enoughTrades: true },
+  scores: { impulseControl: 60, diversification: 60, tradeCount: 6, checkedTrades: 5, flaggedTrades: 2, enoughTrades: true },
 };
 
 export const EMPTY_SUMMARY: PatternSummary = {
   totalPatterns: 0, unreadCount: 0,
   byType: { panic_sell: 0, fomo_buy: 0, overconcentration: 0 },
   largestPosition: null,
-  scores: { impulseControl: null, diversification: 100, tradeCount: 0, flaggedTrades: 0, enoughTrades: false },
+  scores: { impulseControl: null, diversification: 100, tradeCount: 0, checkedTrades: 0, flaggedTrades: 0, enoughTrades: false },
 };
 
 export const INSIGHT: BehaviorInsight = {

@@ -7,24 +7,33 @@ fallback and the prompt can never disagree with the figures shown on the page.
 from __future__ import annotations
 
 from schemas import BehaviorCoaching, BehaviorEvent, BehaviorRequest
+from services.vector_service import format_when
 
 LABELS = {"panic_sell": "panic sell", "fomo_buy": "FOMO buy", "overconcentration": "overconcentration"}
 
 
-def describe_event(event: BehaviorEvent) -> str:
-    """One plain-English line per event, using only the stored facts."""
+def _pct(value: object) -> str:
+    return f"{abs(float(value)):.1f}%" if isinstance(value, (int, float)) else "?"
+
+
+def describe_event(event: BehaviorEvent, tz_name: str | None = None) -> str:
+    """One plain-English line per event, using only the stored facts; dates in the user's time zone."""
     f = event.facts
-    when = f" on {event.created_at[:10]}" if event.created_at else ""
+    when = f" on {format_when(event.created_at, tz_name)}" if event.created_at else ""
+    shares = f"{f['quantity']:g} " if isinstance(f.get("quantity"), (int, float)) else ""
     if event.pattern_type == "panic_sell":
-        line = f"Sold {event.symbol} at ${f.get('price')} after a {f.get('fiveDayReturn')}% 5-day move"
+        drop = f.get("drop") if f.get("drop") is not None else f.get("fiveDayReturn")
+        line = f"Sold {shares}{event.symbol} at ${f.get('price')} after a {_pct(drop)} drop"
         if f.get("vsCostPct") is not None:
-            line += f" ({f.get('vsCostPct')}% vs your average cost)"
+            line += f", {_pct(f.get('vsCostPct'))} below your average cost"
     elif event.pattern_type == "fomo_buy":
-        line = f"Bought {event.symbol} at ${f.get('price')}, {f.get('percentFromHigh')}% under its 52-week high"
-        if f.get("fiveDayReturn") is not None:
-            line += f" after a {f.get('fiveDayReturn')}% 5-day run-up"
+        run_up = f.get("runUp") if f.get("runUp") is not None else f.get("fiveDayReturn")
+        line = f"Bought {shares}{event.symbol} at ${f.get('price')} after a {_pct(run_up)} run-up"
+        if f.get("percentFromHigh") is not None:
+            line += f", {_pct(f.get('percentFromHigh'))} under its 52-week high"
     else:
-        line = f"{event.symbol} reached {f.get('percentOfAccount')}% of your whole account"
+        cause = " through price changes" if f.get("fromPriceMove") else ""
+        line = f"{event.symbol} reached {_pct(f.get('percentOfAccount'))} of your whole account{cause}"
     return f"{line}{when} [{event.severity} severity]"
 
 
@@ -32,15 +41,15 @@ def facts_block(req: BehaviorRequest) -> str:
     """The facts given to Claude: counts, scores and the most recent events (newest first)."""
     s = req.scores
     lines = [
-        f"Trades made: {s.tradeCount}; trades flagged as panic or FOMO: {s.flaggedTrades}",
-        f"Impulse control score: {s.impulseControl if s.impulseControl is not None else 'not enough trades yet (needs 3)'}",
+        f"Trades checked for panic/FOMO: {s.checkedTrades} (of {s.tradeCount} in total); flagged: {s.flaggedTrades}",
+        f"Impulse control score: {s.impulseControl if s.impulseControl is not None else 'not enough checked trades yet (needs 3)'}",
         f"Diversification score: {s.diversification}",
         "Pattern counts: " + ", ".join(f"{LABELS[k]} {v}" for k, v in req.counts.items()),
     ]
     if req.largest_position:
         lines.append(f"Largest position: {req.largest_position.symbol} at {req.largest_position.percent}% of the account")
     lines.append("Recent events:")
-    lines += [f"- {describe_event(e)}" for e in req.events[:10]] or ["- (none)"]
+    lines += [f"- {describe_event(e, req.timezone)}" for e in req.events[:10]] or ["- (none)"]
     return "\n".join(lines)
 
 
@@ -50,7 +59,7 @@ def rule_based_coaching(req: BehaviorRequest) -> BehaviorCoaching:
     if not req.events:
         return BehaviorCoaching(
             headline="No risky habits spotted yet",
-            insight=f"Across your {req.scores.tradeCount} trade(s) there are no panic sells, FOMO buys or oversized positions.",
+            insight=f"Across your {req.scores.checkedTrades} checked trade(s) there are no panic sells, FOMO buys or oversized positions.",
             suggestion="Keep writing down why you buy before each trade, so you can check later whether the reason held.",
         )
     top = max(counts, key=lambda k: counts[k])
@@ -66,6 +75,6 @@ def rule_based_coaching(req: BehaviorRequest) -> BehaviorCoaching:
         suggestion = "Decide a maximum share per stock (for example 20%) and trim back to it when a position grows past it."
     insight = (
         f"You have {counts['panic_sell']} panic sell(s), {counts['fomo_buy']} FOMO buy(s) and "
-        f"{counts['overconcentration']} overconcentration warning(s). The latest: {describe_event(latest)}."
+        f"{counts['overconcentration']} overconcentration warning(s). The latest: {describe_event(latest, req.timezone)}."
     )
     return BehaviorCoaching(headline=headline, insight=insight, suggestion=suggestion)

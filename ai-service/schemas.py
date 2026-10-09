@@ -39,6 +39,10 @@ class AnalyzePortfolioRequest(BaseModel):
         None, max_length=1000, description="Optional free-form question for the advisor"
     )
     risk_profile: Literal["conservative", "moderate", "aggressive"] = "moderate"
+    cash_balance: float | None = Field(
+        None, ge=0, description="Uninvested cash; weights are measured against cash + holdings when given"
+    )
+    timezone: str | None = Field(None, max_length=64, description="User's IANA time zone for dates, e.g. America/Los_Angeles")
 
 
 class IngestTransactionsRequest(BaseModel):
@@ -56,21 +60,29 @@ class PositionMetrics(BaseModel):
     cost_basis: float
     unrealized_pl: float
     unrealized_pl_pct: float
-    weight_pct: float
+    weight_pct: float = Field(..., description="Share of the whole account (cash + holdings), in %")
+    invested_weight_pct: float = Field(..., description="Share of the money invested in stocks only, in %")
 
 
 class PortfolioMetrics(BaseModel):
     """Portfolio-level analytics."""
 
-    total_value: float
+    total_value: float = Field(..., description="Value of the stock holdings (invested money)")
+    cash: float = 0.0
+    account_value: float = Field(0.0, description="Cash + holdings")
+    cash_pct: float = Field(0.0, description="Cash share of the account, in %")
     total_cost: float
     total_unrealized_pl: float
     total_unrealized_pl_pct: float
     position_count: int
     largest_position: str
-    largest_weight_pct: float
-    concentration_hhi: float = Field(
-        ..., description="Herfindahl-Hirschman index of weights (0-10000); >2500 = concentrated"
+    largest_weight_pct: float = Field(..., description="Largest stock's share of the whole account, in %")
+    concentration_hhi: float = Field(..., description="Herfindahl-Hirschman index of the stocks' account weights (0-10000)")
+    concentration_level: Literal["none", "low", "medium", "high"] = Field(
+        "none", description="Largest stock over 35% / 50% / 65% of the account (same bands as the Behavioral Mirror)"
+    )
+    diversification_score: int = Field(
+        100, ge=0, le=100, description="100 - largest stock's share of the account (same formula as the Behavioral Mirror)"
     )
     positions: list[PositionMetrics]
 
@@ -136,7 +148,7 @@ class BehaviorEvent(BaseModel):
     pattern_type: PatternType
     severity: Severity
     symbol: str = Field(..., max_length=10)
-    facts: dict[str, float | None] = Field(default_factory=dict)
+    facts: dict[str, float | bool | None] = Field(default_factory=dict)
     created_at: str | None = None
 
 
@@ -145,7 +157,8 @@ class BehaviorScores(BaseModel):
 
     impulseControl: int | None = Field(None, ge=0, le=100)
     diversification: int = Field(..., ge=0, le=100)
-    tradeCount: int = Field(..., ge=0)
+    tradeCount: int = Field(0, ge=0, description="All trades, checked or not")
+    checkedTrades: int = Field(0, ge=0, description="Trades the detectors actually checked (the score's base)")
     flaggedTrades: int = Field(..., ge=0)
     enoughTrades: bool
 
@@ -164,6 +177,8 @@ class BehaviorRequest(BaseModel):
     counts: dict[PatternType, int] = Field(default_factory=dict)
     largest_position: LargestPosition | None = None
     events: list[BehaviorEvent] = Field(default_factory=list, max_length=50)
+    fingerprint: str | None = Field(None, max_length=64, description="Identifies the data the insight was written for")
+    timezone: str | None = Field(None, max_length=64)
 
 
 class BehaviorCoaching(BaseModel):
@@ -180,4 +195,5 @@ class BehaviorResponse(BehaviorCoaching):
     ai_generated: bool
     model: str | None = None
     created_at: str
+    fingerprint: str | None = None
     disclaimer: str = "Educational insights only - not financial advice."

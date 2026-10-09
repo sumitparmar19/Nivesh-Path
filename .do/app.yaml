@@ -1,8 +1,9 @@
 # DigitalOcean App Platform spec (GitHub Student Pack credit).
 # Deploy: DigitalOcean dashboard -> Apps -> Create App -> "Import from app spec" (or `doctl apps create --spec .do/app.yaml`).
 # Secrets are NOT listed here: add them in the dashboard (Settings -> component -> Environment Variables, tick Encrypt):
-#   web: MONGO_URL, FINNHUB_API_KEY, JWT_SECRET, SENTRY_DSN (optional), RESEND_API_KEY + CONTACT_TO_EMAIL (optional)
-#   ai:  ANTHROPIC_API_KEY, MONGO_URL (same value as web; ChromaDB is rebuilt from it on every deploy), SENTRY_DSN (optional)
+#   web: MONGO_URL, FINNHUB_API_KEY, JWT_SECRET, AI_INTERNAL_TOKEN, SENTRY_DSN (optional), RESEND_API_KEY + CONTACT_TO_EMAIL (optional)
+#   ai:  ANTHROPIC_API_KEY, MONGO_URL (same value as web; ChromaDB is rebuilt from it on every deploy), AI_INTERNAL_TOKEN
+#        (same value as web: the AI service then only answers the web component), SENTRY_DSN (optional)
 name: nivesh-path
 region: nyc
 services:
