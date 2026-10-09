@@ -3,9 +3,25 @@ const express = require("express");
 const rateLimit = require("express-rate-limit");
 const { buildHoldings } = require("../lib/portfolio");
 const { requireAuth } = require("../middleware/auth");
+const { createLedger } = require("../lib/ledger");
+const { timeZone } = require("./patterns");
 
-function aiRoutes({ Purchase, Analysis, quotes, aiClient }) {
+const round2 = (n) => Math.round(n * 100) / 100;
+
+/**
+ * Cash to analyse with. Real holdings: the real cash. What-if holdings: the account keeps its real total
+ * value and cash is whatever the what-if holdings don't use (never below 0), so adding a what-if position
+ * spends cash and removing one frees it instead of inflating or shrinking the account.
+ */
+function cashForAnalysis({ realCash, realTotal, holdings, isWhatIf }) {
+  if (!isWhatIf) return round2(realCash);
+  const value = holdings.reduce((s, h) => s + h.quantity * (h.current_price > 0 ? h.current_price : h.avg_price), 0);
+  return round2(Math.max(0, realTotal - value));
+}
+
+function aiRoutes({ Purchase, User, Analysis, quotes, aiClient }) {
   const router = express.Router();
+  const ledger = User ? createLedger({ User, Purchase, quotes }) : null;
 
   // Each analysis is a paid LLM call, so cap it per user.
   const limiter = rateLimit({
@@ -20,6 +36,7 @@ function aiRoutes({ Purchase, Analysis, quotes, aiClient }) {
     try {
       const body = req.body || {};
       let holdings = Array.isArray(body.holdings) ? body.holdings : null;
+      const isWhatIf = Boolean(holdings && holdings.length);
       if (!holdings || holdings.length === 0) {
         holdings = buildHoldings(await Purchase.find({ userId: req.user.id }).lean());
       }
@@ -39,6 +56,13 @@ function aiRoutes({ Purchase, Analysis, quotes, aiClient }) {
         };
       });
 
+      // Weights are measured against the whole account (cash included), like the Portfolio page and the Mirror.
+      let cashBalance;
+      if (ledger) {
+        const account = await ledger.summary(req.user.id).catch(() => null);
+        if (account) cashBalance = cashForAnalysis({ realCash: account.cashBalance, realTotal: account.totalValue, holdings: enriched, isWhatIf });
+      }
+
       const riskProfile = ["conservative", "moderate", "aggressive"].includes(body.risk_profile) ? body.risk_profile : "moderate";
       const question = body.question ? String(body.question).slice(0, 1000) : undefined;
       const result = await aiClient.analyzePortfolio({
@@ -46,6 +70,8 @@ function aiRoutes({ Purchase, Analysis, quotes, aiClient }) {
         holdings: enriched,
         question,
         risk_profile: riskProfile,
+        cash_balance: cashBalance,
+        timezone: timeZone(body.timezone),
       });
 
       // Save the analysis so the user can reopen it later; a save failure never hides the answer.
@@ -141,3 +167,4 @@ function aiRoutes({ Purchase, Analysis, quotes, aiClient }) {
 }
 
 module.exports = aiRoutes;
+module.exports.cashForAnalysis = cashForAnalysis;

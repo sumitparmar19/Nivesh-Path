@@ -12,6 +12,8 @@ const purchaseSchema = new mongoose.Schema({
     timestamp: { type: Date, default: Date.now },
     // "live" when the server priced the trade from Finnhub, "client" when it fell back to the page's price.
     priceSource: { type: String, enum: ["live", "client"], default: "live" },
+    // Set when the Behavioral Mirror checked this trade for panic/FOMO (counts in the impulse-control score).
+    behaviorCheckedAt: { type: Date },
 });
 
 purchaseSchema.index({ userId: 1, timestamp: -1 });

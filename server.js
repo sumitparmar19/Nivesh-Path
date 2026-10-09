@@ -23,6 +23,9 @@ async function start() {
     try {
       await mongoose.connect(config.mongoUrl);
       console.log("MongoDB connected");
+      // Re-check Behavioral Mirror events saved under older rules (repeat-safe; runs in the background).
+      const { migrateBehaviorEvents } = require("./src/lib/behaviorMigration");
+      migrateBehaviorEvents({ BehaviorEvent: require("./src/models/BehaviorEvent"), Purchase: require("./models/Stock1") });
     } catch (err) {
       console.error("MongoDB connection failed:", err.message);
     }
