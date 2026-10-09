@@ -19,7 +19,7 @@ services:
   ai-service:
     build: ./ai-service
     ports:
-      - "8001:8001"
+      - "127.0.0.1:8001:8001" # this machine only; the backend reaches it over the compose network
     env_file: .env
     environment:
       CHROMA_PERSIST_DIR: /data/chroma
