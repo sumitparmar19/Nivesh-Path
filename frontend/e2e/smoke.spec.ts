@@ -1,5 +1,5 @@
-// Smoke test of the main user journey in a real browser: sign up, see $100k, find a stock, buy it, see it in
-// the portfolio and transactions, ask the AI advisor, log out. Run against a server with FAKE_MARKET_DATA=1.
+// Smoke tests in a real browser: the main journey (sign up, buy, portfolio, transactions, advisor, log out) and the
+// Behavioral Mirror (a flagged trade shows a note and appears on its page). Run against FAKE_MARKET_DATA=1.
 import { test, expect } from "@playwright/test";
 
 test("new user can sign up, buy a stock, get an analysis and log out", async ({ page }) => {
@@ -51,6 +51,42 @@ test("new user can sign up, buy a stock, get an analysis and log out", async ({ 
   await page.getByRole("button", { name: /log out/i }).click();
   await page.goto("/portfolio");
   await expect(page).toHaveURL(/\/login\?redirect=/);
+
+  expect(errors).toEqual([]);
+});
+
+test("a FOMO buy is flagged in the trade panel and shows up on the Behavioral Mirror", async ({ page }) => {
+  const id = Date.now().toString().slice(-8);
+  const errors: string[] = [];
+  page.on("pageerror", (err) => errors.push(err.message));
+
+  await page.goto("/register");
+  await page.getByLabel("Full name").fill("Mirror Tester");
+  await page.getByLabel("Email").fill(`mirror${id}@example.com`);
+  await page.getByLabel("Mobile number").fill(`66${id}`);
+  await page.getByLabel("Password").fill("secret123");
+  await page.getByRole("button", { name: "Create account" }).click();
+  await expect(page).toHaveURL(/\/portfolio$/);
+
+  // FOMO is a made-up ticker that exists only with FAKE_MARKET_DATA=1: 1% under its 52-week high, +18% in 5 days.
+  await page.goto("/stock/FOMO");
+  await page.getByTestId("quantity-input").fill("5");
+  await page.getByRole("button", { name: "Buy 5 FOMO" }).click();
+  await expect(page.getByTestId("trade-success")).toBeVisible();
+  await expect(page.getByTestId("behavior-note")).toContainText("fomo buy");
+
+  await page.getByRole("link", { name: /see your trading habits/i }).click();
+  await expect(page).toHaveURL(/\/behavioral-mirror$/);
+  await expect(page.getByTestId("pattern-fomo_buy")).toContainText("high severity");
+  await expect(page.getByTestId("count-fomo_buy")).toHaveText("1");
+  await expect(page.getByTestId("patterns-unread")).toContainText("1");
+
+  // The AI coach answers (rule-based when no Claude key is configured).
+  await page.getByRole("button", { name: /get my insight/i }).click();
+  await expect(page.getByTestId("coach-insight")).toBeVisible({ timeout: 45_000 });
+
+  await page.getByRole("button", { name: /got it/i }).click();
+  await expect(page.getByTestId("patterns-unread")).toHaveCount(0);
 
   expect(errors).toEqual([]);
 });

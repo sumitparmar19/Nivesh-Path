@@ -46,6 +46,8 @@ export interface TradeResult {
   success: boolean;
   newBalance: number;
   transaction: Trade;
+  /** Behavioral Mirror patterns found in this trade; null if detection didn't finish within ~1.5s. */
+  behavior?: TradeBehavior[] | null;
 }
 
 /** GET /api/portfolio/holdings */
@@ -268,4 +270,62 @@ export interface SystemStatus {
     vectorIndex?: { status: IndexStatus; users: number; transactions: number; seconds: number } | null;
   };
   checkedAt: string;
+}
+
+// ---------- Behavioral Mirror (/api/patterns) ----------
+export type PatternType = "panic_sell" | "fomo_buy" | "overconcentration";
+export type Severity = "low" | "medium" | "high";
+
+/** Numbers computed by the server's detectors (which ones are present depends on the pattern type). */
+export interface PatternFacts {
+  price?: number;
+  fiveDayReturn?: number | null;
+  avgCost?: number;
+  vsCostPct?: number;
+  week52High?: number;
+  percentFromHigh?: number;
+  positionValue?: number;
+  accountValue?: number;
+  percentOfAccount?: number;
+}
+
+export interface Pattern {
+  _id: string;
+  patternType: PatternType;
+  severity: Severity;
+  symbol: string;
+  tradeId: string | null;
+  facts: PatternFacts;
+  acknowledged: boolean;
+  clearedAt?: string | null;
+  createdAt: string;
+}
+
+/** A pattern as returned inside a trade response (`behavior`). */
+export type TradeBehavior = Pick<Pattern, "_id" | "patternType" | "severity" | "symbol" | "facts">;
+
+export interface BehaviorScores {
+  impulseControl: number | null; // null until 3+ trades
+  diversification: number;
+  tradeCount: number;
+  flaggedTrades: number;
+  enoughTrades: boolean;
+}
+
+export interface PatternSummary {
+  totalPatterns: number;
+  unreadCount: number;
+  byType: Record<PatternType, number>;
+  largestPosition: { symbol: string; percent: number } | null;
+  scores: BehaviorScores;
+}
+
+export interface BehaviorInsight {
+  headline: string;
+  insight: string;
+  suggestion: string;
+  ai_generated: boolean;
+  model?: string | null;
+  created_at: string;
+  disclaimer?: string;
 }
