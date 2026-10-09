@@ -6,7 +6,7 @@
 
 ## Implementation notes (read first)
 
-**Status:** Phase 2A ✅ · Phase 2B ✅ (React app) · Phase 2C ✅ (Behavioral Mirror) · next: Phase 2D (pre-trade check + stress test)
+**Status:** Phase 2A ✅ · Phase 2B ✅ (React app) · Phase 2C ✅ (Behavioral Mirror + live-test follow-up) · next: Phase 2D (pre-trade check + stress test)
 
 ### Decisions / deviations from the plan
 - **Branch:** sessions push to the branch they are assigned (e.g. `claude/...`), merged via PR, instead of `feat/*` names.
@@ -116,6 +116,22 @@ Built from the planner's 2C file as corrected by `docs/PHASE2C_REVIEW.md` (appro
 - **Limits:** no backfill of panic/FOMO for trades made before 2C (the market situation at that moment wasn't stored).
 - **Tests:** 178 -> 238 (Jest 111, pytest 31, Vitest 94, Playwright 2). Two existing Vitest assertions were updated
   because the feature changed what they checked (2C left the roadmap; the theme test now finds its PATCH by method).
+
+### Phase 2C follow-up - live-test fixes (done)
+Reviewed in `docs/PHASE2C_FOLLOWUP_REVIEW.md`, approved with four changes; full report in `docs/PHASE2C_FOLLOWUP_REPORT.md`.
+- **Rules v2** (`RULE_VERSION = 2`): FOMO needs a run-up of 5%+ (low within 5% of the high; medium 10%+ within 3%; high
+  15%+ within 2%; any 15%+ jump is at least low). Panic only when selling below average cost. Run-up/drop = the larger
+  of the 5-day return and today's live move; 52-week high also uses today's intraday high.
+- **Impulse control** = unflagged checked trades / checked trades (`Purchase.behaviorCheckedAt`), from 3 checked trades.
+- **Start-up clean-up** re-grades older events from their facts, deletes false alarms (marking their trade checked
+  first) and marks all trades since the 2C launch as checked.
+- **Advisor:** receives `cash_balance` (what-if holdings: account total kept, cash = total - what-if value, >= 0);
+  weights are shares of the whole account, `invested_weight_pct` labelled; concentration bands = the Mirror's;
+  Diversification computed in code and overwritten after Claude. Paper-trading prompt line (no taxes).
+- **Dates:** the browser sends its time zone; AI memory keeps exact timestamps and lists history oldest first.
+- **Concentration from price moves:** re-checked when the summary loads (Portfolio, Mirror, sidebar), max every 15 min.
+- **AI coach:** 5 fresh analyses/hour/user; unchanged data returns the saved insight (fingerprint); `stale` flag.
+- **AI_INTERNAL_TOKEN:** optional shared secret; FastAPI rejects calls without it when set (except `/health`).
 
 ### Known risks to handle in later phases
 1. **Cold start** for the Behavioral Mirror (still open after 2C): new users have no history -> add a demo account with realistic

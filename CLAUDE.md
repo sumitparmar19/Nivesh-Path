@@ -29,6 +29,8 @@ Live: https://nivesh-path-vzeak.ondigitalocean.app (custom domain pending) · Re
       served by Express with a staged rollout (`src/spa.js`, `REACT_DISABLED` rollback), Vitest (75) + Playwright smoke in CI
 - [x] **Phase 2C Behavioral Mirror** - panic sell / FOMO buy / overconcentration detected after every trade (pure rules in
       `src/lib/behaviorRules.js`, events in `behavioral_events`), `/api/patterns`, AI coach, `/behavioral-mirror` page
+- [x] **2C follow-up** (live-test fixes): FOMO needs a 5%+ run-up, no panic flag at/above cost, today's move counts, score
+      over checked trades only, Advisor weights include cash, one Diversification formula, time-zone dates, AI_INTERNAL_TOKEN
 - [ ] **2D Pre-trade check + stress test - next** (reuse `behaviorRules` before the trade) · 2E news + AI chat · 2F cloud
 
 ## Layout
@@ -42,7 +44,9 @@ src/
   spa.js             # serves frontend/dist: React routes + 301s from the legacy URLs they replace; REACT_DISABLED rollback
   lib/fakeMarket.js  # FAKE_MARKET_DATA=1 made-up prices for CI browser tests (refused in production); FOMO/DROP tickers
   lib/behaviorRules.js    # pure Behavioral Mirror rules (panic, FOMO, concentration, dedup, scores) - reuse in 2D
-  lib/behaviorDetector.js # runs the rules after a trade, saves BehaviorEvent; trade waits <=1.5s, never fails
+  lib/behaviorDetector.js # runs the rules after a trade, saves BehaviorEvent; trade waits <=1.5s, never fails;
+                          #   marks Purchase.behaviorCheckedAt; checkPrices(): concentration from price moves (15 min)
+  lib/behaviorMigration.js # start-up clean-up of events saved under older rules (ruleVersion < 2)
   routes/patterns.js      # /api/patterns (list, summary+scores, acknowledge, delete, insight, analyze)
   models/BehaviorEvent.js # collection `behavioral_events` (NOT behavioral_patterns: that is the AI's PatternStore)
   config.js          # env config, STOCKS list, toSymbol() name->ticker
@@ -116,8 +120,13 @@ docs/                # PHASE1_REPORT.md, PHASE2_PLAN.md, DEPLOYMENT.md
 - Keep commits small and descriptive; run `npm test` and `pytest` before pushing; never break CI
 - Durable AI data (coach insight, per-type summaries) goes to MongoDB via `PatternStore`; ChromaDB is wiped on every deploy.
   Per-trade detections are `BehaviorEvent`s written by Node - never write them into `behavioral_patterns` (unique index)
-- Market data for detectors comes from `marketData.momentum()` (basic financials: 52w high, 5-day return); candles are
-  not on the free Finnhub plan
+- Market data for detectors comes from `marketData.momentum()` (basic financials: 52w high, 5-day return) plus the live
+  quote (today's change, intraday high); candles are not on the free Finnhub plan
+- Changing a Behavioral Mirror rule: bump `RULE_VERSION` in `behaviorRules.js` so the start-up clean-up re-grades old events
+- Portfolio weights shown anywhere (Advisor, Mirror, Portfolio) are shares of the WHOLE account (cash + holdings);
+  Diversification = 100 - largest stock's share of the account, computed in code (Node `behaviorRules.diversification`,
+  Python `portfolio_analytics.diversification_score`) - never by the LLM
+- AI prompts must say the account is paper trading (no taxes/fees); dates shown to users use the browser's time zone
 - Don't do arithmetic in the LLM - compute numbers in code and pass them in
 - UI: new UI work goes in `frontend/` (React). Types in `src/types` must match the real API; API calls only through
   `src/lib/api.ts`; >= 5 Vitest tests per page; new release notes go in `frontend/src/config/releases.ts`

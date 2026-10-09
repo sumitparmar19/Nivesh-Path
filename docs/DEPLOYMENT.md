@@ -141,8 +141,13 @@ values and tick **Encrypt** on each one:
 
 | Component | Variables |
 |---|---|
-| web | `MONGO_URL`, `FINNHUB_API_KEY`, `JWT_SECRET` (required in production), `SENTRY_DSN` (optional), `RESEND_API_KEY` + `CONTACT_TO_EMAIL` (optional, contact-form email) |
-| ai | `ANTHROPIC_API_KEY`, `MONGO_URL` (same value as web), `SENTRY_DSN` (optional) |
+| web | `MONGO_URL`, `FINNHUB_API_KEY`, `JWT_SECRET` (required in production), `AI_INTERNAL_TOKEN`, `SENTRY_DSN` (optional), `RESEND_API_KEY` + `CONTACT_TO_EMAIL` (optional, contact-form email) |
+| ai | `ANTHROPIC_API_KEY`, `MONGO_URL` (same value as web), `AI_INTERNAL_TOKEN` (same value as web), `SENTRY_DSN` (optional) |
+
+`AI_INTERNAL_TOKEN` is a shared secret: with it set, the AI service only answers requests from the web component.
+Make one with `node -e "console.log(require('crypto').randomBytes(32).toString('hex'))"` and paste the **same** value on
+both components. Set it on **ai** and **web** in the same save (or web first): if only **ai** has it, the AI Advisor and
+coach stop answering until **web** has it too.
 
 `AI_SERVICE_URL`, `PUBLIC_BASE_URL` and `CLAUDE_MODEL` are already filled in by the spec.
 
