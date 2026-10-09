@@ -124,7 +124,8 @@ Reviewed in `docs/PHASE2C_FOLLOWUP_REVIEW.md`, approved with four changes; full 
   of the 5-day return and today's live move; 52-week high also uses today's intraday high.
 - **Impulse control** = unflagged checked trades / checked trades (`Purchase.behaviorCheckedAt`), from 3 checked trades.
 - **Start-up clean-up** re-grades older events from their facts, deletes false alarms (marking their trade checked
-  first) and marks all trades since the 2C launch as checked.
+  first) and marks trades between the 2C launch and the rule-v2 merge (2026-10-09T06:30:31Z) as checked. The upper bound
+  matters: it runs on every start, and later trades must only be marked by the detector.
 - **Advisor:** receives `cash_balance` (what-if holdings: account total kept, cash = total - what-if value, >= 0);
   weights are shares of the whole account, `invested_weight_pct` labelled; concentration bands = the Mirror's;
   Diversification computed in code and overwritten after Claude. Paper-trading prompt line (no taxes).

@@ -150,7 +150,10 @@
   - Example: −3% over the previous days and −3% today shows as a 3% drop, not ~6%.
   - Why: Finnhub's 5-day figure may or may not already include today, and adding the two could count today twice.
   - When it matters: if Finnhub documents when the figure updates, this can be made exact.
-- **"Checked" for trades made since 2C is set in bulk.** The clean-up marks every trade since the 2C launch as checked. A trade made while Finnhub was down in that window is counted as clean (rare). New trades are only marked when the check really ran.
+- **"Checked" for trades made between the 2C launch and rule v2 is set in bulk** (the v1 detector didn't record it).
+  - A trade in that window made while Finnhub was down counts as clean (rare).
+  - The bulk step is bounded at the rule-v2 merge time (fixed in a follow-up PR; it had no end date at first), so later trades are only ever marked by the detector when their check really ran, across any number of restarts.
+  - Trades made in the few minutes between that merge and the deploy stay unmarked and aren't counted.
 - **Price-move concentration runs only when the user opens the app** (Portfolio, Mirror or any page with the sidebar). There's no background job for inactive users.
 - **The live site wasn't checked from here** (this container can't reach it). B6 was checked in code and CI.
 - **Old AI coach insights** that mention deleted false alarms show the "patterns changed" hint until refreshed.
