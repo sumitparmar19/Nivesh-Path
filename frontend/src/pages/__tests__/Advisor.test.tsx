@@ -28,7 +28,7 @@ describe("AI Advisor", () => {
     expect(await screen.findByTestId("ai-result")).toHaveTextContent("Concentrated in two tech names.");
     expect(screen.getByLabelText(/ask a question/i)).toHaveValue("Am I too concentrated?");
     const post = calls.find((c) => c.method === "POST");
-    expect(post?.body).toEqual({ holdings: HOLDINGS, risk_profile: "aggressive", question: "Am I too concentrated?" });
+    expect(post?.body).toEqual({ timezone: expect.any(String), holdings: HOLDINGS, risk_profile: "aggressive", question: "Am I too concentrated?" });
     expect(screen.getByText(/looked up these 1 past trades/i)).toBeInTheDocument();
   });
 

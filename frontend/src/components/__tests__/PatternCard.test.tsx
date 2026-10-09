@@ -20,7 +20,7 @@ describe("PatternCard", () => {
   });
 
   it("explains a FOMO buy with the distance from the 52-week high and the run-up", () => {
-    expect(explain("fomo_buy", "NVDA", FOMO.facts)).toBe("You bought NVDA at $140.00, just 0.7% under its 52-week high of $141.00 after a 16.2% 5-day run-up.");
+    expect(explain("fomo_buy", "NVDA", FOMO.facts)).toBe("You bought NVDA at $140.00 after it rose 16.2% in 5 days, 0.7% under its 52-week high of $141.00.");
   });
 
   it("explains overconcentration as a share of the whole account", () => {
@@ -64,3 +64,36 @@ describe("BehaviorNote (trade panel)", () => {
     expect(screen.getByRole("link", { name: /see your trading habits/i })).toHaveAttribute("href", "/behavioral-mirror");
   });
 });
+
+describe("PatternCard follow-up (A7, B1, B6)", () => {
+  it("shows the trade's time and share count so similar cards can be told apart", () => {
+    card({ ...FOMO, trade: { quantity: 7, timestamp: "2026-10-09T05:36:00Z", side: "buy" } });
+    expect(screen.getByTestId("pattern-when")).toHaveTextContent(/bought 7 shares/);
+  });
+
+  it("labels read and unread cards clearly", () => {
+    card(PANIC);
+    expect(screen.getByText("New")).toBeInTheDocument();
+    card(FOMO);
+    expect(screen.getByText("Read")).toBeInTheDocument();
+  });
+
+  it("says 'today' when today's move triggered it", () => {
+    expect(explain("panic_sell", "TSLA", { price: 90, drop: 7, fiveDayReturn: 0, todayChange: -7, vsCostPct: -10 })).toBe(
+      "You sold TSLA at $90.00 after it fell 7.0% today. That was 10.0% below what you paid on average.",
+    );
+  });
+
+  it("FOMO far from the high (a 15%+ jump) has no 52-week-high clause", () => {
+    expect(explain("fomo_buy", "X", { price: 90, runUp: 20, fiveDayReturn: 20, percentFromHigh: null as unknown as number, week52High: null as unknown as number })).toBe(
+      "You bought X at $90.00 after it rose 20.0% in 5 days.",
+    );
+  });
+
+  it("concentration from price moves says so", () => {
+    card({ ...CONC, tradeId: null, trade: null, facts: { ...CONC.facts, fromPriceMove: true } });
+    expect(screen.getByText(/after price changes/)).toBeInTheDocument();
+    expect(screen.getByTestId("pattern-when")).toHaveTextContent("from price changes");
+  });
+});
+

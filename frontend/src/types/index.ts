@@ -189,11 +189,20 @@ export interface PositionMetrics {
   cost_basis: number;
   unrealized_pl: number;
   unrealized_pl_pct: number;
+  /** Share of the whole account (cash included), in %. */
   weight_pct: number;
+  /** Share of the money invested in stocks only, in % (missing in analyses saved before Oct 2026). */
+  invested_weight_pct?: number;
 }
 
 export interface PortfolioMetrics {
+  /** Value of the stock holdings. */
   total_value: number;
+  cash?: number;
+  account_value?: number;
+  cash_pct?: number;
+  concentration_level?: "none" | "low" | "medium" | "high";
+  diversification_score?: number;
   total_cost: number;
   total_unrealized_pl: number;
   total_unrealized_pl_pct: number;
@@ -278,6 +287,11 @@ export type Severity = "low" | "medium" | "high";
 
 /** Numbers computed by the server's detectors (which ones are present depends on the pattern type). */
 export interface PatternFacts {
+  quantity?: number;
+  drop?: number;
+  runUp?: number;
+  todayChange?: number | null;
+  fromPriceMove?: boolean;
   price?: number;
   fiveDayReturn?: number | null;
   avgCost?: number;
@@ -299,15 +313,19 @@ export interface Pattern {
   acknowledged: boolean;
   clearedAt?: string | null;
   createdAt: string;
+  /** The trade that triggered it (null for warnings from price moves). */
+  trade?: { quantity: number; timestamp: string; side: "buy" | "sell" } | null;
 }
 
 /** A pattern as returned inside a trade response (`behavior`). */
 export type TradeBehavior = Pick<Pattern, "_id" | "patternType" | "severity" | "symbol" | "facts">;
 
 export interface BehaviorScores {
-  impulseControl: number | null; // null until 3+ trades
+  impulseControl: number | null; // null until 3+ checked trades
   diversification: number;
   tradeCount: number;
+  /** Trades the detectors actually checked: the base of impulse control. */
+  checkedTrades: number;
   flaggedTrades: number;
   enoughTrades: boolean;
 }
@@ -328,4 +346,8 @@ export interface BehaviorInsight {
   model?: string | null;
   created_at: string;
   disclaimer?: string;
+  /** True when the patterns or scores changed after this insight was written. */
+  stale?: boolean;
+  /** True when nothing changed, so the saved insight was returned without a new AI call. */
+  reused?: boolean;
 }
