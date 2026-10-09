@@ -3,7 +3,7 @@
 import { useMemo, useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import { useQuery } from "@tanstack/react-query";
-import { ArrowDownUp, Briefcase, ChartPie, History, Search, Sparkles, Wand2 } from "lucide-react";
+import { ArrowDownUp, Brain, Briefcase, ChartPie, History, Search, Sparkles, Wand2 } from "lucide-react";
 import AllocationChart from "../components/AllocationChart";
 import MemoryPanel from "../components/MemoryPanel";
 import { Badge, ButtonLink, Card, CardHeader, EmptyState, ErrorState, PageHeader, Skeleton, Stat, StockLogo, cx } from "../components/ui";
@@ -101,6 +101,8 @@ export default function Portfolio() {
         <MemoryPanel />
       </div>
 
+      <TradingDnaStrip />
+
       <Card className="overflow-hidden p-0">
         <div className="p-5 pb-0"><CardHeader title="Holdings" icon={<Briefcase size={18} />} action={<span className="text-sm text-muted">Prices refresh every 60 seconds</span>} /></div>
         {s && rows.length === 0 ? (
@@ -167,5 +169,22 @@ export default function Portfolio() {
         )}
       </Card>
     </div>
+  );
+}
+
+/** Link to the Behavioral Mirror with the headline numbers; hidden until the summary loads (or if it fails). */
+function TradingDnaStrip() {
+  const summary = useQuery({ queryKey: ["pattern-summary"], queryFn: api.patterns.summary, staleTime: 60_000 });
+  const d = summary.data;
+  if (!d) return null;
+  const sc = d.scores;
+  return (
+    <Link to="/behavioral-mirror" data-testid="dna-strip" className="flex flex-wrap items-center gap-x-6 gap-y-2 rounded-2xl border border-line bg-surface p-4 shadow-card transition hover:border-brand-100">
+      <span className="flex items-center gap-2 font-display font-bold text-ink"><Brain size={18} className="text-brand-600" /> Trading DNA</span>
+      <span className="text-sm text-ink-2">Impulse control <strong className="tabular-nums text-ink">{sc.impulseControl ?? "–"}</strong></span>
+      <span className="text-sm text-ink-2">Diversification <strong className="tabular-nums text-ink">{sc.diversification}</strong></span>
+      <span className="text-sm text-ink-2">{d.totalPatterns} pattern{d.totalPatterns === 1 ? "" : "s"} found{d.unreadCount ? ` · ${d.unreadCount} new` : ""}</span>
+      <span className="ml-auto text-sm font-semibold text-brand-600">Open Behavioral Mirror</span>
+    </Link>
   );
 }

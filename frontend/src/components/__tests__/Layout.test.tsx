@@ -51,7 +51,7 @@ describe("Layout and routing", () => {
     app("/portfolio");
     await userEvent.click(screen.getByRole("button", { name: /switch to dark mode/i }));
     expect(document.documentElement).toHaveClass("dark");
-    await waitFor(() => expect(calls[0]?.body).toEqual({ theme: "dark" }));
+    await waitFor(() => expect(calls.find((c) => c.method === "PATCH")?.body).toEqual({ theme: "dark" }));
   });
 
   it("log out clears the session and goes to login", async () => {

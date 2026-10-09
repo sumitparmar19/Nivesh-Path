@@ -111,6 +111,15 @@ class PatternStore:
             upsert=True,
         )
 
+    def get(self, user_id: str, pattern_type: str) -> dict[str, Any] | None:
+        """The stored result of one detector/summary for a user, or None."""
+        doc = self._patterns.find_one({"user_id": user_id, "pattern_type": pattern_type}, {"_id": False})
+        return doc["result"] if doc else None
+
+    def delete_user(self, user_id: str) -> int:
+        """Forget everything stored for a user (paper-account reset or account deletion)."""
+        return self._patterns.delete_many({"user_id": user_id}).deleted_count
+
     def for_user(self, user_id: str) -> list[dict[str, Any]]:
         """All stored pattern results for a user, newest first (without Mongo's _id)."""
         cursor = self._patterns.find({"user_id": user_id}, {"_id": False}).sort("updated_at", DESCENDING)

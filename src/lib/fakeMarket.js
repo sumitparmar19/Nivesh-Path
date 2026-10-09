@@ -7,6 +7,13 @@ const NAMES = {
   GS: "Goldman Sachs Group Inc", ORCL: "Oracle Corp", SPY: "SPDR S&P 500 ETF Trust", QQQ: "Invesco QQQ Trust",
 };
 
+// Two extra made-up tickers that exist only in this fake mode, so browser tests can trigger the Behavioral
+// Mirror detectors. Every other symbol keeps its seed-based prices (existing tests depend on them).
+const SCENARIOS = {
+  FOMO: { name: "Fomo Demo Corp", price: 100, week52High: 101, fiveDayReturn: 18 }, // buy -> FOMO (high)
+  DROP: { name: "Dropco Demo Inc", price: 80, week52High: 140, fiveDayReturn: -12 }, // sell -> panic (medium)
+};
+
 // Same symbol -> same numbers on every run, so tests can rely on them.
 function seed(symbol) {
   let h = 0;
@@ -15,6 +22,8 @@ function seed(symbol) {
 }
 
 function fakeQuote(symbol) {
+  const sc = SCENARIOS[symbol];
+  if (sc) return { c: sc.price, d: 0, dp: 0, o: sc.price, h: sc.price + 1, l: sc.price - 1, pc: sc.price, t: Math.floor(Date.now() / 1000) };
   const s = seed(symbol);
   const pc = 50 + (s % 450);
   const dp = ((s % 41) - 20) / 10; // -2.0% .. +2.0%
@@ -29,10 +38,13 @@ function body(url) {
     case "/quote":
       return fakeQuote(symbol);
     case "/stock/profile2":
+      if (SCENARIOS[symbol]) return { name: SCENARIOS[symbol].name, finnhubIndustry: "Demo", exchange: "NASDAQ NMS - GLOBAL MARKET", country: "US", currency: "USD", weburl: "" };
       return NAMES[symbol]
         ? { name: NAMES[symbol], finnhubIndustry: "Technology", exchange: "NASDAQ NMS - GLOBAL MARKET", country: "US", currency: "USD", ipo: "1990-01-01", marketCapitalization: 100000 + seed(symbol) * 10, weburl: "" }
         : {};
     case "/stock/metric": {
+      const sc = SCENARIOS[symbol];
+      if (sc) return { metric: { "52WeekHigh": sc.week52High, "52WeekLow": sc.price * 0.5, "5DayPriceReturnDaily": sc.fiveDayReturn } };
       const q = fakeQuote(symbol);
       return { metric: { marketCapitalization: 100000, peTTM: 25, epsTTM: 4, "52WeekHigh": q.c * 1.2, "52WeekLow": q.c * 0.8, beta: 1.1, currentDividendYieldTTM: 0.5, "10DayAverageTradingVolume": 20 } };
     }

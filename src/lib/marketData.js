@@ -98,11 +98,18 @@ function createMarketData({ cache, quotes, fetchImpl = fetch, apiKey = config.fi
     });
   }
 
+  // Finnhub "basic financials" for a symbol, cached once and shared by metrics() and momentum().
+  async function rawMetric(symbol) {
+    return cached(`metric-raw:${symbol}`, TTL.metrics, async () => {
+      const data = await finnhub("/stock/metric", { symbol, metric: "all" });
+      return (data && data.metric) || {};
+    });
+  }
+
   async function metrics(raw) {
     const symbol = normalizeSymbol(raw);
     return cached(`metrics:${symbol}`, TTL.metrics, async () => {
-      const data = await finnhub("/stock/metric", { symbol, metric: "all" });
-      const m = (data && data.metric) || {};
+      const m = await rawMetric(symbol);
       return {
         symbol,
         marketCap: numOrNull(m.marketCapitalization), // millions of USD
@@ -153,6 +160,14 @@ function createMarketData({ cache, quotes, fetchImpl = fetch, apiKey = config.fi
     });
   }
 
+  // Price momentum for the Behavioral Mirror detectors: 52-week high and the 5-day return (in %). Both come
+  // from basic financials, which the free Finnhub plan includes (daily candles are not on it).
+  async function momentum(raw) {
+    const symbol = normalizeSymbol(raw);
+    const m = await rawMetric(symbol);
+    return { symbol, week52High: numOrNull(m["52WeekHigh"]), fiveDayReturn: numOrNull(m["5DayPriceReturnDaily"]) };
+  }
+
   // Daily candles for a price-history chart. Some Finnhub plans don't include candles: then this reports
   // { available: false } instead of failing, and the page keeps the embedded TradingView chart.
   async function candles(raw, days = 365) {
@@ -177,7 +192,7 @@ function createMarketData({ cache, quotes, fetchImpl = fetch, apiKey = config.fi
     return CURATED;
   }
 
-  return { quote, quoteMany, profile, metrics, news, search, candles, curated };
+  return { quote, quoteMany, profile, metrics, momentum, news, search, candles, curated };
 }
 
 module.exports = { createMarketData };

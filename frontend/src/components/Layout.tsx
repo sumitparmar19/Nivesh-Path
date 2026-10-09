@@ -1,8 +1,9 @@
 // Shared page frame ported from the legacy nivesh.js layout: top bar, sidebar (logged-in pages) and footer.
 // AppLayout wraps the signed-in pages; PublicLayout wraps landing/about/contact (no sidebar).
 import { useState, type ReactNode } from "react";
+import { useQuery } from "@tanstack/react-query";
 import { Link, NavLink, Outlet, useNavigate } from "react-router-dom";
-import { Briefcase, Gift, LineChart, LogOut, Menu, Moon, Receipt, Star, Sun, UserCircle, Wand2, X } from "lucide-react";
+import { Brain, Briefcase, Gift, LineChart, LogOut, Menu, Moon, Receipt, Star, Sun, UserCircle, Wand2, X } from "lucide-react";
 import { useStore } from "../store/useStore";
 import { api } from "../lib/api";
 import { OWNER } from "../config/site";
@@ -14,6 +15,7 @@ export const SIDEBAR = [
   { to: "/portfolio", label: "Portfolio", icon: Briefcase },
   { to: "/transactions", label: "Transactions", icon: Receipt },
   { to: "/advisor", label: "AI Advisor", icon: Wand2 },
+  { to: "/behavioral-mirror", label: "Behavioral Mirror", icon: Brain },
   { to: "/watchlist", label: "Watchlist", icon: Star },
   { to: "/whats-new", label: "What's new", icon: Gift },
   { to: "/account", label: "Account", icon: UserCircle },
@@ -115,6 +117,10 @@ function TopBar({ withMenu }: { withMenu?: boolean }) {
 }
 
 function Sidebar() {
+  // Unread Behavioral Mirror patterns show as a dot on its menu item (signed-in users only).
+  const isAuthenticated = useStore((s) => s.isAuthenticated);
+  const summary = useQuery({ queryKey: ["pattern-summary"], queryFn: api.patterns.summary, enabled: isAuthenticated, staleTime: 60_000 });
+  const unread = isAuthenticated ? summary.data?.unreadCount ?? 0 : 0;
   return (
     <nav aria-label="App" className="border-b border-line bg-surface md:sticky md:top-16 md:h-[calc(100vh-4rem)] md:w-60 md:shrink-0 md:border-b-0 md:border-r">
       <ul className="flex gap-2 overflow-x-auto px-4 py-2 md:grid md:gap-1 md:overflow-visible md:px-3 md:py-5">
@@ -124,13 +130,19 @@ function Sidebar() {
               to={to}
               className={({ isActive }) =>
                 cx(
-                  "flex items-center gap-3 rounded-full border px-3.5 py-2 text-sm font-medium transition md:rounded-xl md:border-0",
+                  "relative flex items-center gap-3 rounded-full border px-3.5 py-2 text-sm font-medium transition md:rounded-xl md:border-0",
                   isActive ? "border-brand-100 bg-brand-50 text-brand-700 md:shadow-[inset_3px_0_0_#16a34a]" : "border-line text-ink-2 hover:bg-surface-2 hover:text-ink",
                 )
               }
             >
               <Icon size={17} className="shrink-0" />
               {label}
+              {to === "/behavioral-mirror" && unread > 0 && (
+                <span data-testid="patterns-unread" className="ml-auto grid h-5 min-w-5 place-items-center rounded-full bg-down px-1.5 text-[11px] font-bold text-white">
+                  {unread}
+                  <span className="sr-only"> new patterns</span>
+                </span>
+              )}
             </NavLink>
           </li>
         ))}

@@ -28,7 +28,7 @@ function avatarSvg(name) {
     `<text x="64" y="64" dy=".35em" text-anchor="middle" font-family="Inter,Arial,sans-serif" font-size="52" font-weight="700" fill="#fff">${initials}</text></svg>`;
 }
 
-function accountRoutes({ User, Purchase, Watchlist, Analysis, aiClient }) {
+function accountRoutes({ User, Purchase, Watchlist, Analysis, BehaviorEvent, aiClient }) {
   const router = express.Router();
 
   async function currentUser(req) {
@@ -135,7 +135,7 @@ function accountRoutes({ User, Purchase, Watchlist, Analysis, aiClient }) {
     }
   });
 
-  // Permanently removes the account and everything tied to it (trades, watchlist, analyses, AI memory).
+  // Permanently removes the account and everything tied to it (trades, watchlist, analyses, patterns, AI memory).
   router.delete("/api/me", requireAuth, async (req, res, next) => {
     try {
       const { password, confirm } = req.body || {};
@@ -149,6 +149,7 @@ function accountRoutes({ User, Purchase, Watchlist, Analysis, aiClient }) {
         Purchase.deleteMany({ userId }),
         Watchlist ? Watchlist.deleteMany({ userId }) : null,
         Analysis ? Analysis.deleteMany({ userId }) : null,
+        BehaviorEvent ? BehaviorEvent.deleteMany({ userId }).catch((err) => console.warn("Patterns not deleted:", err.message)) : null,
       ]);
       await User.deleteOne({ _id: userId });
       if (aiClient && aiClient.deleteMemory) {

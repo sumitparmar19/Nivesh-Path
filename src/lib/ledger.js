@@ -99,7 +99,7 @@ function createLedger({ User, Purchase, quotes }) {
         userId, name: symbol, price, quantity, total, transactionType: "sell", priceSource: source,
       });
       const user = await User.findOneAndUpdate({ _id: userId }, { $inc: { cashBalance: total } }, { new: true });
-      return { transaction, newBalance: round2(user ? user.cashBalance : 0) };
+      return { transaction, newBalance: round2(user ? user.cashBalance : 0), avgCost: owned.avg_price };
     });
   }
 
