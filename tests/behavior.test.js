@@ -6,7 +6,7 @@ const request = require("supertest");
 const { createApp } = require("../src/app");
 const rules = require("../src/lib/behaviorRules");
 const { createBehaviorDetector } = require("../src/lib/behaviorDetector");
-const { migrateBehaviorEvents, PHASE_2C_LAUNCH } = require("../src/lib/behaviorMigration");
+const { migrateBehaviorEvents, PHASE_2C_LAUNCH, RULE_V2_LAUNCH } = require("../src/lib/behaviorMigration");
 const { cashForAnalysis } = require("../src/routes/ai");
 
 // --- In-memory model: the Mongo operators these features use ---
@@ -15,11 +15,12 @@ function matches(doc, filter = {}) {
     const value = doc[key];
     if (cond === null) return value === null || value === undefined;
     if (cond && typeof cond === "object" && !Array.isArray(cond) && !(cond instanceof Date)) {
-      if ("$in" in cond) return cond.$in.map(String).includes(String(value));
-      if ("$ne" in cond) return value !== cond.$ne;
-      if ("$exists" in cond && "$gte" in cond) return value !== undefined && value >= cond.$gte;
-      if ("$gte" in cond) return value >= cond.$gte;
-      if ("$exists" in cond) return (value !== undefined) === cond.$exists;
+      // Every operator present must hold (e.g. a $gte + $lt range).
+      if ("$in" in cond && !cond.$in.map(String).includes(String(value))) return false;
+      if ("$ne" in cond && value === cond.$ne) return false;
+      if ("$exists" in cond && (value !== undefined) !== cond.$exists) return false;
+      if ("$gte" in cond && !(value !== undefined && value >= cond.$gte)) return false;
+      if ("$lt" in cond && !(value !== undefined && value < cond.$lt)) return false;
       return true;
     }
     return String(value) === String(cond);
@@ -320,6 +321,16 @@ describe("behavior rule clean-up", () => {
     await migrateBehaviorEvents({ BehaviorEvent, Purchase, log: quiet });
     expect(Purchase.rows.find((t) => t._id === spy._id).behaviorCheckedAt).toBeInstanceOf(Date);
     expect(Purchase.rows.find((t) => t._id === old._id).behaviorCheckedAt).toBeUndefined();
+  });
+
+  test("a trade made after rule v2 went live whose check did not run stays unchecked, even after two runs", async () => {
+    const { Purchase, BehaviorEvent } = await seed();
+    const between = await Purchase.create({ userId: "u1", name: "MSFT", price: 500, quantity: 1, transactionType: "buy", timestamp: new Date(RULE_V2_LAUNCH.getTime() - 60 * 1000) });
+    const unchecked = await Purchase.create({ userId: "u1", name: "NVDA", price: 180, quantity: 2, transactionType: "buy", timestamp: new Date(RULE_V2_LAUNCH.getTime() + 60 * 1000) });
+    await migrateBehaviorEvents({ BehaviorEvent, Purchase, log: { warn: () => {}, log: () => {} } });
+    await migrateBehaviorEvents({ BehaviorEvent, Purchase, log: { warn: () => {}, log: () => {} } });
+    expect(Purchase.rows.find((t) => t._id === unchecked._id).behaviorCheckedAt).toBeUndefined();
+    expect(Purchase.rows.find((t) => t._id === between._id).behaviorCheckedAt).toBeInstanceOf(Date); // v1 era: was checked
   });
 
   test("is safe to run twice", async () => {
