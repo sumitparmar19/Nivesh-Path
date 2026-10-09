@@ -11,7 +11,9 @@ import hashlib
 import logging
 import math
 import re
+from datetime import datetime, timezone, tzinfo
 from typing import Any
+from zoneinfo import ZoneInfo, ZoneInfoNotFoundError
 
 import chromadb
 from langchain_core.documents import Document
@@ -43,20 +45,54 @@ def embed_texts(texts: list[str]) -> list[list[float]]:
 
 
 def transaction_to_document(user_id: str, tx: Transaction) -> Document:
-    """Render a transaction as a LangChain Document with searchable text."""
-    when = tx.timestamp.date().isoformat() if tx.timestamp else "unknown date"
+    """Render a transaction as a LangChain Document with searchable text.
+
+    The exact time is kept in metadata (UTC ISO) instead of a date in the text, so it can be shown in the
+    user's own time zone and the history can be listed in time order.
+    """
     text = (
         f"{tx.transaction_type.upper()} {tx.quantity:g} shares of {tx.symbol.upper()} "
-        f"at ${tx.price:,.2f} (total ${tx.quantity * tx.price:,.2f}) on {when}"
+        f"at ${tx.price:,.2f} (total ${tx.quantity * tx.price:,.2f})"
     )
-    return Document(
-        page_content=text,
-        metadata={
-            "user_id": user_id,
-            "symbol": tx.symbol.upper(),
-            "transaction_type": tx.transaction_type,
-        },
-    )
+    metadata: dict[str, str] = {
+        "user_id": user_id,
+        "symbol": tx.symbol.upper(),
+        "transaction_type": tx.transaction_type,
+    }
+    if tx.timestamp:
+        ts = tx.timestamp if tx.timestamp.tzinfo else tx.timestamp.replace(tzinfo=timezone.utc)
+        metadata["timestamp"] = ts.astimezone(timezone.utc).isoformat()
+    return Document(page_content=text, metadata=metadata)
+
+
+def _zone(tz_name: str | None) -> tuple[tzinfo, str]:
+    """The user's time zone, or UTC (labelled) when it is missing or unknown."""
+    if tz_name:
+        try:
+            return ZoneInfo(tz_name), ""
+        except (ZoneInfoNotFoundError, ValueError):
+            pass
+    return timezone.utc, " UTC"
+
+
+def format_when(iso: str | None, tz_name: str | None) -> str:
+    """'2026-10-08 10:16 PM' in the user's time zone (or with a UTC label)."""
+    if not iso:
+        return "unknown date"
+    try:
+        moment = datetime.fromisoformat(iso.replace("Z", "+00:00"))
+    except ValueError:
+        return "unknown date"
+    if moment.tzinfo is None:
+        moment = moment.replace(tzinfo=timezone.utc)
+    zone, label = _zone(tz_name)
+    return moment.astimezone(zone).strftime("%Y-%m-%d %I:%M %p").replace(" 0", " ") + label
+
+
+def history_lines(docs: list[Document], tz_name: str | None) -> list[str]:
+    """Retrieved trades in time order (oldest first), each with its date in the user's time zone."""
+    ordered = sorted(docs, key=lambda d: (d.metadata or {}).get("timestamp") or "")
+    return [f"{d.page_content} on {format_when((d.metadata or {}).get('timestamp'), tz_name)}" for d in ordered]
 
 
 def _make_client(settings: Settings) -> Any:
