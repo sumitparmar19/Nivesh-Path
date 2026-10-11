@@ -1,8 +1,10 @@
-"""Cold-start rebuild of the ChromaDB RAG index from MongoDB.
+"""Cold-start rebuild of the ChromaDB RAG index from the durable trade history.
 
-ChromaDB lives on the container filesystem, which DigitalOcean wipes on every deploy. MongoDB
-Atlas is external and durable, so at boot we re-embed every user's trades from the `purchases`
-collection. main.py runs this once in a background thread; it can also be run by hand:
+ChromaDB lives on the container filesystem, which DigitalOcean wipes on every deploy. The trades are
+durable elsewhere, so at boot we re-embed every user's trades: through the Node web service's /internal API
+when WEB_INTERNAL_URL is set (it reads whichever ledger holds the money, MongoDB or Postgres), else from the
+`purchases` collection in MongoDB directly. main.py runs this once in a background thread; it can also be run
+by hand:
 
     python startup.py
 """
@@ -14,6 +16,7 @@ import time
 from dataclasses import asdict, dataclass, field
 
 from services.mongo_store import TradeStore
+from services.web_trades import TradeSource
 from services.vector_service import VectorService
 
 logger = logging.getLogger("ai-service.startup")
@@ -36,8 +39,8 @@ class RebuildReport:
         return asdict(self)
 
 
-def rebuild_user(vectors: VectorService, trades: TradeStore, user_id: str) -> int:
-    """Re-index one user's trades from MongoDB; returns how many were embedded."""
+def rebuild_user(vectors: VectorService, trades: TradeSource, user_id: str) -> int:
+    """Re-index one user's trades from the trade source; returns how many were embedded."""
     transactions = trades.transactions_for(user_id)
     for start in range(0, len(transactions), BATCH_SIZE):
         vectors.add_transactions(user_id, transactions[start : start + BATCH_SIZE])
@@ -45,7 +48,7 @@ def rebuild_user(vectors: VectorService, trades: TradeStore, user_id: str) -> in
 
 
 def rebuild_vector_index(
-    vectors: VectorService, trades: TradeStore | None, report: RebuildReport | None = None
+    vectors: VectorService, trades: TradeSource | None, report: RebuildReport | None = None
 ) -> RebuildReport:
     """Re-populate every user's Chroma collection from MongoDB.
 
@@ -55,7 +58,7 @@ def rebuild_vector_index(
     report = report or RebuildReport()
     if trades is None:
         report.status = "disabled"
-        logger.info("MONGO_URL not set; skipping ChromaDB rebuild")
+        logger.info("No trade source (WEB_INTERNAL_URL or MONGO_URL) configured; skipping ChromaDB rebuild")
         return report
 
     report.status = "running"
@@ -87,8 +90,15 @@ if __name__ == "__main__":
     from config import get_settings
     from services.mongo_store import connect
 
+    from services.web_trades import HttpTradeStore
+
     settings = get_settings()
-    db = connect(settings)
-    result = rebuild_vector_index(VectorService(settings), TradeStore(db) if db is not None else None)
+    source: TradeSource | None
+    if settings.web_internal_url and settings.ai_internal_token:
+        source = HttpTradeStore(settings.web_internal_url, settings.ai_internal_token)
+    else:
+        db = connect(settings)
+        source = TradeStore(db) if db is not None else None
+    result = rebuild_vector_index(VectorService(settings), source)
     print(result.as_dict())
     raise SystemExit(0 if result.status in ("ok", "disabled") else 1)
