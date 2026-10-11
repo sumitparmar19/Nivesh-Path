@@ -48,6 +48,8 @@ export interface TradeResult {
   transaction: Trade;
   /** Behavioral Mirror patterns found in this trade; null if detection didn't finish within ~1.5s. */
   behavior?: TradeBehavior[] | null;
+  /** True when this answers a retry (same Idempotency-Key): the original trade, nothing new was placed. */
+  replayed?: boolean;
 }
 
 /** GET /api/portfolio/holdings */
