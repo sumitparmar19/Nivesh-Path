@@ -1,0 +1,17 @@
+# Secret scanning config for gitleaks (CI job "Secret scan"). Extends the default rules with one gitleaks lacks:
+# MongoDB connection strings that carry a username and password.
+[extend]
+useDefault = true
+
+[[rules]]
+id = "mongodb-connection-string-with-password"
+description = "MongoDB connection string with embedded credentials"
+regex = '''mongodb(?:\+srv)?://[^\s:/@"']+:[^\s@"']+@[^\s"']+'''
+keywords = ["mongodb://", "mongodb+srv://"]
+
+[allowlist]
+description = "Local/test hosts and documentation placeholders (<db_password>, YOURPASS, NEW_PASSWORD, ...)"
+regexes = [
+  '''mongodb://(?:mongo|localhost|127\.0\.0\.1)''',
+  '''mongodb(?:\+srv)?://[^\s:/@"']+:(?:<[^>]+>|[A-Z_]*PASS(?:WORD)?[A-Z_]*)@''',
+]
