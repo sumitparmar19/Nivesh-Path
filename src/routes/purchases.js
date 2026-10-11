@@ -1,13 +1,12 @@
 // Per-user trading and portfolio API: virtual-cash buys/sells, trade history, holdings and wallet summary.
 // Every route requires a valid JWT and only ever reads or writes the caller's own trades.
 const express = require("express");
-const { buildHoldings } = require("../lib/portfolio");
 const { createLedger } = require("../lib/ledger");
 const { requireAuth } = require("../middleware/auth");
 
-function purchaseRoutes({ Purchase, User, quotes, aiClient, BehaviorEvent, detector }) {
+function purchaseRoutes({ ledger: sharedLedger, Purchase, User, quotes, aiClient, BehaviorEvent, detector }) {
   const router = express.Router();
-  const ledger = createLedger({ User, Purchase, quotes });
+  const ledger = sharedLedger || createLedger({ User, Purchase, quotes });
 
   // Accepts the new shape { symbol, quantity, price, type: "BUY"|"SELL" }
   // and the Phase 1 shape { name, quantity, price, transactionType: "buy"|"sell" }.
@@ -20,8 +19,14 @@ function purchaseRoutes({ Purchase, User, quotes, aiClient, BehaviorEvent, detec
         quantity: body.quantity,
         price: body.price,
         type: body.type || body.transactionType,
+        idempotencyKey: req.get("Idempotency-Key"),
       });
       const tx = result.transaction;
+
+      // A retry of an order that already went through: same answer, nothing new to remember or check.
+      if (result.replayed) {
+        return res.status(200).json({ success: true, newBalance: result.newBalance, transaction: tx, purchase: tx, behavior: null, replayed: true });
+      }
 
       // Feed this user's AI memory; never block or fail the trade on it.
       if (aiClient) {
@@ -52,8 +57,7 @@ function purchaseRoutes({ Purchase, User, quotes, aiClient, BehaviorEvent, detec
 
   router.get("/api/transactions", requireAuth, async (req, res, next) => {
     try {
-      const rows = await Purchase.find({ userId: req.user.id }).sort({ timestamp: -1 }).limit(500).lean();
-      res.json(rows);
+      res.json(await ledger.store.listTrades(req.user.id, { limit: 500 }));
     } catch (err) {
       next(err);
     }
@@ -61,7 +65,7 @@ function purchaseRoutes({ Purchase, User, quotes, aiClient, BehaviorEvent, detec
 
   router.get("/api/portfolio/holdings", requireAuth, async (req, res, next) => {
     try {
-      res.json(buildHoldings(await Purchase.find({ userId: req.user.id }).lean()));
+      res.json(await ledger.holdings(req.user.id));
     } catch (err) {
       next(err);
     }

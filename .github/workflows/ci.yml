@@ -1,4 +1,5 @@
-# CI: test both services on every push/PR, build Docker images, and publish them to GHCR from main.
+# CI: test both services on every push/PR (backend against a real Postgres), scan the full git history for
+# secrets, run the browser smoke test on both ledgers, build Docker images, and publish them to GHCR from main.
 name: CI
 
 on:
@@ -11,16 +12,54 @@ permissions:
 
 jobs:
   backend:
-    name: Backend tests (Node)
+    name: Backend tests (Node + Postgres)
     runs-on: ubuntu-latest
+    services:
+      postgres:
+        image: postgres:16
+        env:
+          POSTGRES_PASSWORD: postgres
+          POSTGRES_DB: nivesh_test
+        ports: ["5432:5432"]
+        options: >-
+          --health-cmd "pg_isready -U postgres" --health-interval 5s --health-timeout 5s --health-retries 10
+    env:
+      DATABASE_URL: postgresql://postgres:postgres@localhost:5432/nivesh_test
+      DIRECT_URL: postgresql://postgres:postgres@localhost:5432/nivesh_test
+      TEST_DATABASE_URL: postgresql://postgres:postgres@localhost:5432/nivesh_test
+      REQUIRE_PG_TESTS: "1" # the Postgres ledger suite must run here, never skip
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4
         with:
           node-version: 22
           cache: npm
-      - run: npm ci
+      - run: npm ci # also runs `prisma generate`
+      - name: Apply the Prisma migrations
+        run: npx prisma migrate deploy
+      - name: Prisma schema and migrations agree (no unmigrated schema change)
+        run: |
+          PGPASSWORD=postgres psql -h localhost -U postgres -c "CREATE DATABASE nivesh_shadow"
+          npx prisma migrate diff --from-migrations prisma/migrations --to-schema-datamodel prisma/schema.prisma \
+            --shadow-database-url postgresql://postgres:postgres@localhost:5432/nivesh_shadow --exit-code
       - run: npm test
+
+  secret-scan:
+    name: Secret scan (gitleaks, full history)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0 # every commit, not just the latest
+      - name: Install gitleaks 8.30.1 (checksum-pinned)
+        run: |
+          curl -sSfL -o gitleaks.tgz https://github.com/gitleaks/gitleaks/releases/download/v8.30.1/gitleaks_8.30.1_linux_x64.tar.gz
+          echo "551f6fc83ea457d62a0d98237cbad105af8d557003051f41f3e7ca7b3f2470eb  gitleaks.tgz" | sha256sum -c -
+          tar -xzf gitleaks.tgz gitleaks
+      - name: Scan the full git history
+        # .gitleaksignore lists the credentials leaked in the first commit (already public, being rotated);
+        # anything else fails the build. Findings are redacted in the log.
+        run: ./gitleaks git --config .gitleaks.toml --gitleaks-ignore-path .gitleaksignore --redact --verbose --exit-code 1 .
 
   ai-service:
     name: AI service tests (pytest)
@@ -57,18 +96,36 @@ jobs:
       - run: npm run build
 
   e2e:
-    name: End-to-end smoke test (Playwright)
+    name: End-to-end smoke test (Playwright, ${{ matrix.ledger }} ledger)
     needs: [frontend]
     runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        ledger: [mongo, postgres] # today's ledger and the Phase 3 cutover target
     services:
       mongo:
         image: mongo:7
         ports: ["27017:27017"]
+      postgres:
+        image: postgres:16
+        env:
+          POSTGRES_PASSWORD: postgres
+          POSTGRES_DB: nivesh_e2e
+        ports: ["5432:5432"]
+        options: >-
+          --health-cmd "pg_isready -U postgres" --health-interval 5s --health-timeout 5s --health-retries 10
     env:
       MONGO_URL: mongodb://localhost:27017/nivesh_e2e
       JWT_SECRET: e2e-only-secret
       FAKE_MARKET_DATA: "1" # made-up prices: CI has no Finnhub key
       AI_SERVICE_URL: http://localhost:8001
+      LEDGER_BACKEND: ${{ matrix.ledger }}
+      DATABASE_URL: postgresql://postgres:postgres@localhost:5432/nivesh_e2e
+      DIRECT_URL: postgresql://postgres:postgres@localhost:5432/nivesh_e2e
+      AI_INTERNAL_TOKEN: e2e-internal-token
+      # The AI service reads trades through the web service's /internal API (as on DigitalOcean)
+      WEB_INTERNAL_URL: http://localhost:3000
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4
@@ -84,6 +141,7 @@ jobs:
           cache: pip
           cache-dependency-path: ai-service/requirements*.txt
       - run: npm ci
+      - run: npx prisma migrate deploy
       - run: npm ci && npm run build
         working-directory: frontend
       - run: npx playwright install --with-deps chromium
@@ -110,7 +168,7 @@ jobs:
       - uses: actions/upload-artifact@v4
         if: failure()
         with:
-          name: playwright-report
+          name: playwright-report-${{ matrix.ledger }}
           path: frontend/playwright-report
           retention-days: 7
 
@@ -121,6 +179,15 @@ jobs:
     permissions:
       contents: read
       packages: write
+    services:
+      postgres:
+        image: postgres:16
+        env:
+          POSTGRES_PASSWORD: postgres
+          POSTGRES_DB: nivesh_image
+        ports: ["5432:5432"]
+        options: >-
+          --health-cmd "pg_isready -U postgres" --health-interval 5s --health-timeout 5s --health-retries 10
     steps:
       - uses: actions/checkout@v4
       - uses: docker/setup-buildx-action@v3
@@ -134,11 +201,31 @@ jobs:
       - name: Compute image names
         id: names
         run: echo "owner=$(echo '${{ github.repository_owner }}' | tr '[:upper:]' '[:lower:]')" >> "$GITHUB_OUTPUT"
-      - name: Backend image
+      - name: Backend image (load locally for the checks below)
         uses: docker/build-push-action@v6
         with:
           context: .
-          push: ${{ github.ref == 'refs/heads/main' && github.event_name == 'push' }}
+          load: true
+          tags: nivesh-backend:ci
+      - name: The image runs Prisma on Alpine (migrate, one query, boot on the Postgres ledger)
+        env:
+          DB: postgresql://postgres:postgres@localhost:5432/nivesh_image
+        run: |
+          docker run --rm --network host -e DATABASE_URL="$DB" -e DIRECT_URL="$DB" nivesh-backend:ci \
+            sh -c "npx --no-install prisma migrate deploy && node scripts/db-check.js"
+          docker run -d --name web --network host -e PORT=3000 -e NODE_ENV=production -e JWT_SECRET=ci-only \
+            -e LEDGER_BACKEND=postgres -e DATABASE_URL="$DB" nivesh-backend:ci
+          for i in $(seq 1 30); do curl -sf http://localhost:3000/health && break; sleep 1; done
+          curl -sf http://localhost:3000/health
+          test "$(curl -s -o /dev/null -w '%{http_code}' http://localhost:3000/internal/trades/users)" = 404
+          docker logs web
+          docker rm -f web
+      - name: Backend image (publish)
+        if: github.ref == 'refs/heads/main' && github.event_name == 'push'
+        uses: docker/build-push-action@v6
+        with:
+          context: .
+          push: true
           tags: ghcr.io/${{ steps.names.outputs.owner }}/nivesh-path-backend:latest
       - name: AI service image
         uses: docker/build-push-action@v6

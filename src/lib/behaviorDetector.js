@@ -3,11 +3,14 @@
 // and the trade is unaffected. The trade route waits for it at most DETECTION_BUDGET_MS so the trade panel can
 // show a note when it's ready.
 const rules = require("./behaviorRules");
+const { createMongoLedgerStore } = require("./ledgerStore.mongo");
 
 const DETECTION_BUDGET_MS = 1500;
 const PRICE_CHECK_INTERVAL_MS = 15 * 60 * 1000; // concentration re-check from price moves, per user
 
-function createBehaviorDetector({ BehaviorEvent, Purchase, marketData, ledger, log = console, now = () => Date.now() }) {
+function createBehaviorDetector({ BehaviorEvent, ledgerStore, Purchase, marketData, ledger, log = console, now = () => Date.now() }) {
+  // Where the "checked" mark is written: the ledger's trade store (older callers pass the Mongo model).
+  const trades = ledgerStore || (ledger && ledger.store) || (Purchase ? createMongoLedgerStore({ Purchase }) : null);
   const lastPriceCheck = new Map(); // userId -> ms (single web instance; good enough for a throttle)
 
   // 5-day return + 52-week high (daily data) and today's move + intraday high (live quote). Either half may
@@ -58,7 +61,7 @@ function createBehaviorDetector({ BehaviorEvent, Purchase, marketData, ledger, l
           if (hit) created.push(await BehaviorEvent.create({ userId, tradeId: trade._id, ruleVersion: rules.RULE_VERSION, ...hit }));
         }
         // Only trades that were really checked count in the impulse-control score.
-        if (Purchase) await Purchase.updateOne({ _id: trade._id, userId }, { $set: { behaviorCheckedAt: new Date() } });
+        if (trades) await trades.markChecked(userId, trade._id, new Date());
       }
     } catch (err) {
       log.warn(`[behavior] panic/FOMO detection skipped: ${err.message}`);

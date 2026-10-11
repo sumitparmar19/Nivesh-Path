@@ -1,7 +1,6 @@
 // Portfolio AI Advisor: enriches holdings with live prices and forwards to the AI service.
 const express = require("express");
 const rateLimit = require("express-rate-limit");
-const { buildHoldings } = require("../lib/portfolio");
 const { requireAuth } = require("../middleware/auth");
 const { createLedger } = require("../lib/ledger");
 const { timeZone } = require("./patterns");
@@ -19,9 +18,9 @@ function cashForAnalysis({ realCash, realTotal, holdings, isWhatIf }) {
   return round2(Math.max(0, realTotal - value));
 }
 
-function aiRoutes({ Purchase, User, Analysis, quotes, aiClient }) {
+function aiRoutes({ ledger: sharedLedger, Purchase, User, Analysis, quotes, aiClient }) {
   const router = express.Router();
-  const ledger = User ? createLedger({ User, Purchase, quotes }) : null;
+  const ledger = sharedLedger || createLedger({ User, Purchase, quotes });
 
   // Each analysis is a paid LLM call, so cap it per user.
   const limiter = rateLimit({
@@ -38,7 +37,7 @@ function aiRoutes({ Purchase, User, Analysis, quotes, aiClient }) {
       let holdings = Array.isArray(body.holdings) ? body.holdings : null;
       const isWhatIf = Boolean(holdings && holdings.length);
       if (!holdings || holdings.length === 0) {
-        holdings = buildHoldings(await Purchase.find({ userId: req.user.id }).lean());
+        holdings = await ledger.holdings(req.user.id);
       }
       if (holdings.length === 0) {
         return res.status(400).json({ error: "No holdings yet - buy a stock or send a holdings array." });
@@ -58,10 +57,8 @@ function aiRoutes({ Purchase, User, Analysis, quotes, aiClient }) {
 
       // Weights are measured against the whole account (cash included), like the Portfolio page and the Mirror.
       let cashBalance;
-      if (ledger) {
-        const account = await ledger.summary(req.user.id).catch(() => null);
-        if (account) cashBalance = cashForAnalysis({ realCash: account.cashBalance, realTotal: account.totalValue, holdings: enriched, isWhatIf });
-      }
+      const account = await ledger.summary(req.user.id).catch(() => null);
+      if (account) cashBalance = cashForAnalysis({ realCash: account.cashBalance, realTotal: account.totalValue, holdings: enriched, isWhatIf });
 
       const riskProfile = ["conservative", "moderate", "aggressive"].includes(body.risk_profile) ? body.risk_profile : "moderate";
       const question = body.question ? String(body.question).slice(0, 1000) : undefined;
@@ -129,11 +126,9 @@ function aiRoutes({ Purchase, User, Analysis, quotes, aiClient }) {
     }
   });
 
-  // What the advisor remembers about the caller: trades in MongoDB vs trades embedded in ChromaDB.
+  // What the advisor remembers about the caller: trades in the ledger vs trades embedded in ChromaDB.
   async function memoryResponse(req, ai) {
-    const tradesInDatabase = Purchase.countDocuments
-      ? await Purchase.countDocuments({ userId: req.user.id })
-      : (await Purchase.find({ userId: req.user.id }).lean()).length;
+    const tradesInDatabase = await ledger.store.countTrades(req.user.id);
     if (!ai) return { tradesInDatabase, aiReachable: false };
     return {
       tradesInDatabase,

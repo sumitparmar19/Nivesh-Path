@@ -30,8 +30,15 @@ interface ErrorBody {
 
 type Method = "GET" | "POST" | "PATCH" | "DELETE";
 
-async function request<T>(path: string, method: Method = "GET", body?: unknown, auth = true): Promise<T> {
-  const headers: Record<string, string> = { Accept: "application/json" };
+/** A fresh random key for one order, sent as Idempotency-Key so a retry can never place it twice. */
+export function newIdempotencyKey(): string {
+  const c = globalThis.crypto;
+  if (c && typeof c.randomUUID === "function") return c.randomUUID();
+  return `${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 12)}-${Math.random().toString(36).slice(2, 12)}`;
+}
+
+async function request<T>(path: string, method: Method = "GET", body?: unknown, auth = true, extraHeaders: Record<string, string> = {}): Promise<T> {
+  const headers: Record<string, string> = { Accept: "application/json", ...extraHeaders };
   if (body !== undefined) headers["Content-Type"] = "application/json";
   const token = readToken();
   if (token) headers.Authorization = `Bearer ${token}`;
@@ -78,9 +85,12 @@ export const api = {
     holdings: () => request<Holding[]>("/api/portfolio/holdings"),
     transactions: () => request<Trade[]>("/api/transactions"),
     reset: () => request<ResetResult>("/api/portfolio/reset", "POST", { confirm: "RESET" }),
-    /** Server prices the order live; `price` is only a fallback when no quote is available. */
-    trade: (symbol: string, type: "BUY" | "SELL", quantity: number, price?: number) =>
-      request<TradeResult>("/api/store-purchase", "POST", { symbol, type, quantity, price }),
+    /**
+     * Server prices the order live; `price` is only a fallback when no quote is available. Sending the same
+     * `idempotencyKey` again returns the original trade instead of placing a second one.
+     */
+    trade: (symbol: string, type: "BUY" | "SELL", quantity: number, price?: number, idempotencyKey?: string) =>
+      request<TradeResult>("/api/store-purchase", "POST", { symbol, type, quantity, price }, true, idempotencyKey ? { "Idempotency-Key": idempotencyKey } : {}),
   },
   stocks: {
     curated: () => request<CuratedSector[]>("/api/stocks/curated", "GET", undefined, false),
