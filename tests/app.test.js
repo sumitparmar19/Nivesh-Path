@@ -811,3 +811,102 @@ describe("React app serving and staged rollout", () => {
     expect([...disabledRoutes(" /stock , /markets")]).toEqual(["/stock/:symbol", "/markets"]);
   });
 });
+
+// ================= Phase 3 PR A: ledger store, idempotency, maintenance, internal API (MongoDB store) =================
+describe("ledger (MongoDB store): idempotency, whole shares, maintenance", () => {
+  const order = (app, u, key, quantity = 2) =>
+    request(app).post("/api/trades").set({ ...auth(u), "Idempotency-Key": key }).send({ symbol: "AAPL", quantity, type: "BUY" });
+
+  test("a retry with the same Idempotency-Key returns the original trade without charging again or re-ingesting", async () => {
+    const { app, deps } = setup();
+    const u = await newUser(app);
+    const first = await order(app, u, "key-aaaa-0001");
+    const again = await order(app, u, "key-aaaa-0001");
+    expect(first.status).toBe(201);
+    expect(again.status).toBe(200);
+    expect(again.body).toMatchObject({ replayed: true, newBalance: 99800, behavior: null });
+    expect(String(again.body.transaction._id)).toBe(String(first.body.transaction._id));
+    expect(deps.Purchase.rows.filter((r) => String(r.userId) === u.id)).toHaveLength(1);
+    expect(deps.aiClient.ingestTransactions).toHaveBeenCalledTimes(1);
+    // A new key is a new order; keys belong to one user.
+    expect((await order(app, u, "key-aaaa-0002")).body.newBalance).toBe(99600);
+    const other = await newUser(app);
+    expect((await order(app, other, "key-aaaa-0001")).status).toBe(201);
+  });
+
+  test("malformed keys, fractional and huge quantities are refused", async () => {
+    const { app } = setup();
+    const u = await newUser(app);
+    expect((await order(app, u, "short")).status).toBe(400);
+    expect((await order(app, u, "has spaces in it")).status).toBe(400);
+    expect((await buy(app, u, "AAPL", 1.5)).body.error).toMatch(/whole number of shares/);
+    expect((await buy(app, u, "AAPL", 1000001)).body.error).toMatch(/at most 1,000,000 shares/);
+  });
+
+  test("LEDGER_MAINTENANCE: trades, reset and account deletion pause with 503; reads still work", async () => {
+    const shared = { Purchase: fakeModel(), User: fakeModel([], { cashBalance: 100000, totalDeposited: 100000 }) };
+    const open = setup(shared).app;
+    const u = await newUser(open);
+    await buy(open, u, "AAPL", 1);
+    const { app } = setup({ ...shared, ledgerMaintenance: true });
+    const trade = await buy(app, u, "AAPL", 1);
+    expect(trade.status).toBe(503);
+    expect(trade.body.error).toMatch(/Trading is paused for a few minutes/);
+    expect((await request(app).post("/api/portfolio/reset").set(auth(u)).send({ confirm: "RESET" })).status).toBe(503);
+    expect((await request(app).delete("/api/me").set(auth(u)).send({ password: u.password, confirm: "DELETE" })).status).toBe(503);
+    expect((await request(app).get("/api/transactions").set(auth(u))).body).toHaveLength(1);
+    expect((await request(app).get("/api/portfolio/cash-balance").set(auth(u))).body.cashBalance).toBe(99900);
+    expect(shared.User.rows).toHaveLength(1);
+  });
+
+  test("an unknown LEDGER_BACKEND is refused", () => {
+    expect(() => setup({ ledgerBackend: "mysql" })).toThrow(/LEDGER_BACKEND must be one of mongo, postgres/);
+  });
+});
+
+describe("internal API (/internal/*, AI service -> web)", () => {
+  const TOKEN = "internal-secret-for-tests";
+
+  test("does not exist without AI_INTERNAL_TOKEN, even with a token header", async () => {
+    const { app } = setup({ internalToken: "" });
+    for (const path of ["/internal/trades/users", "/internal/trades?userId=0123456789abcdef01234567", "/internal/anything"]) {
+      const res = await request(app).get(path).set("X-Internal-Token", "guess");
+      expect([path, res.status, res.body]).toEqual([path, 404, { error: "Not found" }]);
+    }
+  });
+
+  test("needs the exact token; a user's JWT is not enough", async () => {
+    const { app } = setup({ internalToken: TOKEN });
+    const u = await newUser(app);
+    await buy(app, u, "AAPL", 1);
+    expect((await request(app).get("/internal/trades/users")).status).toBe(404);
+    expect((await request(app).get("/internal/trades/users").set(auth(u))).status).toBe(404);
+    expect((await request(app).get("/internal/trades/users").set("X-Internal-Token", `${TOKEN}x`)).status).toBe(404);
+    expect((await request(app).get("/internal/trades/users").set("X-Internal-Token", TOKEN.slice(0, -1))).status).toBe(404);
+  });
+
+  test("lists users with trades and one user's trades oldest first, in the AI service's shape", async () => {
+    const { app } = setup({ internalToken: TOKEN, Purchase: Object.assign(fakeModel(), { distinct: undefined }) });
+    const [a, b] = [await newUser(app), await newUser(app)];
+    await buy(app, a, "AAPL", 3);
+    await sell(app, a, "AAPL", 1);
+    await buy(app, b, "TSLA", 2);
+    const users = await request(app).get("/internal/trades/users").set("X-Internal-Token", TOKEN);
+    expect(users.body.users.sort()).toEqual([a.id, b.id].sort());
+    const trades = await request(app).get(`/internal/trades?userId=${a.id}`).set("X-Internal-Token", TOKEN);
+    expect(trades.body.userId).toBe(a.id);
+    expect(trades.body.trades.map(({ symbol, quantity, price, transaction_type }) => ({ symbol, quantity, price, transaction_type }))).toEqual([
+      { symbol: "AAPL", quantity: 3, price: 100, transaction_type: "buy" },
+      { symbol: "AAPL", quantity: 1, price: 100, transaction_type: "sell" },
+    ]);
+    expect((await request(app).get("/internal/trades?userId=../../etc").set("X-Internal-Token", TOKEN)).status).toBe(400);
+    expect((await request(app).get("/internal/nope").set("X-Internal-Token", TOKEN)).status).toBe(404);
+  });
+
+  test("tokensMatch compares in constant time and handles different lengths", () => {
+    const { tokensMatch } = require("../src/routes/internal");
+    expect(tokensMatch("abc", "abc")).toBe(true);
+    expect(tokensMatch("abc", "abcd")).toBe(false);
+    expect(tokensMatch("", "abc")).toBe(false);
+  });
+});
