@@ -125,7 +125,8 @@ docs/                # PHASE1_REPORT.md, PHASE2_PLAN.md, DEPLOYMENT.md
 
 ## Commands
 - Backend: `npm install && npm run dev` (port 3000; `npm install` runs `prisma generate`); tests `npm test`
-  (Postgres suite: `TEST_DATABASE_URL=... npx prisma migrate deploy && TEST_DATABASE_URL=... npm test`); `node scripts/db-check.js`
+  (Postgres suites: `DATABASE_URL=$U DIRECT_URL=$U npx prisma migrate deploy && TEST_DATABASE_URL=$U npm test` with a
+  disposable database `$U`; Jest runs files one at a time because they share it); `node scripts/db-check.js`
 - Frontend: `cd frontend && npm install && npm run dev` (port 5173, proxies /api to :3000); `npm test`, `npm run typecheck`,
   `npm run build` (Express then serves it on :3000); `npm run e2e` against a server started with `FAKE_MARKET_DATA=1`
 - AI service: `cd ai-service && python -m venv .venv && .venv/bin/pip install -r requirements-dev.txt && .venv/bin/uvicorn main:app --port 8001`; tests `.venv/bin/pytest -q`
