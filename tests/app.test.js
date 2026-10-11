@@ -439,6 +439,12 @@ describe("AI memory and status", () => {
     expect(res.status).toBe(200);
     expect(res.body.ai).toEqual({ reachable: false });
   });
+
+  test("status says which ledger holds the money and whether trading is paused (no database call)", async () => {
+    expect((await request(setup().app).get("/api/status")).body.ledger).toEqual({ backend: "mongo", tradingPaused: false });
+    const paused = setup({ ledgerMaintenance: true, ledgerStore: { kind: "postgres" } });
+    expect((await request(paused.app).get("/api/status")).body.ledger).toEqual({ backend: "postgres", tradingPaused: true });
+  });
 });
 
 describe("account data is saved to the database", () => {

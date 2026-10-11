@@ -21,7 +21,7 @@ COPY prisma ./prisma
 RUN npm ci --omit=dev && npm cache clean --force
 
 COPY server.js demo.js ./
-COPY scripts/db-check.js ./scripts/db-check.js
+COPY scripts/db-check.js scripts/migrate-ledger.js ./scripts/
 COPY src ./src
 COPY models ./models
 COPY public ./public

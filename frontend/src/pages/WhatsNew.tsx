@@ -20,9 +20,13 @@ function rows(s: SystemStatus | undefined): [string, string, Dot][] {
     failed: ["Failed - advisor runs without history", "bad"],
     disabled: ["Not configured (no database link)", "warn"],
   };
+  const ledger: [string, string, Dot][] = s.ledger
+    ? [["Money ledger", `${s.ledger.backend === "postgres" ? "PostgreSQL (Neon)" : "MongoDB"}${s.ledger.tradingPaused ? " · trading paused for an upgrade" : ""}`, s.ledger.tradingPaused ? "warn" : "ok"]]
+    : [];
   return [
     ["Web app", "Online", "ok"],
     ["Database (MongoDB Atlas)", s.db === "connected" ? "Connected" : "Disconnected", s.db === "connected" ? "ok" : "bad"],
+    ...ledger,
     ["AI service", ai.reachable ? "Online" : "Offline", ai.reachable ? "ok" : "bad"],
     ["Claude AI model", ai.reachable ? (ai.llmConfigured ? ai.model || "Configured" : "Rule-based fallback") : "Unavailable", ai.reachable ? (ai.llmConfigured ? "ok" : "warn") : "bad"],
     ["AI memory rebuild", ai.reachable && idx ? indexText[idx.status][0] : "Unavailable", ai.reachable && idx ? indexText[idx.status][1] : "bad"],
