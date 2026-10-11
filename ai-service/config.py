@@ -22,6 +22,8 @@ class Settings:
     sentry_dsn: str | None
     allowed_origins: list[str]
     ai_internal_token: str | None = None
+    # Node web service base URL (DigitalOcean: ${web.PRIVATE_URL}); trades are read from its /internal API.
+    web_internal_url: str | None = None
 
 
 @lru_cache
@@ -40,4 +42,5 @@ def get_settings() -> Settings:
         sentry_dsn=os.getenv("SENTRY_DSN") or None,
         allowed_origins=[o.strip() for o in origins.split(",") if o.strip()],
         ai_internal_token=os.getenv("AI_INTERNAL_TOKEN") or None,
+        web_internal_url=os.getenv("WEB_INTERNAL_URL") or None,
     )

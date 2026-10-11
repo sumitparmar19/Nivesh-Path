@@ -30,11 +30,13 @@ from schemas import (
 from services.behavior_coach import rule_based_coaching
 from services.llm_service import LLMService, LLMUnavailableError
 from services.mongo_store import PatternStore, TradeStore, connect
+from services.web_trades import HttpTradeStore, TradeSource
 from services.portfolio_analytics import compute_metrics, rule_based_insight
 from services.vector_service import VectorService, history_lines
 from startup import RebuildReport, rebuild_user, rebuild_vector_index
 
 logging.basicConfig(level=logging.INFO)
+logging.getLogger("httpx").setLevel(logging.WARNING)  # one line per request (and user id) is noise
 logger = logging.getLogger("ai-service")
 
 settings = get_settings()
@@ -57,8 +59,18 @@ def get_mongo_db() -> Database | None:
         return None
 
 
-def get_trade_store() -> TradeStore | None:
-    """Durable trade history written by the Node backend."""
+@lru_cache
+def _http_trade_store(base_url: str, token: str) -> HttpTradeStore:
+    """One HTTP client (connection pool) per process."""
+    return HttpTradeStore(base_url, token)
+
+
+def get_trade_store() -> TradeSource | None:
+    """Durable trade history: Node's /internal API when WEB_INTERNAL_URL and the token are set (works for both
+    ledgers, MongoDB or Postgres), else the `purchases` collection in MongoDB directly (local dev, older setups)."""
+    current = get_settings()
+    if current.web_internal_url and current.ai_internal_token:
+        return _http_trade_store(current.web_internal_url, current.ai_internal_token)
     db = get_mongo_db()
     return TradeStore(db) if db is not None else None
 
@@ -203,17 +215,17 @@ def delete_memory(
 def rebuild_memory(
     user_id: str = Path(..., max_length=128),
     vectors: VectorService = Depends(get_vector_service),
-    trades: TradeStore | None = Depends(get_trade_store),
+    trades: TradeSource | None = Depends(get_trade_store),
     patterns: PatternStore | None = Depends(get_pattern_store),
 ) -> MemoryStatus:
-    """Re-embed one user's trades from MongoDB into ChromaDB (same as the boot-time rebuild, for one user)."""
+    """Re-embed one user's trades into ChromaDB from the trade source (same as the boot-time rebuild, for one user)."""
     if trades is None:
-        raise HTTPException(status_code=503, detail="MongoDB is not configured for the AI service")
+        raise HTTPException(status_code=503, detail="Trade history is not configured for the AI service")
     try:
         rebuild_user(vectors, trades, user_id)
     except Exception as exc:
         logger.exception("Manual rebuild failed")
-        raise HTTPException(status_code=502, detail="Could not rebuild from MongoDB") from exc
+        raise HTTPException(status_code=502, detail="Could not rebuild from the trade history") from exc
     return _memory_status(user_id, vectors, patterns)
 
 
@@ -222,7 +234,7 @@ def analyze_portfolio(
     body: AnalyzePortfolioRequest,
     vectors: VectorService = Depends(get_vector_service),
     llm: LLMService = Depends(get_llm_service),
-    trades: TradeStore | None = Depends(get_trade_store),
+    trades: TradeSource | None = Depends(get_trade_store),
 ) -> AnalyzePortfolioResponse:
     """Compute portfolio metrics, retrieve relevant history (RAG) and ask Claude for insights.
 
