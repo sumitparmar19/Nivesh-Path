@@ -58,18 +58,34 @@
     }
   }
 
+  // Idempotency-Key per order: kept while the same order is retried after an unclear failure (network error,
+  // 5xx), so an order that did go through is never placed twice; a new order gets a new key.
+  var pending = null;
+  function newKey() {
+    if (window.crypto && typeof window.crypto.randomUUID === "function") return window.crypto.randomUUID();
+    return Date.now().toString(36) + "-" + Math.random().toString(36).slice(2, 12) + "-" + Math.random().toString(36).slice(2, 12);
+  }
+  function keyFor(id) {
+    if (!pending || pending.order !== id) pending = { order: id, key: newKey() };
+    return pending.key;
+  }
+
   async function place(type, btn) {
     var order = readOrder();
     if (!order) return;
+    var key = keyFor(symbol + "|" + type + "|" + order.quantity);
     busy(btn, true, type === "BUY" ? "Buying…" : "Selling…");
     try {
       var res = await NP.authFetch("/api/store-purchase", {
         method: "POST",
+        headers: { "Idempotency-Key": key },
         body: JSON.stringify({ symbol: symbol, quantity: order.quantity, price: order.price, type: type }),
       });
       var data = {};
       try { data = await res.json(); } catch (e) {}
+      if (res.status >= 400 && res.status < 500) pending = null; // clearly not placed: next try is a new order
       if (!res.ok) throw new Error(data.error || "Could not place the order");
+      pending = null;
       var tx = data.transaction || {};
       NP.toast(
         (type === "BUY" ? "Bought " : "Sold ") + tx.quantity + " " + symbol + " at " + money(tx.price) +

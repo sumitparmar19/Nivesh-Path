@@ -1,9 +1,11 @@
 // Buy/Sell panel for a stock page: integer quantity, live total, cash or shares available, server-priced
 // order via /api/store-purchase. Refreshes portfolio data on success. (Phase 2D pre-trade check goes here.)
-import { useState, type FormEvent } from "react";
+// Each order carries an Idempotency-Key; if it fails without a clear answer (network error, 5xx) and the user
+// tries the same order again, the same key is reused, so an order that did go through is never placed twice.
+import { useRef, useState, type FormEvent } from "react";
 import { Link } from "react-router-dom";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
-import { api } from "../lib/api";
+import { ApiError, api, newIdempotencyKey } from "../lib/api";
 import { money } from "../lib/format";
 import { useStore } from "../store/useStore";
 import { Button, Card, cx } from "./ui";
@@ -21,9 +23,18 @@ export default function TradePanel({ symbol, price, cash, owned }: { symbol: str
 
   const quantity = /^\d+$/.test(qty) ? parseInt(qty, 10) : 0;
   const total = quantity && price ? quantity * price : 0;
+  const pending = useRef<{ order: string; key: string } | null>(null);
+
+  /** The key for this order: reused while the same order is being retried after an unclear failure. */
+  function keyFor(order: string): string {
+    if (!pending.current || pending.current.order !== order) pending.current = { order, key: newIdempotencyKey() };
+    return pending.current.key;
+  }
+
   const trade = useMutation({
-    mutationFn: () => api.portfolio.trade(symbol, side, quantity, price ?? undefined),
+    mutationFn: (key: string) => api.portfolio.trade(symbol, side, quantity, price ?? undefined, key),
     onSuccess: (res) => {
+      pending.current = null;
       const t = res.transaction;
       const text = `${side === "BUY" ? "Bought" : "Sold"} ${t.quantity} ${symbol} at ${money(t.price)}. Cash left: ${money(res.newBalance)}.`;
       setMessage({ ok: true, text });
@@ -32,14 +43,18 @@ export default function TradePanel({ symbol, price, cash, owned }: { symbol: str
       setBehavior(res.behavior ?? []);
       ["portfolio", "holdings", "transactions", "ai-memory", "patterns", "pattern-summary"].forEach((k) => client.invalidateQueries({ queryKey: [k] }));
     },
-    onError: (err: Error) => setMessage({ ok: false, text: err.message }),
+    onError: (err: Error) => {
+      // A 4xx is a clear "not placed" (e.g. not enough cash): the next attempt is a new order.
+      if (err instanceof ApiError && err.status >= 400 && err.status < 500) pending.current = null;
+      setMessage({ ok: false, text: err.message });
+    },
   });
 
   function submit(e: FormEvent) {
     e.preventDefault();
     setMessage(null);
     setBehavior([]);
-    if (quantity > 0) trade.mutate();
+    if (quantity > 0) trade.mutate(keyFor(`${symbol}|${side}|${quantity}`));
   }
 
   return (
