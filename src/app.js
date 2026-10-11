@@ -18,7 +18,9 @@ const { accountRoutes } = require("./routes/account");
 const watchlistRoutes = require("./routes/watchlist");
 const contactRoutes = require("./routes/contact");
 const patternRoutes = require("./routes/patterns");
+const { internalRoutes } = require("./routes/internal");
 const { createLedger } = require("./lib/ledger");
+const { createLedgerStore } = require("./lib/ledgerStore");
 const { createBehaviorDetector } = require("./lib/behaviorDetector");
 const { createMailer } = require("./lib/mailer");
 const { createMarketData } = require("./lib/marketData");
@@ -62,8 +64,12 @@ function createApp(deps = {}) {
   const Message = deps.Message || require("./models/Message");
   const mailer = deps.mailer || createMailer();
   const BehaviorEvent = deps.BehaviorEvent || require("./models/BehaviorEvent");
-  const ledger = createLedger({ User, Purchase, quotes });
-  const detector = deps.detector === undefined ? createBehaviorDetector({ BehaviorEvent, Purchase, marketData, ledger }) : deps.detector;
+  // One ledger for the whole app: MongoDB or Postgres (LEDGER_BACKEND); LEDGER_MAINTENANCE=1 pauses trading.
+  const ledgerStore = deps.ledgerStore || createLedgerStore({ backend: deps.ledgerBackend || config.ledgerBackend, User, Purchase });
+  const maintenance = () => (deps.ledgerMaintenance !== undefined ? Boolean(deps.ledgerMaintenance) : process.env.LEDGER_MAINTENANCE === "1");
+  const ledger = createLedger({ store: ledgerStore, quotes, maintenance });
+  const detector = deps.detector === undefined ? createBehaviorDetector({ BehaviorEvent, ledgerStore, marketData, ledger }) : deps.detector;
+  const internalToken = deps.internalToken !== undefined ? deps.internalToken : config.aiInternalToken;
 
   const app = express();
   app.disable("x-powered-by");
@@ -102,18 +108,22 @@ function createApp(deps = {}) {
     });
   });
 
+  // Service-to-service (AI service -> web): token-only, never a user JWT; 404 unless AI_INTERNAL_TOKEN is set.
+  app.use(internalRoutes({ ledgerStore, token: internalToken }));
+
   app.use(optionalAuth);
   app.use(stockRoutes({ quotes, marketData }));
-  app.use(purchaseRoutes({ Purchase, User, quotes, aiClient, BehaviorEvent, detector }));
-  app.use(authRoutes({ User }));
-  app.use(accountRoutes({ User, Purchase, Watchlist, Analysis, BehaviorEvent, aiClient }));
+  app.use(purchaseRoutes({ ledger, aiClient, BehaviorEvent, detector }));
+  app.use(authRoutes({ User, ledgerStore }));
+  app.use(accountRoutes({ User, ledger, Watchlist, Analysis, BehaviorEvent, aiClient }));
   app.use(watchlistRoutes({ Watchlist }));
   app.use(contactRoutes({ Message, mailer, contactTo: deps.contactTo }));
-  app.use(aiRoutes({ Purchase, User, Analysis, quotes, aiClient }));
-  app.use(patternRoutes({ BehaviorEvent, Purchase, ledger, aiClient, detector }));
+  app.use(aiRoutes({ ledger, Analysis, quotes, aiClient }));
+  app.use(patternRoutes({ BehaviorEvent, ledger, aiClient, detector }));
 
   // React app (frontend/dist): enabled routes take over, and the legacy URLs they replace redirect to them.
   app.locals.reactRoutes = mountSpa(app, deps.spa || {});
+  app.locals.ledgerStore = ledgerStore;
 
   // Old page URLs (company-name pages, removed marketing pages) keep working via permanent redirects.
   app.get("/", (req, res) => res.redirect(302, "/psk/index.html"));

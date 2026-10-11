@@ -1,0 +1,9 @@
+# Known secrets in the repository's first commit (e666745, Phase 1). They are still in git history, so they
+# must be treated as PUBLIC and rotated: the MongoDB Atlas user "dhrumil" on niveshpathcluster.egrir, the Finnhub
+# API key and the Stripe secret key. Listed here only so the CI secret scan can catch NEW leaks; listing them
+# does not make them safe. Rotation steps: docs/PHASE3_PR_A_REPORT.md ("Your steps", step 1).
+e6667453d465743ab685cb6d064ae905e01ff674:.env:mongodb-connection-string-with-password:2
+e6667453d465743ab685cb6d064ae905e01ff674:.env:generic-api-key:1
+e6667453d465743ab685cb6d064ae905e01ff674:.env:stripe-access-token:3
+e6667453d465743ab685cb6d064ae905e01ff674:demo.js:mongodb-connection-string-with-password:729
+e6667453d465743ab685cb6d064ae905e01ff674:public/client.js:mongodb-connection-string-with-password:282

@@ -28,7 +28,7 @@ function avatarSvg(name) {
     `<text x="64" y="64" dy=".35em" text-anchor="middle" font-family="Inter,Arial,sans-serif" font-size="52" font-weight="700" fill="#fff">${initials}</text></svg>`;
 }
 
-function accountRoutes({ User, Purchase, Watchlist, Analysis, BehaviorEvent, aiClient }) {
+function accountRoutes({ User, ledger, Watchlist, Analysis, BehaviorEvent, aiClient }) {
   const router = express.Router();
 
   async function currentUser(req) {
@@ -144,9 +144,10 @@ function accountRoutes({ User, Purchase, Watchlist, Analysis, BehaviorEvent, aiC
       if (!password || !(await bcrypt.compare(String(password), user.passwordHash))) {
         return res.status(403).json({ error: "Your password is not correct" });
       }
+      ledger.assertOpen(); // the ledger is being moved: deleting now could leave trades behind in the copy
       const userId = req.user.id;
       await Promise.all([
-        Purchase.deleteMany({ userId }),
+        ledger.store.deleteUser(userId),
         Watchlist ? Watchlist.deleteMany({ userId }) : null,
         Analysis ? Analysis.deleteMany({ userId }) : null,
         BehaviorEvent ? BehaviorEvent.deleteMany({ userId }).catch((err) => console.warn("Patterns not deleted:", err.message)) : null,

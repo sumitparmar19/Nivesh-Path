@@ -10,9 +10,20 @@ export interface Release {
 
 export const RELEASES: Release[] = [
   {
+    title: "Orders that can't go through twice",
+    tag: "Phase 3 · Oct 2026",
+    isNew: true,
+    intro: "Groundwork for moving your cash and trades to a Postgres ledger. Nothing changes in how you trade; orders just got safer.",
+    points: [
+      ["Retry-safe orders.", "Every order carries a one-time key. If your connection drops and you press Buy again, you get the original order back instead of buying twice."],
+      ["Whole shares only.", "Orders are for whole shares (1 or more), as the order form always asked."],
+      ["A clear pause message.", "During the short ledger move, Buy, Sell and Start over say \"Trading is paused for a few minutes\" instead of failing; your portfolio stays readable."],
+    ],
+    links: [{ to: "/markets", label: "Go to Markets" }, { to: "/portfolio", label: "Your portfolio" }],
+  },
+  {
     title: "Fairer Behavioral Mirror, and an Advisor that counts your cash",
     tag: "Phase 2C update · Oct 2026",
-    isNew: true,
     intro: "Fixes from live testing: fewer false alarms, the same numbers on every page, and dates in your own time zone.",
     points: [
       ["FOMO needs a real run-up.", "Buying near a high is only flagged after a 5%+ rise (or any 15%+ jump), so ordinary index-fund buys aren't flagged."],
@@ -95,5 +106,6 @@ export const RELEASES: Release[] = [
 export const ROADMAP: [string, string, string][] = [
   ["2D", "Pre-trade check", "A quick gut-check before you buy or sell, plus portfolio stress tests."],
   ["2E", "News + AI chat", "Market news linked to your holdings and a chat that knows your portfolio."],
+  ["3", "Postgres ledger + monitoring", "Cash and trades move to Postgres with database-enforced rules; tracing and alerts across both services."],
   ["2F", "Cloud + observability", "Email sign-in recovery, photo upload, monitoring and alerts."],
 ];

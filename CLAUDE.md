@@ -10,7 +10,8 @@ to that idea. Paper trading with $100k virtual cash; educational, not financial 
 Owner: Sumit Parmar (MS CS @ UB, graduating Dec 2026, targeting SWE / Full-Stack / Backend / Data roles).
 Live: https://nivesh-path-vzeak.ondigitalocean.app (custom domain pending) · Repo: sumitparmar19/Nivesh-Path
 
-**Plan:** `docs/PHASE2_PLAN.md` (read its "Implementation notes" first - they override the plan text).
+**Plan:** `docs/PHASE2_PLAN.md` (read its "Implementation notes" first - they override the plan text); Phase 3:
+`docs/PHASE3_REVIEW.md` (decisions D1-D10, PR plan A-I) and the per-PR reports `docs/PHASE3_PR_*_REPORT.md`.
 **History:** `docs/PHASE1_REPORT.md`.
 
 ## Current progress
@@ -31,7 +32,11 @@ Live: https://nivesh-path-vzeak.ondigitalocean.app (custom domain pending) · Re
       `src/lib/behaviorRules.js`, events in `behavioral_events`), `/api/patterns`, AI coach, `/behavioral-mirror` page
 - [x] **2C follow-up** (live-test fixes): FOMO needs a 5%+ run-up, no panic flag at/above cost, today's move counts, score
       over checked trades only, Advisor weights include cash, one Diversification formula, time-zone dates, AI_INTERNAL_TOKEN
-- [ ] **2D Pre-trade check + stress test - next** (reuse `behaviorRules` before the trade) · 2E news + AI chat · 2F cloud
+- [x] **Phase 3 PR A** - Postgres ledger foundation (Prisma, ledger store interface, `FOR UPDATE`, Idempotency-Key,
+      `LEDGER_MAINTENANCE`, token-only `/internal/trades*` read by the AI service, gitleaks full-history scan, MIT license);
+      `LEDGER_BACKEND` still `mongo` on the live site until the PR B cutover
+- [ ] **Phase 3** (plan: `docs/PHASE3_REVIEW.md`) - next PR B ledger move/cutover · C+D observability + k6 · E AWS · F jobs ·
+      G pre-trade check + stress test (2D) · H+I agent + evals
 
 ## Layout
 ```
@@ -51,7 +56,13 @@ src/
   models/BehaviorEvent.js # collection `behavioral_events` (NOT behavioral_patterns: that is the AI's PatternStore)
   config.js          # env config, STOCKS list, toSymbol() name->ticker
   middleware/auth.js # requireAuth (401) / optionalAuth - req.user = { id, email }
-  lib/ledger.js      # virtual cash ledger: atomic buy/sell, per-user lock, portfolio summary
+  lib/ledger.js      # virtual cash ledger: validates + prices orders, summary/holdings/reset; LEDGER_MAINTENANCE -> 503
+  lib/ledgerStore.js # picks the store for LEDGER_BACKEND (mongo default | postgres); every trade/cash read goes through it
+  lib/ledgerStore.mongo.js # User.cashBalance + `purchases` (per-user in-process lock) - rollback path until retired
+  lib/ledgerStore.pg.js    # Prisma: accounts + trades, SELECT ... FOR UPDATE per order, idempotency, Decimal money
+  lib/db.js          # lazy shared PrismaClient
+  routes/internal.js # /internal/trades/users, /internal/trades?userId= - X-Internal-Token only (404 otherwise), for the AI
+prisma/              # schema.prisma + migrations (CHECK constraints are hand-added in migration SQL); `npx prisma migrate dev`
   lib/               # cache (Redis or memory), quotes (Finnhub), portfolio math, aiClient
   models/User.js     # users (bcryptjs hash, cashBalance, totalDeposited)
   routes/            # stocks (/api/stocks/*), purchases (trades, portfolio, reset), auth, account (/api/me*),
@@ -59,7 +70,7 @@ src/
   lib/marketData.js  # Finnhub: quote, profile, metrics, news, search, candles (cached); CURATED list in config.js
   lib/mailer.js      # Resend email (optional)
   models/            # User (+settings), Analysis, Watchlist, Message
-models/Stock1.js     # Trade model "Purchase": userId, name(=ticker), price, quantity, total, transactionType
+models/Stock1.js     # Trade model "Purchase": userId, name(=ticker), price, quantity, total, transactionType, idempotencyKey
 public/              # LEGACY static UI (rollback while React is live; its URLs 301 to React routes): search.html (Markets), <TICKER>.html stock pages (generated),
                      #   stock.html?symbol= (any ticker), portfolio, transactions, advisor, watchlist, whats-new
 public/psk/pages/    # about (+FAQ), contect (contact form), login, signup, user-dashboard (Account)
@@ -71,9 +82,11 @@ ai-service/          # Python FastAPI AI service (port 8001, internal only)
   services/llm_service.py         # LangChain prompt + Anthropic SDK structured output
   services/vector_service.py      # ChromaDB RAG, one collection per user (transactions_user_<id>) - a cache only
   services/mongo_store.py         # MongoDB: TradeStore (reads purchases) + PatternStore (behavioral_patterns)
+  services/web_trades.py          # HttpTradeStore: trades from Node /internal (used when WEB_INTERNAL_URL + token set)
   startup.py                      # cold-start rebuild of ChromaDB from MongoDB (runs at boot)
   services/portfolio_analytics.py # deterministic metrics + rule-based fallback
-tests/app.test.js    # Jest + Supertest (isolation, auth, ledger, AI proxy)
+tests/app.test.js    # Jest + Supertest (isolation, auth, ledger, AI proxy, idempotency, maintenance, /internal)
+tests/ledger.pg.test.js # real Postgres (TEST_DATABASE_URL; CI sets it): constraints, 20 parallel buys, idempotency, reset
 ai-service/tests/    # pytest
 docs/                # PHASE1_REPORT.md, PHASE2_PLAN.md, DEPLOYMENT.md
 ```
@@ -81,7 +94,9 @@ docs/                # PHASE1_REPORT.md, PHASE2_PLAN.md, DEPLOYMENT.md
 ## Key endpoints (all `/api/*` trade, portfolio and AI routes require `Authorization: Bearer <jwt>`)
 - `POST /api/register` (returns token) · `POST /api/login` (mobile or email) · `GET /api/me`
 - `POST /api/store-purchase` (aliases `/store-purchase`, `/api/trades`): `{symbol, quantity, price, type: "BUY"|"SELL"}`
-  -> `{success, newBalance, transaction}`; server prices from Finnhub, 400 on insufficient funds / not enough shares
+  -> `{success, newBalance, transaction}`; server prices from Finnhub, 400 on insufficient funds / not enough shares /
+  non-whole quantity; optional `Idempotency-Key` header (8-100 of `[A-Za-z0-9_-]`): a repeat returns 200 `replayed: true`
+- `GET /internal/trades/users` · `GET /internal/trades?userId=` - service-to-service, `X-Internal-Token` only (404 otherwise)
 - `GET /api/transactions` · `GET /api/portfolio/holdings` · `GET /api/portfolio/cash-balance` (cash, holdings value, total P&L)
 - `POST /api/ai/analyze-portfolio` -> FastAPI with `user_id`; `POST /api/ai/transactions` (FastAPI) indexes trades per user
 - `GET /api/ai/memory` (trades in Mongo vs indexed in Chroma) · `POST /api/ai/memory/rebuild` (re-index caller's trades)
@@ -102,9 +117,11 @@ docs/                # PHASE1_REPORT.md, PHASE2_PLAN.md, DEPLOYMENT.md
   Playwright; legacy static HTML in `public/` kept as rollback
 - Backend: Node 22, Express 4, MongoDB (Mongoose), Redis cache (optional), JWT (jsonwebtoken + bcryptjs), Helmet, rate limiting
 - AI: FastAPI, LangChain (`langchain-core`), Anthropic Python SDK, ChromaDB; model from `CLAUDE_MODEL` (now `claude-opus-5-5`)
+- Ledger (Phase 3): Postgres 16 (Neon in production) via Prisma 6.19.3 (`binaryTargets` include musl for Alpine)
 
 ## Commands
-- Backend: `npm install && npm run dev` (port 3000); tests `npm test`
+- Backend: `npm install && npm run dev` (port 3000; `npm install` runs `prisma generate`); tests `npm test`
+  (Postgres suite: `TEST_DATABASE_URL=... npx prisma migrate deploy && TEST_DATABASE_URL=... npm test`); `node scripts/db-check.js`
 - Frontend: `cd frontend && npm install && npm run dev` (port 5173, proxies /api to :3000); `npm test`, `npm run typecheck`,
   `npm run build` (Express then serves it on :3000); `npm run e2e` against a server started with `FAKE_MARKET_DATA=1`
 - AI service: `cd ai-service && python -m venv .venv && .venv/bin/pip install -r requirements-dev.txt && .venv/bin/uvicorn main:app --port 8001`; tests `.venv/bin/pytest -q`
@@ -112,7 +129,11 @@ docs/                # PHASE1_REPORT.md, PHASE2_PLAN.md, DEPLOYMENT.md
 
 ## Rules for Claude Code
 - Every query on trades/portfolio MUST filter by `req.user.id`; every new trade/portfolio/AI route uses `requireAuth`
-- Cash changes only through `src/lib/ledger.js` (atomic `$inc`, never read-modify-write)
+- Cash and trades change only through `src/lib/ledger.js` -> the ledger store (Mongo: atomic `$inc`; Postgres: one
+  transaction with `FOR UPDATE` on the account). Never query `Purchase`/`prisma.trade` from a route: use `ledger.store`
+- Ledger schema change: edit `prisma/schema.prisma`, `npx prisma migrate dev --name <what>`, add CHECKs by hand in the SQL;
+  CI fails if the schema and migrations disagree. Money columns are NUMERIC; quantities are whole shares
+- `/internal/*` is reachable from the internet: token-only, and every route there stays read-only unless reviewed
 - Python: type hints everywhere; FastAPI endpoints have docstrings (+ response_model)
 - All new code has error handling; external services (Claude, Finnhub, Redis, AI service) must fail gracefully
 - Every new file starts with a brief comment explaining what it does and why it exists

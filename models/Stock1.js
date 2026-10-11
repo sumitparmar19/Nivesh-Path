@@ -14,8 +14,14 @@ const purchaseSchema = new mongoose.Schema({
     priceSource: { type: String, enum: ["live", "client"], default: "live" },
     // Set when the Behavioral Mirror checked this trade for panic/FOMO (counts in the impulse-control score).
     behaviorCheckedAt: { type: Date },
+    // Idempotency-Key header of the order that created this trade: a retry with the same key gets this trade back.
+    idempotencyKey: { type: String },
 });
 
 purchaseSchema.index({ userId: 1, timestamp: -1 });
+purchaseSchema.index(
+    { userId: 1, idempotencyKey: 1 },
+    { unique: true, partialFilterExpression: { idempotencyKey: { $type: "string" } } }
+);
 
 module.exports = mongoose.models.Purchase || mongoose.model("Purchase", purchaseSchema);

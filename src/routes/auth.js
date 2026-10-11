@@ -29,7 +29,7 @@ function signToken(user) {
   return jwt.sign({ sub: String(user._id), email: user.email }, config.jwtSecret, { expiresIn: "7d" });
 }
 
-function authRoutes({ User }) {
+function authRoutes({ User, ledgerStore }) {
   const router = express.Router();
 
   router.post("/api/register", async (req, res) => {
@@ -76,7 +76,13 @@ function authRoutes({ User }) {
     try {
       const user = await User.findById(req.user.id);
       if (!user) return res.status(401).json({ error: "Account not found. Please log in again." });
-      return res.json(publicUser(user));
+      const profile = publicUser(user);
+      // Cash lives in the ledger (Postgres after the cutover), not on the user document.
+      if (ledgerStore && ledgerStore.kind !== "mongo") {
+        const account = await ledgerStore.getAccount(req.user.id).catch(() => null);
+        if (account) profile.cashBalance = account.cashBalance;
+      }
+      return res.json(profile);
     } catch (err) {
       return next(err);
     }

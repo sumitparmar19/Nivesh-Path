@@ -25,8 +25,9 @@ function timeZone(raw) {
   }
 }
 
-function patternRoutes({ BehaviorEvent, Purchase, ledger, aiClient, detector }) {
+function patternRoutes({ BehaviorEvent, ledger, aiClient, detector }) {
   const router = express.Router();
+  const trades = ledger.store;
 
   // Each fresh analysis is a paid LLM call: at most 5 per hour per user (unchanged data is served for free).
   const limiter = rateLimit({
@@ -42,8 +43,8 @@ function patternRoutes({ BehaviorEvent, Purchase, ledger, aiClient, detector }) 
   async function buildSummary(userId) {
     const [events, tradeCount, checkedTrades, portfolio] = await Promise.all([
       BehaviorEvent.find({ userId }).sort({ createdAt: -1 }).limit(500).lean(),
-      Purchase.countDocuments({ userId }),
-      Purchase.countDocuments({ userId, behaviorCheckedAt: { $exists: true } }),
+      trades.countTrades(userId),
+      trades.countTrades(userId, { checkedOnly: true }),
       ledger.summary(userId).catch(() => null),
     ]);
     const byType = Object.fromEntries(TYPES.map((t) => [t, 0]));
@@ -92,8 +93,8 @@ function patternRoutes({ BehaviorEvent, Purchase, ledger, aiClient, detector }) 
 
       // Add the trade's time and size so two similar cards can be told apart (only the caller's own trades).
       const tradeIds = [...new Set(patterns.filter((p) => p.tradeId).map((p) => String(p.tradeId)))];
-      const trades = tradeIds.length ? await Purchase.find({ userId: req.user.id, _id: { $in: tradeIds } }).lean() : [];
-      const byId = Object.fromEntries(trades.map((t) => [String(t._id), t]));
+      const found = await trades.findTrades(req.user.id, tradeIds);
+      const byId = Object.fromEntries(found.map((t) => [String(t._id), t]));
       res.json({
         patterns: patterns.map((p) => {
           const t = p.tradeId && byId[String(p.tradeId)];

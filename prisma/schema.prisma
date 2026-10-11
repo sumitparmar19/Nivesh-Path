@@ -1,0 +1,47 @@
+// Postgres schema for the money ledger (Phase 3, PR A): each user's cash account and their trades.
+// Users, auth, AI memory, behavioral events, watchlist and messages stay in MongoDB; rows here refer to a user by
+// the MongoDB user id (24-character hex string). CHECK constraints live in the migration SQL (Prisma can't
+// express them): cash >= 0, quantity > 0, price > 0, total > 0, side in ('buy','sell').
+generator client {
+  provider      = "prisma-client-js"
+  // "native" for local/CI, musl for the node:22-alpine Docker image (blocking issue 5 in docs/PHASE3_REVIEW.md).
+  binaryTargets = ["native", "linux-musl-openssl-3.0.x"]
+}
+
+datasource db {
+  provider  = "postgresql"
+  url       = env("DATABASE_URL") // pooled (Neon: add pgbouncer=true)
+  directUrl = env("DIRECT_URL")   // direct connection, used by `prisma migrate`
+}
+
+model Account {
+  userId         String   @id @map("user_id") @db.VarChar(24)
+  cash           Decimal  @db.Decimal(14, 2)
+  totalDeposited Decimal  @map("total_deposited") @db.Decimal(14, 2)
+  createdAt      DateTime @default(now()) @map("created_at") @db.Timestamptz(3)
+  updatedAt      DateTime @updatedAt @map("updated_at") @db.Timestamptz(3)
+  trades         Trade[]
+
+  @@map("accounts")
+}
+
+model Trade {
+  // Same 24-character ObjectId string as the MongoDB trade it came from (or a fresh one), so behavioral_events,
+  // analyses and AI memory keep pointing at the right trade (blocking issue 1).
+  id                String    @id @db.Char(24)
+  userId            String    @map("user_id") @db.VarChar(24)
+  account           Account   @relation(fields: [userId], references: [userId], onDelete: Cascade)
+  symbol            String    @db.VarChar(10)
+  side              String    @db.VarChar(4)
+  quantity          Int
+  price             Decimal   @db.Decimal(14, 4)
+  total             Decimal   @db.Decimal(14, 2)
+  priceSource       String    @default("live") @map("price_source") @db.VarChar(6)
+  behaviorCheckedAt DateTime? @map("behavior_checked_at") @db.Timestamptz(3)
+  idempotencyKey    String?   @map("idempotency_key") @db.VarChar(100)
+  executedAt        DateTime  @default(now()) @map("executed_at") @db.Timestamptz(3)
+
+  @@unique([userId, idempotencyKey])
+  @@index([userId, executedAt])
+  @@map("trades")
+}

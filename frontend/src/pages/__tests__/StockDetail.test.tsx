@@ -98,6 +98,62 @@ describe("Stock detail", () => {
     expect(await screen.findByTestId("trade-error")).toHaveTextContent(/insufficient funds/i);
   });
 
+  describe("Idempotency-Key (a retried order is never placed twice)", () => {
+    const filled = { success: true, newBalance: 88862.8, transaction: { _id: "t9", name: "XOM", price: 112.4, quantity: 3, total: 337.2, transactionType: "buy", timestamp: "2026-10-05T15:00:00Z" } };
+    const keyOf = (init: RequestInit) => (init.headers as Record<string, string>)["Idempotency-Key"];
+    async function buy(qty: string) {
+      const input = screen.getByTestId("quantity-input");
+      await userEvent.clear(input);
+      await userEvent.type(input, qty);
+      await userEvent.click(screen.getByRole("button", { name: new RegExp(`buy ${qty} xom`, "i") }));
+    }
+
+    it("reuses the key when the same order is retried after a network error, and starts a new one after success", async () => {
+      const keys: string[] = [];
+      let attempt = 0;
+      mockApi({
+        ...market, ...account,
+        "POST /api/store-purchase": (_body: unknown, init: RequestInit) => {
+          keys.push(keyOf(init));
+          attempt += 1;
+          if (attempt === 1) throw new TypeError("Failed to fetch");
+          return filled;
+        },
+      });
+      open();
+      await screen.findByTestId("stock-price");
+      await buy("3");
+      expect(await screen.findByTestId("trade-error")).toHaveTextContent(/can't reach the server/i);
+      await buy("3");
+      expect(await screen.findByTestId("trade-success")).toBeInTheDocument();
+      await buy("3");
+      await waitFor(() => expect(keys).toHaveLength(3));
+      expect(keys[0]).toMatch(/^[A-Za-z0-9_-]{8,100}$/);
+      expect(keys[1]).toBe(keys[0]);
+      expect(keys[2]).not.toBe(keys[0]);
+    });
+
+    it("a clear refusal (4xx) or a different order gets a new key", async () => {
+      const keys: string[] = [];
+      mockApi({
+        ...market, ...account,
+        "POST /api/store-purchase": (_body: unknown, init: RequestInit) => {
+          keys.push(keyOf(init));
+          return keys.length === 1 ? new Response(JSON.stringify({ error: "Insufficient funds" }), { status: 400 }) : new Response(JSON.stringify({ error: "busy" }), { status: 503 });
+        },
+      });
+      open();
+      await screen.findByTestId("stock-price");
+      await buy("3");
+      expect(await screen.findByTestId("trade-error")).toHaveTextContent(/insufficient funds/i);
+      await buy("3");
+      await waitFor(() => expect(keys).toHaveLength(2));
+      await buy("4");
+      await waitFor(() => expect(keys).toHaveLength(3));
+      expect(new Set(keys).size).toBe(3);
+    });
+  });
+
   it("logged-out visitors can browse but are asked to log in to trade", async () => {
     signOut();
     mockApi({ ...market });

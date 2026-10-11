@@ -1,9 +1,13 @@
 # DigitalOcean App Platform spec (GitHub Student Pack credit).
 # Deploy: DigitalOcean dashboard -> Apps -> Create App -> "Import from app spec" (or `doctl apps create --spec .do/app.yaml`).
+# Changing this file does NOT change the live app: paste edits into Settings -> App Spec -> Edit (DigitalOcean).
 # Secrets are NOT listed here: add them in the dashboard (Settings -> component -> Environment Variables, tick Encrypt):
-#   web: MONGO_URL, FINNHUB_API_KEY, JWT_SECRET, AI_INTERNAL_TOKEN, SENTRY_DSN (optional), RESEND_API_KEY + CONTACT_TO_EMAIL (optional)
-#   ai:  ANTHROPIC_API_KEY, MONGO_URL (same value as web; ChromaDB is rebuilt from it on every deploy), AI_INTERNAL_TOKEN
-#        (same value as web: the AI service then only answers the web component), SENTRY_DSN (optional)
+#   web:     MONGO_URL, FINNHUB_API_KEY, JWT_SECRET, AI_INTERNAL_TOKEN, DATABASE_URL (Neon pooled, with pgbouncer=true),
+#            SENTRY_DSN (optional), RESEND_API_KEY + CONTACT_TO_EMAIL (optional)
+#   migrate: DATABASE_URL (same as web), DIRECT_URL (Neon direct, for migrations)
+#   ai:      ANTHROPIC_API_KEY, MONGO_URL (behavioral pattern results), AI_INTERNAL_TOKEN (same value as web: the AI
+#            service then only answers the web component, and it reads trades from web's /internal API), SENTRY_DSN
+# Cutover switches (web, see docs/PHASE3_REVIEW.md 2.4): LEDGER_BACKEND=mongo|postgres, LEDGER_MAINTENANCE=1.
 name: nivesh-path
 region: nyc
 services:
@@ -25,6 +29,8 @@ services:
         value: ${ai.PRIVATE_URL}
       - key: PUBLIC_BASE_URL
         value: ${APP_URL}
+      - key: LEDGER_BACKEND
+        value: mongo
 
   - name: ai
     github:
@@ -43,3 +49,19 @@ services:
     envs:
       - key: CLAUDE_MODEL
         value: claude-opus-5-5
+      - key: WEB_INTERNAL_URL
+        value: ${web.PRIVATE_URL}
+
+jobs:
+  # Applies new Postgres ledger migrations before each deploy. If it fails, the deploy stops and the running
+  # version stays up (a migration in the run command would crash-loop the live container instead).
+  - name: migrate
+    kind: PRE_DEPLOY
+    github:
+      repo: sumitparmar19/Nivesh-Path
+      branch: main
+      deploy_on_push: true
+    dockerfile_path: Dockerfile
+    instance_count: 1
+    instance_size_slug: apps-s-1vcpu-0.5gb
+    run_command: npx --no-install prisma migrate deploy

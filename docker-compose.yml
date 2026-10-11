@@ -10,10 +10,18 @@ services:
       REDIS_URL: redis://redis:6379
       AI_SERVICE_URL: http://ai-service:8001
       PUBLIC_BASE_URL: http://localhost:3000
+      # Postgres ledger (Phase 3). LEDGER_BACKEND comes from .env (mongo by default).
+      DATABASE_URL: postgresql://nivesh:nivesh@postgres:5432/nivesh
+      DIRECT_URL: postgresql://nivesh:nivesh@postgres:5432/nivesh
+    # Apply any new ledger migrations, then start (on DigitalOcean a pre-deploy job does the migrate step).
+    command: ["sh", "-c", "npx --no-install prisma migrate deploy && node server.js"]
     depends_on:
-      - mongo
-      - redis
-      - ai-service
+      mongo:
+        condition: service_started
+      redis:
+        condition: service_started
+      postgres:
+        condition: service_healthy
     restart: unless-stopped
 
   ai-service:
@@ -23,8 +31,10 @@ services:
     env_file: .env
     environment:
       CHROMA_PERSIST_DIR: /data/chroma
-      # Same database as the web service: ChromaDB is rebuilt from it on cold start
+      # Behavioral pattern results live in MongoDB; trades are read through the web service's /internal API
+      # (needs AI_INTERNAL_TOKEN in .env; without it the AI service reads `purchases` from MongoDB directly).
       MONGO_URL: mongodb://mongo:27017/niveshpath
+      WEB_INTERNAL_URL: http://backend:3000
     volumes:
       - chroma_data:/data/chroma
     restart: unless-stopped
@@ -39,6 +49,22 @@ services:
     image: redis:7-alpine
     restart: unless-stopped
 
+  postgres:
+    image: postgres:16-alpine
+    environment:
+      POSTGRES_USER: nivesh
+      POSTGRES_PASSWORD: nivesh # local only; never exposed outside the compose network
+      POSTGRES_DB: nivesh
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U nivesh -d nivesh"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+    restart: unless-stopped
+
 volumes:
+  postgres_data:
   mongo_data:
   chroma_data:
