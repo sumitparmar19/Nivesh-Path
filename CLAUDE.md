@@ -35,7 +35,9 @@ Live: https://nivesh-path-vzeak.ondigitalocean.app (custom domain pending) · Re
 - [x] **Phase 3 PR A** - Postgres ledger foundation (Prisma, ledger store interface, `FOR UPDATE`, Idempotency-Key,
       `LEDGER_MAINTENANCE`, token-only `/internal/trades*` read by the AI service, gitleaks full-history scan, MIT license);
       `LEDGER_BACKEND` still `mongo` on the live site until the PR B cutover
-- [ ] **Phase 3** (plan: `docs/PHASE3_REVIEW.md`) - next PR B ledger move/cutover · C+D observability + k6 · E AWS · F jobs ·
+- [x] **Phase 3 PR B** - `scripts/migrate-ledger.js` (dry-run/migrate/verify/export-since) + `docs/LEDGER_CUTOVER.md`;
+      What's new shows which ledger holds the money. Live cutover is Sumit's step (runbook)
+- [ ] **Phase 3** (plan: `docs/PHASE3_REVIEW.md`) - next · C+D observability + k6 · E AWS · F jobs ·
       G pre-trade check + stress test (2D) · H+I agent + evals
 
 ## Layout
@@ -61,6 +63,7 @@ src/
   lib/ledgerStore.mongo.js # User.cashBalance + `purchases` (per-user in-process lock) - rollback path until retired
   lib/ledgerStore.pg.js    # Prisma: accounts + trades, SELECT ... FOR UPDATE per order, idempotency, Decimal money
   lib/db.js          # lazy shared PrismaClient
+  lib/ledgerMigration.js # MongoDB -> Postgres move: plan (pure), apply (repeat-safe), verify (to the cent), tradesSince
   routes/internal.js # /internal/trades/users, /internal/trades?userId= - X-Internal-Token only (404 otherwise), for the AI
 prisma/              # schema.prisma + migrations (CHECK constraints are hand-added in migration SQL); `npx prisma migrate dev`
   lib/               # cache (Redis or memory), quotes (Finnhub), portfolio math, aiClient
@@ -74,7 +77,8 @@ models/Stock1.js     # Trade model "Purchase": userId, name(=ticker), price, qua
 public/              # LEGACY static UI (rollback while React is live; its URLs 301 to React routes): search.html (Markets), <TICKER>.html stock pages (generated),
                      #   stock.html?symbol= (any ticker), portfolio, transactions, advisor, watchlist, whats-new
 public/psk/pages/    # about (+FAQ), contect (contact form), login, signup, user-dashboard (Account)
-scripts/             # gen-stock-pages.py + stock-page.template.html (regenerate the 12 stock pages), check-finnhub.js
+scripts/             # gen-stock-pages.py + stock-page.template.html (regenerate the 12 stock pages), check-finnhub.js,
+                     #   migrate-ledger.js (cutover tool, see docs/LEDGER_CUTOVER.md), db-check.js (Postgres check)
 public/assets/       # nivesh.css, nivesh.js (shared navbar/sidebar/footer, toasts, NP.authFetch, NP.stocks), trade.js,
                      #   stock-page.js (all stock pages), stock.css
 public/psk/          # landing (index.html), about, contact, login/signup, account (served at /psk/...)

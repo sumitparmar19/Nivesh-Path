@@ -10,9 +10,20 @@ export interface Release {
 
 export const RELEASES: Release[] = [
   {
-    title: "Orders that can't go through twice",
+    title: "See where your money lives",
     tag: "Phase 3 · Oct 2026",
     isNew: true,
+    intro: "Your cash and trades are moving from MongoDB to a PostgreSQL ledger, where the database itself enforces the rules.",
+    points: [
+      ["Live ledger status.", "The status panel below shows which database holds your cash and trades right now."],
+      ["Checked to the cent.", "Before the switch, every account's cash, holdings and trade list is compared between the two databases; any difference stops the move."],
+      ["A short, announced pause.", "While the copy runs (a few minutes), Buy and Sell are paused and the status panel says so. Your portfolio stays readable."],
+    ],
+    links: [{ to: "/portfolio", label: "Your portfolio" }],
+  },
+  {
+    title: "Orders that can't go through twice",
+    tag: "Phase 3 · Oct 2026",
     intro: "Groundwork for moving your cash and trades to a Postgres ledger. Nothing changes in how you trade; orders just got safer.",
     points: [
       ["Retry-safe orders.", "Every order carries a one-time key. If your connection drops and you press Buy again, you get the original order back instead of buying twice."],

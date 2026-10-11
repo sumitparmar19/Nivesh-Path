@@ -280,6 +280,8 @@ export interface SystemStatus {
     model?: string | null;
     vectorIndex?: { status: IndexStatus; users: number; transactions: number; seconds: number } | null;
   };
+  /** Where cash and trades live (Phase 3 cutover), and whether trading is paused for it. */
+  ledger?: { backend: "mongo" | "postgres"; tradingPaused: boolean };
   checkedAt: string;
 }
 

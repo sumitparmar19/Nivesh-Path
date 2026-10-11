@@ -150,7 +150,14 @@ Phase 3 plan and decisions: `docs/PHASE3_REVIEW.md` (D1-D10 approved; D10 = MIT)
 - **CI**: Postgres service + `migrate deploy` + schema/migration drift check; `secret-scan` (gitleaks 8.30.1, sha256-pinned,
   full history; `.gitleaksignore` = the first commit's leaked credentials, rotation is on Sumit's list); e2e runs on both
   ledgers; the Docker job migrates, queries and boots the built Alpine image on Postgres.
-- Next: PR B (`scripts/migrate-ledger.js` dry-run/migrate/verify/export-since + `docs/LEDGER_CUTOVER.md`).
+
+### Phase 3 PR B - ledger move (built; cutover is Sumit's live step)
+- `src/lib/ledgerMigration.js` + `scripts/migrate-ledger.js`: dry-run / migrate / verify / export-since. Reads MongoDB only;
+  keeps trade ids; rounds half-up (cash/total 2, price 4) and lists every change; fractional shares and bad rows block.
+- Re-run safe (keyed by Mongo ids); refuses users with Postgres-only trades, refuses while `LEDGER_BACKEND=postgres`, and
+  `--migrate` needs `LEDGER_MAINTENANCE=1` (`--force` for tests). Runbook: `docs/LEDGER_CUTOVER.md`.
+- `/api/status` -> `ledger: {backend, tradingPaused}` shown on What's new ("Money ledger").
+- About a week after the cutover: D-cleanup PR removes the Mongo ledger path (data stays as backup).
 
 ### Known risks to handle in later phases
 1. **Cold start** for the Behavioral Mirror (still open after 2C): new users have no history -> add a demo account with realistic
