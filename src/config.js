@@ -17,6 +17,9 @@ const config = {
   mailFrom: process.env.MAIL_FROM || "Nivesh-Path <onboarding@resend.dev>",
   contactToEmail: process.env.CONTACT_TO_EMAIL || "",
   quoteCacheSeconds: Number(process.env.QUOTE_CACHE_SECONDS) || 60,
+  // Phase 3 ledger: "mongo" (default) or "postgres" (needs DATABASE_URL). See docs/PHASE3_REVIEW.md 2.4.
+  ledgerBackend: (process.env.LEDGER_BACKEND || "mongo").trim().toLowerCase(),
+  databaseUrl: process.env.DATABASE_URL || "",
 };
 
 // The 12 stocks with their own page (/<TICKER>.html); used for dashboard quotes.
