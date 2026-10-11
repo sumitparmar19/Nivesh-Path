@@ -134,6 +134,24 @@ Reviewed in `docs/PHASE2C_FOLLOWUP_REVIEW.md`, approved with four changes; full 
 - **AI coach:** 5 fresh analyses/hour/user; unchanged data returns the saved insight (fingerprint); `stale` flag.
 - **AI_INTERNAL_TOKEN:** optional shared secret; FastAPI rejects calls without it when set (except `/health`).
 
+### Phase 3 PR A - Postgres ledger foundation (built; switch still on `mongo`)
+Phase 3 plan and decisions: `docs/PHASE3_REVIEW.md` (D1-D10 approved; D10 = MIT). Report: `docs/PHASE3_PR_A_REPORT.md`.
+- **Ledger store interface** (`src/lib/ledgerStore.{mongo,pg}.js`, picked by `LEDGER_BACKEND`, default `mongo`): every reader
+  of trades/cash goes through it (purchases, ai, patterns, account delete, `/api/me` cash, detector, migration). `ledger.js`
+  only validates and prices. Postgres: `SELECT ... FOR UPDATE` on the account row inside a Prisma interactive transaction.
+- **Schema** (`prisma/`): `accounts` (cash NUMERIC(14,2)) + `trades` (24-hex ObjectId ids, INTEGER whole shares, price
+  NUMERIC(14,4)); CHECK constraints live in the migration SQL. Users/auth/events stay in MongoDB (D4).
+- **Idempotency-Key** header (React `TradePanel`, legacy `trade.js`): reused only while the same order is retried after an
+  unclear failure; a replay returns 200 + `replayed: true` and skips detection and AI ingest. Unique per (user, key).
+- **`LEDGER_MAINTENANCE=1`**: trades, reset and account delete -> 503; reads keep working (for the PR B cutover).
+- **`/internal/trades*`** (Node): token-only (`AI_INTERNAL_TOKEN`, constant-time), 404 for everything when unset/wrong. The
+  AI service reads trades there when `WEB_INTERNAL_URL` + token are set (`services/web_trades.py`), else MongoDB.
+- **Migrations** on DigitalOcean: PRE_DEPLOY job `migrate` (`npx prisma migrate deploy`, needs `DIRECT_URL`).
+- **CI**: Postgres service + `migrate deploy` + schema/migration drift check; `secret-scan` (gitleaks 8.30.1, sha256-pinned,
+  full history; `.gitleaksignore` = the first commit's leaked credentials, rotation is on Sumit's list); e2e runs on both
+  ledgers; the Docker job migrates, queries and boots the built Alpine image on Postgres.
+- Next: PR B (`scripts/migrate-ledger.js` dry-run/migrate/verify/export-since + `docs/LEDGER_CUTOVER.md`).
+
 ### Known risks to handle in later phases
 1. **Cold start** for the Behavioral Mirror (still open after 2C): new users have no history -> add a demo account with realistic
    seeded trades and **CSV import** of real broker history (Robinhood / Webull / Zerodha) in Phase 2C.
