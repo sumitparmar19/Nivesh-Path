@@ -12,7 +12,7 @@ Moves every user's cash and trades from MongoDB to Postgres (Neon) with about 5 
 2. Read the end of the output:
    - `No blocking problems.` means you can do the cutover.
    - `BLOCKING problems` means stop and send the output to Claude. Examples are a fractional share count from the old API or a broken row.
-3. `Rounding changes` lists every value that changes when stored with fixed decimals (cash and totals to cents, prices to 4 places). Send that part to Claude too, so it goes into the PR B report.
+3. `Rounding changes` lists every value that changes when stored with fixed decimals (cash and totals to cents, prices to 4 places), and any trade with no timestamp (it gets the creation time built into its id instead of 1970). Send that part to Claude too, so it goes into the PR B report.
 
 The output shows user ids and amounts only, never emails, passwords or keys.
 

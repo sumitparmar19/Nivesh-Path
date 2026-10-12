@@ -8,6 +8,7 @@ const { createMongoLedgerStore, STARTING_CASH } = require("./ledgerStore.mongo")
 const SYMBOL_RE = /^[A-Z.]{1,10}$/;
 const MAX_QUANTITY = 1000000; // whole shares only (decision D1); also keeps the Postgres INTEGER column safe
 const IDEMPOTENCY_KEY_RE = /^[A-Za-z0-9_-]{8,100}$/;
+const REUSED_KEY_MESSAGE = "This order key was already used for a different order.";
 const MAINTENANCE_MESSAGE = "Trading is paused for a few minutes while we upgrade the ledger. Please try again shortly.";
 
 const round2 = (n) => Math.round(n * 100) / 100;
@@ -16,6 +17,11 @@ function httpError(status, message) {
   const err = new Error(message);
   err.status = status;
   return err;
+}
+
+/** Does a saved trade match the order now being placed (ticker, side, share count)? */
+function sameOrder(trade, { symbol, type, quantity }) {
+  return toSymbol(trade.name) === symbol && trade.transactionType === type && Number(trade.quantity) === quantity;
 }
 
 /** A valid Idempotency-Key header value, or undefined (absent). Malformed keys are a 400. */
@@ -63,7 +69,13 @@ function createLedger({ store, User, Purchase, quotes, maintenance = () => false
 
     const { price, source } = await livePrice(symbol, Number(clientPrice));
     const total = round2(price * quantity);
-    return ledgerStore.executeTrade({ userId: String(userId), symbol, quantity, price, total, type, priceSource: source, idempotencyKey: key });
+    const result = await ledgerStore.executeTrade({ userId: String(userId), symbol, quantity, price, total, type, priceSource: source, idempotencyKey: key });
+    // A key belongs to one order. Reusing it for a different order is a client bug: refuse it rather than
+    // silently answering with the earlier trade (same rule as Stripe). Price may differ: it's re-quoted live.
+    if (result.replayed && !sameOrder(result.transaction, { symbol, type, quantity })) {
+      throw httpError(422, REUSED_KEY_MESSAGE);
+    }
+    return result;
   }
 
   async function summary(userId) {
@@ -105,4 +117,4 @@ function createLedger({ store, User, Purchase, quotes, maintenance = () => false
   return { execute, summary, holdings, reset, assertOpen, store: ledgerStore };
 }
 
-module.exports = { createLedger, idempotencyKey, STARTING_CASH, MAX_QUANTITY, MAINTENANCE_MESSAGE };
+module.exports = { createLedger, idempotencyKey, STARTING_CASH, MAX_QUANTITY, MAINTENANCE_MESSAGE, REUSED_KEY_MESSAGE };

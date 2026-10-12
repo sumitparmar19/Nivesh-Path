@@ -65,7 +65,7 @@ The full runbook with every command is `docs/LEDGER_CUTOVER.md`. In short:
 
 | Suite | Before | After | New |
 |---|---|---|---|
-| Jest | 154 | 167 | 12 in `ledgerMigration.pg.test.js` (4 pure, 8 against Postgres); 1 status test |
+| Jest | 154 | 170 | 13 in `ledgerMigration.pg.test.js` (5 pure, 8 against Postgres); 1 status test; 2 for the 422 below (one per store) |
 | pytest | 46 | 46 | |
 | Vitest | 108 | 109 | ledger row + paused warning on What's new |
 | Playwright | 2 × 2 ledgers | same | |
@@ -84,6 +84,27 @@ The Postgres tests cover:
 - the portfolio summary computed from MongoDB vs from Postgres being **identical**.
 
 **Run by me end to end** with a real MongoDB 7 and Postgres 16: dry run → `--migrate` refused without maintenance → migrate → verify "All users match (2)" → re-run (0 copied, still matching) → refused under `LEDGER_BACKEND=postgres` → export.
+
+## 2b. Changes after the planning chat's review
+1. **A reused Idempotency-Key with a different order now gets 422** "This order key was already used for a different order."
+   - "Different" means another ticker, side or share count. The price is re-quoted live, so it isn't compared.
+   - It's checked once in `ledger.js`, so both stores behave the same.
+   - The identical order still replays (200).
+   - Tests: `app.test.js` (MongoDB store) and `ledger.pg.test.js` (Postgres store). Both confirm nothing was bought and the cash didn't change.
+2. **A trade with no usable timestamp is no longer saved as 1 Jan 1970**, which would have moved it to the front when buys and sells are put in order for the average cost.
+   - It gets the creation time built into its MongoDB id.
+   - `--dry-run` lists it: "no timestamp (missing): using the time from its id, …".
+   - Test in `ledgerMigration.pg.test.js`.
+   - **Note:** today's live site sorts such a row first. If one exists between a buy and a sell, `--verify` may report a cost-basis difference for that stock. That's on purpose: the move stops, rather than quietly changing your average cost. Send me the output if it happens.
+3. **Decisions recorded:**
+   - Q1: the nightly job uses `/internal` only, there is no `nivesh-jobs` Atlas user, and AWS holds no database credentials.
+   - Q2: no copy-back.
+   - Q4: remove the MongoDB ledger code about a week after the cutover.
+   - Q5: start PR C+D.
+
+Planted bugs for these:
+- Turning the 422 check off failed both new tests (one per store).
+- Putting the 1970 fallback back failed the timestamp test.
 
 ## 3. Bug planted on purpose
 - I removed the post-cutover conflict check in `applyUser`. The conflict test failed: the user was reported `updated` instead of `conflict`, and their newer Postgres cash would have been overwritten with the older MongoDB balance.

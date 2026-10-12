@@ -15,11 +15,11 @@
 |---|---|---|
 | What | Postgres ledger next to MongoDB, behind a switch; database-enforced rules; row locks; retry-safe orders; maintenance pause; AI reads trades through Node; secret scan; MIT license | The one-time move: copy tool (`--dry-run / --migrate / --verify / --export-since`), cutover runbook, "Money ledger" on What's new |
 | Files | 50 files, +2,754 / −196 | 15 files, +773 / −6 |
-| Tests | 279 → 310 | 310 → 324 |
+| Tests | 279 → 310 | 310 → 327 |
 | Live effect | None until you set variables (site behaves as before) | None until you run the runbook |
 | CI | All 7 jobs green (both push and PR runs) | All 7 jobs green (both push and PR runs) |
 
-**Totals:** Jest 132 → 167, pytest 39 → 46, Vitest 106 → 109, Playwright 2 (now run on **both** ledgers).
+**Totals:** Jest 132 → 170, pytest 39 → 46, Vitest 106 → 109, Playwright 2 (now run on **both** ledgers).
 **No existing test was edited.**
 
 ---
@@ -37,7 +37,7 @@
 - **Addition 1, security:**
   - a gitleaks full-history scan in CI;
   - "rotate the MongoDB Atlas password and update it everywhere" is **Step 1** in your list, before anything else (so also before Part 2).
-- **Addition 2, separate Atlas users** for live / jobs / demo, each `readWrite` on its own database only: the click-by-click steps are in your list (see §9). There's one consequence for PR F; see question Q1.
+- **Addition 2, separate Atlas users**, each `readWrite` on its own database only: `nivesh-live` and `nivesh-demo` steps are in your list (see §9). After review there is **no jobs user**: the nightly job goes through the web service's internal API (Q1). There's one consequence for PR F; see question Q1.
 - **Addition 3, PR grouping:** A and B stay separate; C+D will be one PR; H+I will be one PR.
 - **Addition 4, keep building while you're blocked:** PR B was built while PR A waited. PR C+D is next.
 - **Addition 5, reports start with your steps:** both PR reports do (`docs/PHASE3_PR_A_REPORT.md`, `docs/PHASE3_PR_B_REPORT.md`).
@@ -152,7 +152,8 @@ How it's handled:
   - The key is **reused only while the same order is retried after an unclear failure** (network error or 5xx).
   - A success or a 4xx (e.g. not enough cash) starts a new key.
 - **Server side:**
-  - a repeat with the same key returns **200 `{replayed: true}` with the original trade**, with no second charge, no Behavioral Mirror run and no AI ingest;
+  - a repeat of the same order with the same key returns **200 `{replayed: true}` with the original trade**, with no second charge, no Behavioral Mirror run and no AI ingest;
+  - the same key with a **different** order (ticker, side or share count) is refused: **422** "This order key was already used for a different order." (added after review, Q3);
   - keys are per user, 8–100 characters of `[A-Za-z0-9_-]`; anything else is a 400;
   - MongoDB got a matching partial unique index on `purchases`.
 
@@ -290,14 +291,15 @@ Both were caught; details are in the PR A report.
 - **Jest now runs test files one at a time** (`"jest": {"maxWorkers": 1}`). The two Postgres suites share one test database, and plain `npx jest` ran them in parallel so they wiped each other's tables. `npm test` was already serial, and CI was never affected.
 - **The CLAUDE.md test command was fixed:** `prisma migrate deploy` needs `DIRECT_URL` too.
 
-### 4.4 PR B tests (310 → 324)
+### 4.4 PR B tests (310 → 327)
 
-**Jest +13** (`tests/ledgerMigration.pg.test.js`, plus 1 status test)
-- 4 pure tests:
+**Jest +16** (`tests/ledgerMigration.pg.test.js`, 1 status test, 2 review-change tests)
+- 5 pure tests:
   - rounding (`187.43999999999998` → `187.4400`; cash `99899.89999999999` → `99899.90`);
   - the blocking list;
   - a stored total kept and reported;
-  - CLI arguments.
+  - CLI arguments;
+  - a trade with no usable date gets its MongoDB id's creation time and a dry-run note (never 1970) (added after review).
 - 8 against Postgres:
   - copy + verify;
   - rerun safety;
@@ -344,7 +346,7 @@ Both were caught; details are in the PR A report.
 1. **Unit tests use a MongoDB-store wrapper around the existing in-memory fakes,** not a separate "in-memory store" as the review said. It's the same goal (all old tests unchanged) with less new code. The real-Postgres suites cover the Postgres store.
 2. **Holdings stay a JS fold, not SQL `GROUP BY`** (see 3.2). Average cost after partial sells depends on the order of buys and sells.
 3. **`/internal` returns 404, not 401,** when the token is missing or wrong, so the endpoints can't be discovered.
-4. **A retried Idempotency-Key with a *different* order body returns the original trade.** Some APIs return an error instead. The UIs only reuse a key for the identical order. See question Q3.
+4. ~~A retried Idempotency-Key with a *different* order body returns the original trade.~~ **Changed after review (Q3):** it is now a 422 error, like Stripe.
 5. **The AI service no longer reads `purchases` directly once `WEB_INTERNAL_URL` + token are set,** for either ledger. That way the rebuild path is proven before the cutover.
 6. **`--migrate` and `--export-since` were added** beyond the required `--dry-run` / `--verify`.
 7. **`/api/status` doesn't ping Postgres** (Neon free plan sleeps; polling would keep it awake and eat compute hours). It reports which ledger is configured, not database health. Health monitoring comes with PR C.
@@ -379,10 +381,11 @@ Never paste a password, key or connection string into any chat. They go only int
 
 **PR A, now (it's already merged and deployed):**
 1. **Rotate the leaked credentials** (`docs/PHASE3_PR_A_REPORT.md` Step 1 has every click):
+   0. **First check which cluster the live `MONGO_URL` points to**: web Console → `node -e "const u=new URL(process.env.MONGO_URL); console.log(u.username, u.hostname)"` (prints the user and host, never the password). If `niveshpathcluster` isn't in your own Atlas account, its owner must delete `dhrumil`, and you move to a cluster in your own account.
    1. In Atlas, create `nivesh-live` (`readWrite` on your live database only).
    2. Build the new connection string and update `MONGO_URL` on **web** and **ai** in DigitalOcean (Encrypt on).
    3. Check the site works, then **delete `dhrumil`**.
-   4. Create `nivesh-demo` (`readWrite` on `niveshpath_demo`) and `nivesh-jobs` (`readWrite` on `niveshpath_jobs`).
+   4. Create `nivesh-demo` (`readWrite` on `niveshpath_demo`). No jobs user (Q1).
    5. Regenerate the **Finnhub** key and update `FINNHUB_API_KEY` on web.
    6. **Roll the Stripe** secret key.
 2. **Neon:** create the project (AWS US East). Copy the **pooled** URL (add `&pgbouncer=true`) and the **direct** URL.
@@ -411,12 +414,13 @@ Rollback = `LEDGER_BACKEND=mongo`.
 
 ---
 
-## 10. Questions to confirm with the planning chat
-- **Q1. `nivesh-jobs` scope.** With `readWrite` on `niveshpath_jobs` only (as you asked), the nightly job (PR F) can't write live users' Behavioral Mirror events. My plan: the job sends them to a new token-protected internal endpoint on the web service, so rule code stays in Node. The alternative is giving `nivesh-jobs` access to the live database. **Which do you want?**
-- **Q2. Rollback copy-back.** Should `migrate-ledger.js` get a `--copy-back` mode (Postgres → MongoDB for trades after the switch)? With one active user, redoing a few trades by hand is simpler. **My recommendation: not needed.**
-- **Q3. Idempotency mismatch.** Same key with a different order body: return the original trade (current) or a 422 error? **My recommendation: keep it as is.**
-- **Q4. Timing.** OK to leave the MongoDB ledger code in place for about a week after the cutover, then remove it in a small D-cleanup PR (MongoDB data stays as a backup)?
-- **Q5. Next.** OK to start PR C+D (OpenTelemetry → Grafana Cloud + k6) now, while you do the steps above? It needs your Grafana Cloud account only for the live part.
+## 10. Decisions from the planning chat review (confirmed)
+- **Q1. Nightly job access:** the job (PR F) talks only to token-protected `/internal` endpoints on the web service: list held tickers, save daily price snapshots, run the concentration check. **AWS holds no database credentials** (only the internal token and the Finnhub key), and the `nivesh-jobs` Atlas user is dropped from your steps.
+- **Q2. Rollback copy-back:** not needed.
+- **Q3. Reused key, different order:** **422** "This order key was already used for a different order." Done in PR B, with a test for each store.
+- **Q4. Remove the MongoDB ledger code** about a week after the cutover, keeping the MongoDB data as a backup: yes.
+- **Q5. Start PR C+D** (monitoring + load tests) now: yes.
+- **Plus a review finding:** a trade with no timestamp was saved as 1 Jan 1970, which would change the order of buys and sells. Now it gets the creation time built into its MongoDB id, and the dry run lists it. Done in PR B, with a test.
 
 ## 11. Files (for reference)
 

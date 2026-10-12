@@ -99,7 +99,8 @@ docs/                # PHASE1_REPORT.md, PHASE2_PLAN.md, DEPLOYMENT.md
 - `POST /api/register` (returns token) · `POST /api/login` (mobile or email) · `GET /api/me`
 - `POST /api/store-purchase` (aliases `/store-purchase`, `/api/trades`): `{symbol, quantity, price, type: "BUY"|"SELL"}`
   -> `{success, newBalance, transaction}`; server prices from Finnhub, 400 on insufficient funds / not enough shares /
-  non-whole quantity; optional `Idempotency-Key` header (8-100 of `[A-Za-z0-9_-]`): a repeat returns 200 `replayed: true`
+  non-whole quantity; optional `Idempotency-Key` header (8-100 of `[A-Za-z0-9_-]`): the same order again returns 200
+  `replayed: true`; the same key with a different order (ticker/side/shares) is 422
 - `GET /internal/trades/users` · `GET /internal/trades?userId=` - service-to-service, `X-Internal-Token` only (404 otherwise)
 - `GET /api/transactions` · `GET /api/portfolio/holdings` · `GET /api/portfolio/cash-balance` (cash, holdings value, total P&L)
 - `POST /api/ai/analyze-portfolio` -> FastAPI with `user_id`; `POST /api/ai/transactions` (FastAPI) indexes trades per user

@@ -45,6 +45,14 @@ function convertTrade(doc, userId) {
   if (!total.equals(D(storedTotal))) notes.push(`total ${storedTotal} -> ${total.toFixed(2)}`);
   if (!recomputed.equals(total)) notes.push(`stored total ${total.toFixed(2)} != price x quantity ${recomputed.toFixed(2)} (stored total kept: it is what moved the cash)`);
 
+  // When the trade happened decides the order of buys and sells, and so the average cost. A row with no usable
+  // date is never silently saved as 1970: it gets the creation time built into its MongoDB id, and says so.
+  let executedAt = new Date(doc.timestamp || doc.createdAt || NaN);
+  if (Number.isNaN(executedAt.getTime())) {
+    executedAt = new Date(parseInt(id.slice(0, 8), 16) * 1000);
+    notes.push(`no timestamp (${doc.timestamp === undefined ? "missing" : `"${doc.timestamp}"`}): using the time from its id, ${executedAt.toISOString()}`);
+  }
+
   return {
     id,
     notes,
@@ -59,7 +67,7 @@ function convertTrade(doc, userId) {
       priceSource: doc.priceSource === "client" ? "client" : "live",
       behaviorCheckedAt: doc.behaviorCheckedAt ? new Date(doc.behaviorCheckedAt) : null,
       idempotencyKey: typeof doc.idempotencyKey === "string" ? doc.idempotencyKey : null,
-      executedAt: new Date(doc.timestamp || doc.createdAt || 0),
+      executedAt,
     },
   };
 }
