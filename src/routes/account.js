@@ -4,6 +4,7 @@ const express = require("express");
 const bcrypt = require("bcryptjs");
 const { requireAuth } = require("../middleware/auth");
 const { publicUser } = require("./auth");
+const { logger } = require("../lib/logger");
 
 const PROFILE_FIELDS = { name: 100, nickname: 60, email: 200, mobile: 20, country: 60, city: 60, address: 200 };
 const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
@@ -150,11 +151,11 @@ function accountRoutes({ User, ledger, Watchlist, Analysis, BehaviorEvent, aiCli
         ledger.store.deleteUser(userId),
         Watchlist ? Watchlist.deleteMany({ userId }) : null,
         Analysis ? Analysis.deleteMany({ userId }) : null,
-        BehaviorEvent ? BehaviorEvent.deleteMany({ userId }).catch((err) => console.warn("Patterns not deleted:", err.message)) : null,
+        BehaviorEvent ? BehaviorEvent.deleteMany({ userId }).catch((err) => logger.warn("Patterns not deleted: %s", err.message)) : null,
       ]);
       await User.deleteOne({ _id: userId });
       if (aiClient && aiClient.deleteMemory) {
-        aiClient.deleteMemory(userId).catch((err) => console.warn("AI memory not deleted:", err.message));
+        aiClient.deleteMemory(userId).catch((err) => logger.warn("AI memory not deleted: %s", err.message));
       }
       return res.json({ success: true });
     } catch (err) {

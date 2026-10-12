@@ -3,6 +3,7 @@
 // and the trade is unaffected. The trade route waits for it at most DETECTION_BUDGET_MS so the trade panel can
 // show a note when it's ready.
 const rules = require("./behaviorRules");
+const { recordDetection } = require("./metrics");
 const { createMongoLedgerStore } = require("./ledgerStore.mongo");
 
 const DETECTION_BUDGET_MS = 1500;
@@ -71,6 +72,7 @@ function createBehaviorDetector({ BehaviorEvent, ledgerStore, Purchase, marketDa
     } catch (err) {
       log.warn(`[behavior] overconcentration check skipped: ${err.message}`);
     }
+    for (const e of created) recordDetection(e.patternType, e.severity);
     return created.map((e) => (typeof e.toObject === "function" ? e.toObject() : e));
   }
 
@@ -92,7 +94,9 @@ function createBehaviorDetector({ BehaviorEvent, ledgerStore, Purchase, marketDa
     if (last !== undefined && now() - last < PRICE_CHECK_INTERVAL_MS) return [];
     lastPriceCheck.set(key, now());
     try {
-      return await checkConcentration(userId, null);
+      const created = await checkConcentration(userId, null);
+      for (const e of created) recordDetection(e.patternType, e.severity);
+      return created;
     } catch (err) {
       log.warn(`[behavior] price-move concentration check skipped: ${err.message}`);
       return [];

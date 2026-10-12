@@ -1,6 +1,7 @@
 // Sends email through Resend's HTTP API (free tier). Optional: without RESEND_API_KEY it does nothing,
 // and a failed send never breaks the request that triggered it.
 const { config } = require("../config");
+const { logger } = require("./logger");
 
 function createMailer({ fetchImpl = fetch, apiKey = config.resendApiKey, from = config.mailFrom } = {}) {
   return {
@@ -14,10 +15,10 @@ function createMailer({ fetchImpl = fetch, apiKey = config.resendApiKey, from = 
           body: JSON.stringify({ from, to: [to], subject, text, reply_to: replyTo }),
           signal: AbortSignal.timeout(10000),
         });
-        if (!res.ok) console.warn(`Resend returned ${res.status}`);
+        if (!res.ok) logger.warn(`Resend returned ${res.status}`);
         return res.ok;
       } catch (err) {
-        console.warn("Email not sent:", err.message);
+        logger.warn("Email not sent: %s", err.message);
         return false;
       }
     },

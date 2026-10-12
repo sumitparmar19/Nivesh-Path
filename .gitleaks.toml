@@ -10,8 +10,8 @@ regex = '''mongodb(?:\+srv)?://[^\s:/@"']+:[^\s@"']+@[^\s"']+'''
 keywords = ["mongodb://", "mongodb+srv://"]
 
 [allowlist]
-description = "Local/test hosts and documentation placeholders (<db_password>, YOURPASS, NEW_PASSWORD, ...)"
+description = "Local/test hosts, documentation placeholders (<db_password>, YOURPASS, NEW_PASSWORD, ...) and redacted output ([REDACTED])"
 regexes = [
   '''mongodb://(?:mongo|localhost|127\.0\.0\.1)''',
-  '''mongodb(?:\+srv)?://[^\s:/@"']+:(?:<[^>]+>|[A-Z_]*PASS(?:WORD)?[A-Z_]*)@''',
+  '''mongodb(?:\+srv)?://[^\s:/@"']+:(?:<[^>]+>|\[REDACTED\]|[A-Z_]*PASS(?:WORD)?[A-Z_]*)@''',
 ]
