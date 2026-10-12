@@ -20,10 +20,15 @@ function rows(s: SystemStatus | undefined): [string, string, Dot][] {
     failed: ["Failed - advisor runs without history", "bad"],
     disabled: ["Not configured (no database link)", "warn"],
   };
+  const onAws = s.platform === "aws-demo";
+  const postgres = onAws ? "PostgreSQL (AWS RDS)" : "PostgreSQL (Neon)";
   const ledger: [string, string, Dot][] = s.ledger
-    ? [["Money ledger", `${s.ledger.backend === "postgres" ? "PostgreSQL (Neon)" : "MongoDB"}${s.ledger.tradingPaused ? " · trading paused for an upgrade" : ""}`, s.ledger.tradingPaused ? "warn" : "ok"]]
+    ? [["Money ledger", `${s.ledger.backend === "postgres" ? postgres : "MongoDB"}${s.ledger.tradingPaused ? " · trading paused for an upgrade" : ""}`, s.ledger.tradingPaused ? "warn" : "ok"]]
     : [];
+  // Only the AWS demo stack sets DEPLOY_PLATFORM, so a visitor there can tell it isn't the live site.
+  const hosting: [string, string, Dot][] = onAws ? [["Hosted on", "AWS (demo stack, temporary)", "ok"]] : [];
   return [
+    ...hosting,
     ["Web app", "Online", "ok"],
     ["Database (MongoDB Atlas)", s.db === "connected" ? "Connected" : "Disconnected", s.db === "connected" ? "ok" : "bad"],
     ...ledger,
