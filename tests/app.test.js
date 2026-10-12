@@ -439,6 +439,12 @@ describe("AI memory and status", () => {
     expect(res.status).toBe(200);
     expect(res.body.ai).toEqual({ reachable: false });
   });
+
+  test("status says which ledger holds the money and whether trading is paused (no database call)", async () => {
+    expect((await request(setup().app).get("/api/status")).body.ledger).toEqual({ backend: "mongo", tradingPaused: false });
+    const paused = setup({ ledgerMaintenance: true, ledgerStore: { kind: "postgres" } });
+    expect((await request(paused.app).get("/api/status")).body.ledger).toEqual({ backend: "postgres", tradingPaused: true });
+  });
 });
 
 describe("account data is saved to the database", () => {
@@ -832,6 +838,22 @@ describe("ledger (MongoDB store): idempotency, whole shares, maintenance", () =>
     expect((await order(app, u, "key-aaaa-0002")).body.newBalance).toBe(99600);
     const other = await newUser(app);
     expect((await order(app, other, "key-aaaa-0001")).status).toBe(201);
+  });
+
+  test("the same key with a different order is refused with 422, and nothing is bought", async () => {
+    const { app, deps } = setup();
+    const u = await newUser(app);
+    expect((await order(app, u, "key-bbbb-0001", 2)).status).toBe(201);
+    const moreShares = await order(app, u, "key-bbbb-0001", 3);
+    expect(moreShares.status).toBe(422);
+    expect(moreShares.body.error).toBe("This order key was already used for a different order.");
+    const otherSide = await request(app).post("/api/trades").set({ ...auth(u), "Idempotency-Key": "key-bbbb-0001" }).send({ symbol: "AAPL", quantity: 2, type: "SELL" });
+    expect(otherSide.status).toBe(422);
+    const otherStock = await request(app).post("/api/trades").set({ ...auth(u), "Idempotency-Key": "key-bbbb-0001" }).send({ symbol: "TSLA", quantity: 2, type: "BUY" });
+    expect(otherStock.status).toBe(422);
+    expect(deps.Purchase.rows.filter((r) => String(r.userId) === u.id)).toHaveLength(1);
+    expect((await request(app).get("/api/portfolio/cash-balance").set(auth(u))).body.cashBalance).toBe(99800);
+    expect((await order(app, u, "key-bbbb-0001", 2)).status).toBe(200); // the identical order still replays
   });
 
   test("malformed keys, fractional and huge quantities are refused", async () => {

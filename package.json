@@ -10,6 +10,9 @@
     "postinstall": "prisma generate",
     "db:migrate": "prisma migrate deploy"
   },
+  "jest": {
+    "maxWorkers": 1
+  },
   "engines": {
     "node": ">=18"
   },

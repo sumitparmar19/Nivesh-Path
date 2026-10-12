@@ -104,6 +104,8 @@ function createApp(deps = {}) {
       web: "ok",
       db: mongoose.connection.readyState === 1 ? "connected" : "disconnected",
       ai,
+      // Which store holds the money (no database call: this endpoint is polled, and Neon sleeps when idle).
+      ledger: { backend: ledgerStore.kind, tradingPaused: maintenance() },
       checkedAt: new Date().toISOString(),
     });
   });
