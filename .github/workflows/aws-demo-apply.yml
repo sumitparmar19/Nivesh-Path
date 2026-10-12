@@ -1,0 +1,62 @@
+# AWS demo: create or update the whole demo stack, then build, migrate and deploy this commit (Phase 3, PR E).
+# Manual only (Actions -> "AWS demo: apply + deploy" -> Run workflow, on main). The job runs in the aws-demo
+# environment, so GitHub waits for Sumit's approval, and only then can it sign in to AWS (OIDC, deploy role).
+# Takes about 15-20 minutes the first time (RDS). Ends with the app URL in the run summary.
+name: "AWS demo: apply + deploy"
+
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  id-token: write
+
+concurrency:
+  group: aws-demo
+  cancel-in-progress: false
+
+env:
+  TF_VERSION: 1.15.9
+  TF_DIR: infra/demo
+  TF_VAR_certificate_arn: ${{ vars.AWS_DEMO_CERTIFICATE_ARN }} # optional repository variable; empty = HTTP only
+
+jobs:
+  apply:
+    name: terraform apply, then build + migrate + deploy
+    if: github.ref == 'refs/heads/main'
+    runs-on: ubuntu-latest
+    environment: aws-demo
+    timeout-minutes: 60
+    steps:
+      - uses: actions/checkout@v4
+      - uses: hashicorp/setup-terraform@v3
+        with:
+          terraform_version: ${{ env.TF_VERSION }}
+          terraform_wrapper: false
+      - uses: aws-actions/configure-aws-credentials@v4
+        with:
+          role-to-assume: ${{ vars.AWS_ROLE_ARN }}
+          aws-region: ${{ vars.AWS_REGION || 'us-east-1' }}
+          role-duration-seconds: 3600
+      - name: terraform init
+        run: |
+          BUCKET="nivesh-path-tfstate-$(aws sts get-caller-identity --query Account --output text)"
+          terraform -chdir="$TF_DIR" init -input=false -lockfile=readonly -backend-config="bucket=$BUCKET"
+      - name: terraform plan + apply
+        run: |
+          terraform -chdir="$TF_DIR" plan -input=false -out=demo.tfplan
+          terraform -chdir="$TF_DIR" apply -input=false demo.tfplan
+      - name: Build, migrate, deploy
+        env:
+          IMAGE_TAG: ${{ github.sha }}
+        run: infra/scripts/deploy.sh
+      - name: Summary
+        if: always()
+        run: |
+          {
+            echo "## AWS demo"
+            echo "- App: $(terraform -chdir="$TF_DIR" output -raw app_url 2>/dev/null || echo 'not created')"
+            echo "- Dashboard: $(terraform -chdir="$TF_DIR" output -raw dashboard_url 2>/dev/null || echo 'n/a')"
+            echo "- Commit: \`${GITHUB_SHA::7}\`"
+            echo "- Running costs money until **AWS demo: destroy** is run (docs/AWS.md, Costs)."
+          } >> "$GITHUB_STEP_SUMMARY"

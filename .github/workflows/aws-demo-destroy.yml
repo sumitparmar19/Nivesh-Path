@@ -1,0 +1,67 @@
+# AWS demo: delete the whole demo stack (VPC, ALB, ECS, RDS and its data, ECR images, logs, dashboard, alarms),
+# then deregister the task-definition revisions the deploys created. What stays: infra/bootstrap (state bucket,
+# GitHub roles, secrets, alert topic) and infra/jobs. Manual only; type "destroy" to confirm; Sumit approves.
+name: "AWS demo: destroy"
+
+on:
+  workflow_dispatch:
+    inputs:
+      confirm:
+        description: 'Type "destroy" to delete the AWS demo stack and its database'
+        required: true
+
+permissions:
+  contents: read
+  id-token: write
+
+concurrency:
+  group: aws-demo
+  cancel-in-progress: false
+
+env:
+  TF_VERSION: 1.15.9
+  TF_DIR: infra/demo
+  TF_VAR_certificate_arn: ${{ vars.AWS_DEMO_CERTIFICATE_ARN }} # optional repository variable; empty = HTTP only
+
+jobs:
+  destroy:
+    name: terraform destroy
+    if: github.ref == 'refs/heads/main' && inputs.confirm == 'destroy'
+    runs-on: ubuntu-latest
+    environment: aws-demo
+    timeout-minutes: 45
+    steps:
+      - uses: actions/checkout@v4
+      - uses: hashicorp/setup-terraform@v3
+        with:
+          terraform_version: ${{ env.TF_VERSION }}
+          terraform_wrapper: false
+      - uses: aws-actions/configure-aws-credentials@v4
+        with:
+          role-to-assume: ${{ vars.AWS_ROLE_ARN }}
+          aws-region: ${{ vars.AWS_REGION || 'us-east-1' }}
+          role-duration-seconds: 3600
+      - name: terraform destroy
+        run: |
+          BUCKET="nivesh-path-tfstate-$(aws sts get-caller-identity --query Account --output text)"
+          terraform -chdir="$TF_DIR" init -input=false -lockfile=readonly -backend-config="bucket=$BUCKET"
+          terraform -chdir="$TF_DIR" destroy -input=false -auto-approve
+      - name: Remove the task-definition revisions deploys registered
+        run: |
+          for family in nivesh-demo-web nivesh-demo-ai nivesh-demo-migrate; do
+            for arn in $(aws ecs list-task-definitions --family-prefix "$family" --status ACTIVE --query 'taskDefinitionArns[]' --output text); do
+              aws ecs deregister-task-definition --task-definition "$arn" --query 'taskDefinition.taskDefinitionArn' --output text
+            done
+            for arn in $(aws ecs list-task-definitions --family-prefix "$family" --status INACTIVE --query 'taskDefinitionArns[]' --output text); do
+              aws ecs delete-task-definitions --task-definitions "$arn" --query 'taskDefinitions[0].taskDefinitionArn' --output text || true
+            done
+          done
+      - name: What's left
+        run: |
+          {
+            echo "## AWS demo destroyed"
+            echo "Remaining tagged Stack=demo resources (should be none):"
+            echo '```'
+            aws resourcegroupstaggingapi get-resources --tag-filters Key=Stack,Values=demo --query 'ResourceTagMappingList[].ResourceARN' --output text || echo "(could not list)"
+            echo '```'
+          } >> "$GITHUB_STEP_SUMMARY"
