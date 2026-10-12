@@ -11,7 +11,8 @@ Owner: Sumit Parmar (MS CS @ UB, graduating Dec 2026, targeting SWE / Full-Stack
 Live: https://nivesh-path-vzeak.ondigitalocean.app (custom domain pending) · Repo: sumitparmar19/Nivesh-Path
 
 **Plan:** `docs/PHASE2_PLAN.md` (read its "Implementation notes" first - they override the plan text); Phase 3:
-`docs/PHASE3_REVIEW.md` (decisions D1-D10, PR plan A-I) and the per-PR reports `docs/PHASE3_PR_*_REPORT.md`.
+`docs/PHASE3_REVIEW.md` (decisions D1-D10, PR plan A-I) and the per-PR reports `docs/PHASE3_PR_*_REPORT.md`
+(all of Part 1 together: `docs/PHASE3_FULL_REPORT.md`).
 **History:** `docs/PHASE1_REPORT.md`.
 
 ## Current progress
