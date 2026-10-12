@@ -1,0 +1,28 @@
+# Load-test overlay for docker-compose.yml (used by .github/workflows/loadtest.yml; see docs/PERFORMANCE.md):
+#   docker compose -f docker-compose.yml -f docker-compose.loadtest.yml up -d --build
+# Made-up market data (no Finnhub key, no external calls), the Postgres ledger, CACHE_DISABLED from the shell
+# (1 = cache off run), and a local Prometheus that receives the web service's metrics for the cache hit rate.
+services:
+  backend:
+    environment:
+      NODE_ENV: loadtest # FAKE_MARKET_DATA is refused when NODE_ENV=production
+      FAKE_MARKET_DATA: "1"
+      LEDGER_BACKEND: postgres
+      CACHE_DISABLED: ${CACHE_DISABLED:-0}
+      OTEL_EXPORTER_OTLP_ENDPOINT: http://prometheus:9090/api/v1/otlp
+      OTEL_TRACES_EXPORTER: none
+      OTEL_LOGS_EXPORTER: none
+      OTEL_METRIC_EXPORT_INTERVAL: "5000"
+      OTEL_SERVICE_NAME: nivesh-web
+      LOG_LEVEL: warn
+    depends_on:
+      prometheus:
+        condition: service_started
+
+  prometheus:
+    image: prom/prometheus:v3.5.0
+    command: ["--config.file=/etc/prometheus/prometheus.yml", "--web.enable-otlp-receiver"]
+    volumes:
+      - ./loadtest/prometheus.yml:/etc/prometheus/prometheus.yml:ro
+    ports:
+      - "127.0.0.1:9090:9090"
