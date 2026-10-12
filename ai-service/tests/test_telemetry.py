@@ -108,3 +108,47 @@ def test_credential_keys_with_underscores_are_dropped() -> None:
     """x_internal_token / idempotency_key (underscore spellings) are dropped like the dash spellings."""
     attrs = {"x_internal_token": "t", "idempotency_key": "k", "http.request.header.idempotency-key": "k", "http.route": "/x"}
     assert telemetry.redact_attributes(attrs) == {"http.route": "/x"}
+
+
+def test_a_real_log_batch_reaches_the_otlp_endpoint(monkeypatch: pytest.MonkeyPatch) -> None:
+    """The log pipeline setup() installs (batch processor + OTLP exporter) delivers a record to a real HTTP receiver."""
+    import http.server
+    import threading
+
+    from opentelemetry.sdk._logs import LoggingHandler
+    from opentelemetry.sdk.resources import Resource
+
+    received: list[tuple[str, bytes]] = []
+
+    class Receiver(http.server.BaseHTTPRequestHandler):
+        def do_POST(self) -> None:  # noqa: N802 - http.server naming
+            body = self.rfile.read(int(self.headers.get("Content-Length", "0")))
+            received.append((self.path, body))
+            self.send_response(200)
+            self.send_header("Content-Type", "application/x-protobuf")
+            self.end_headers()
+
+        def log_message(self, *args: Any) -> None:  # keep test output quiet
+            return
+
+    server = http.server.HTTPServer(("127.0.0.1", 0), Receiver)
+    thread = threading.Thread(target=server.serve_forever, daemon=True)
+    thread.start()
+    try:
+        monkeypatch.setenv("OTEL_EXPORTER_OTLP_ENDPOINT", f"http://127.0.0.1:{server.server_address[1]}")
+        provider = telemetry.log_provider(Resource.create({"service.name": "nivesh-ai-test"}))
+        log = logging.getLogger("log-export-test")
+        log.propagate = False
+        log.setLevel(logging.INFO)
+        handler = LoggingHandler(level=logging.INFO, logger_provider=provider)
+        log.addHandler(handler)
+        log.info("ai-log-export-check 42")
+        assert provider.force_flush(10_000)
+        provider.shutdown()
+        log.removeHandler(handler)
+    finally:
+        server.shutdown()
+
+    batches = [body for path, body in received if path == "/v1/logs"]
+    assert batches, f"no request to /v1/logs (got {[p for p, _ in received]})"
+    assert any(b"ai-log-export-check 42" in body for body in batches)
