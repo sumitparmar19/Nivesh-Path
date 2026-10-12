@@ -18,3 +18,12 @@ coverage/
 chroma_data/
 *.log
 .DS_Store
+
+# Terraform (infra/): provider downloads, local state and saved plans never go into Git.
+# infra/bootstrap/backend.tf is written in CloudShell after the state bucket exists (docs/AWS.md).
+.terraform/
+*.tfstate
+*.tfstate.*
+*.tfplan
+crash.log
+infra/bootstrap/backend.tf

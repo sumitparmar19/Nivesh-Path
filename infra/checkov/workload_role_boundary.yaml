@@ -1,0 +1,15 @@
+# Custom Checkov rule for this repo (run by .github/workflows/infra.yml with --external-checks-dir infra/checkov):
+# every IAM role Terraform creates must carry a permissions boundary. The deploy role is only allowed to create
+# roles with nivesh-workload-boundary (infra/bootstrap/deploy_policy.tf), so a role without one would fail at
+# apply time anyway; this catches it on the pull request instead. The two GitHub roles in infra/bootstrap are
+# skipped in the code: they are created by Sumit's admin login, not by the deploy role.
+metadata:
+  id: "CKV2_NIVESH_1"
+  name: "IAM roles created by the demo/jobs stacks carry the workload permissions boundary"
+  category: "IAM"
+definition:
+  cond_type: "attribute"
+  resource_types:
+    - "aws_iam_role"
+  attribute: "permissions_boundary"
+  operator: "exists"
