@@ -95,5 +95,13 @@ describe("PatternCard follow-up (A7, B1, B6)", () => {
     expect(screen.getByText(/after price changes/)).toBeInTheDocument();
     expect(screen.getByTestId("pattern-when")).toHaveTextContent("from price changes");
   });
-});
 
+  it("rule v3: a 5-day move from this site's saved closes says so", () => {
+    expect(explain("panic_sell", "TSLA", { price: 80, drop: 15, fiveDayReturn: -15, todayChange: 0, fiveDaySource: "snapshots" })).toBe(
+      "You sold TSLA at $80.00 after it fell 15.0% over 5 trading days (from the daily closes this site saves).",
+    );
+    expect(explain("fomo_buy", "X", { price: 90, runUp: 20, fiveDayReturn: 20, fiveDaySource: "finnhub", percentFromHigh: null as unknown as number, week52High: null as unknown as number })).toBe(
+      "You bought X at $90.00 after it rose 20.0% in 5 days.",
+    );
+  });
+});

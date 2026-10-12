@@ -24,18 +24,20 @@ const pct = (n: number | null | undefined) => (typeof n === "number" ? `${Math.a
 
 /** One sentence explaining the pattern, using only the numbers the server computed. */
 export function explain(type: PatternType, symbol: string, f: PatternFacts): string {
-  // Which window the move came from: today's live move or the 5-day return (the larger one counts).
+  // Which window the move came from: today's live move or the 5-day return (the larger one counts). Rule v3
+  // says when the 5-day figure came from the closing prices this site saves every weekday.
   const today = typeof f.todayChange === "number" ? f.todayChange : null;
+  const fiveDays = f.fiveDaySource === "snapshots" ? "over 5 trading days (from the daily closes this site saves)" : "in 5 days";
   if (type === "panic_sell") {
     const drop = typeof f.drop === "number" ? f.drop : Math.abs(f.fiveDayReturn ?? 0);
-    const when = today !== null && -today >= drop - 0.005 ? "today" : "in 5 days";
+    const when = today !== null && -today >= drop - 0.005 ? "today" : fiveDays;
     const v = f.vsCostPct;
     const vsCost = typeof v !== "number" ? "" : Math.abs(v) < 0.05 ? " That was about what you paid on average." : ` That was ${pct(v)} ${v < 0 ? "below" : "above"} what you paid on average.`;
     return `You sold ${symbol} at ${money(f.price ?? 0)} after it fell ${pct(drop)} ${when}.${vsCost}`;
   }
   if (type === "fomo_buy") {
     const runUp = typeof f.runUp === "number" ? f.runUp : f.fiveDayReturn ?? 0;
-    const when = today !== null && today >= runUp - 0.005 ? "today" : "in 5 days";
+    const when = today !== null && today >= runUp - 0.005 ? "today" : fiveDays;
     const near = typeof f.percentFromHigh === "number" && typeof f.week52High === "number"
       ? `, ${pct(f.percentFromHigh)} under its 52-week high of ${money(f.week52High)}`
       : "";
