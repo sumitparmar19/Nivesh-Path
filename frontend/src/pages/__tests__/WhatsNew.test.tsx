@@ -70,4 +70,13 @@ describe("What's new", () => {
     expect(await screen.findByText("All systems go")).toBeInTheDocument();
     expect(screen.queryByText("Hosted on")).not.toBeInTheDocument();
   });
+
+  it("labels the AI memory rebuild with when it ran, so its counts aren't read as live", async () => {
+    const finishedAt = "2026-10-12T18:40:05Z";
+    mockApi({ "GET /api/status": { ...OK, ai: { ...OK.ai, vectorIndex: { status: "ok", users: 1, transactions: 5, seconds: 0.3, finishedAt } } } });
+    open();
+    const list = await screen.findByTestId("status-list");
+    const time = new Date(finishedAt).toLocaleString([], { month: "short", day: "numeric", hour: "numeric", minute: "2-digit" });
+    expect(await within(list).findByText(`Done at last restart, ${time} · 5 trades for 1 user in 0.3s`)).toBeInTheDocument();
+  });
 });

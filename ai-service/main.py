@@ -181,7 +181,7 @@ def _memory_status(
         user_id=user_id,
         indexed_trades=vectors.count(user_id),
         durable_storage=patterns is not None,
-        index=IndexStatus(**{k: report[k] for k in ("status", "users", "transactions", "seconds")}),
+        index=IndexStatus(**{k: report[k] for k in ("status", "users", "transactions", "seconds", "finished_at")}),
         patterns=stored,
     )
 

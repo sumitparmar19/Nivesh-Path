@@ -16,7 +16,7 @@ jobs:
     runs-on: ubuntu-latest
     services:
       postgres:
-        image: postgres:16
+        image: postgres:18 # same major as production (Neon runs 18)
         env:
           POSTGRES_PASSWORD: postgres
           POSTGRES_DB: nivesh_test
@@ -108,7 +108,7 @@ jobs:
         image: mongo:7
         ports: ["27017:27017"]
       postgres:
-        image: postgres:16
+        image: postgres:18 # same major as production (Neon runs 18)
         env:
           POSTGRES_PASSWORD: postgres
           POSTGRES_DB: nivesh_e2e
@@ -181,7 +181,7 @@ jobs:
       packages: write
     services:
       postgres:
-        image: postgres:16
+        image: postgres:18 # same major as production (Neon runs 18)
         env:
           POSTGRES_PASSWORD: postgres
           POSTGRES_DB: nivesh_image
