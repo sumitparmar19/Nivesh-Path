@@ -102,3 +102,9 @@ def test_a_claude_call_records_latency_and_tokens(meter: Any) -> None:
     (duration,) = got["nivesh.ai.llm.duration"]
     assert duration.attributes == {"model": "claude-test", "outcome": "end_turn"}
     assert duration.count == 1
+
+
+def test_credential_keys_with_underscores_are_dropped() -> None:
+    """x_internal_token / idempotency_key (underscore spellings) are dropped like the dash spellings."""
+    attrs = {"x_internal_token": "t", "idempotency_key": "k", "http.request.header.idempotency-key": "k", "http.route": "/x"}
+    assert telemetry.redact_attributes(attrs) == {"http.route": "/x"}

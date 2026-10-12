@@ -44,6 +44,17 @@ describe("redaction: no tokens, keys, passwords or emails in telemetry", () => {
     });
   });
 
+  test("credential keys are dropped whether written with dashes or underscores", () => {
+    expect(redactAttributes({
+      "http.request.header.x_internal_token": "t",
+      "x_internal_token": "t",
+      "idempotency_key": "k",
+      "order.idempotency_key": "k",
+      "X-Internal-Token": "t",
+      "http.route": "/internal/trades",
+    })).toEqual({ "http.route": "/internal/trades" });
+  });
+
   test("real spans go through the redacting exporter scrubbed, and keep their trace ids", async () => {
     const { redactingSpanExporter } = require("../src/telemetry");
     const memory = new InMemorySpanExporter();
