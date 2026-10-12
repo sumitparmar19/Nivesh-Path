@@ -100,7 +100,11 @@ No existing test was edited.
 - **Memory** (`docs/OBSERVABILITY.md` §5): web RSS after 400 requests, telemetry off 104/104 MB vs on 111/112 MB, **about +8 MB**.
 - **Joined trace** (§5): 94 spans across both services for one trade.
 - **AI-down signal:** flipped to 0 within 40 s.
-- **Load test:** `docs/PERFORMANCE.md`, from the CI run linked there.
+- **Load test** (`docs/PERFORMANCE.md`, [Load test #4](https://github.com/sumitparmar19/Nivesh-Path/actions/runs/38203584203)): 4 vCPU / 15 GB GitHub runner, fake market data, Postgres ledger.
+  - **Read mix**, 20 users: about 122 req/s. p50/p95/p99 is **3.2 / 9.6 / 15.2 ms with the cache on** and **5.5 / 22.3 / 37.7 ms with it off**, so p95 is **2.3× slower** without the cache. Cache hit rate **99.7%**.
+  - **Trade mix**, 10 users: about 17 req/s. p95 is about 22 ms either way (Postgres transaction-bound).
+  - **0 errors** in about 42,000 requests across two runs.
+  - Each trade makes about 11 cache lookups. That's why the cache is required with Finnhub's 60-calls-a-minute free plan.
 
 ## 5. Limits
 - **Not checked live.** I can't reach Grafana Cloud or the live site; steps 4–7 are the live check.
@@ -112,4 +116,4 @@ No existing test was edited.
 
 ## 6. Resume bullets (measured only)
 - Instrumented a Node/Express + Python/FastAPI app with OpenTelemetry. One trade is one distributed trace (94 spans across both services, Postgres included), metrics feed a 15-panel Grafana dashboard and 3 alerts, and a redacting exporter is proven by tests to drop tokens, keys and emails. Memory cost measured at about 8 MB per instance.
-- Built a k6 load-test workflow that boots the full stack in CI and compares cache on vs off. The numbers are in `docs/PERFORMANCE.md`.
+- Built a k6 load-test pipeline in GitHub Actions that boots the full 7-service stack. Measured read-path p95 latency of 9.6 ms with Redis caching vs 22.3 ms without (2.3×) at a 99.7% cache hit rate, and 0 errors across about 42,000 requests including concurrent Postgres-backed orders.
