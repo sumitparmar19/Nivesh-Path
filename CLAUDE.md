@@ -41,7 +41,11 @@ Live: https://nivesh-path-vzeak.ondigitalocean.app (custom domain pending) · Re
 - [x] **Phase 3 PR C+D** - OpenTelemetry in both services (off unless `OTEL_EXPORTER_OTLP_ENDPOINT`), redacting exporter,
       metrics + JSON logs with trace ids, Grafana dashboard + 3 alerts (`observability/`, `docs/OBSERVABILITY.md`);
       k6 read/trade mixes + `loadtest.yml` workflow (cache on vs `CACHE_DISABLED=1`), `docs/PERFORMANCE.md`
-- [ ] **Phase 3** (plan: `docs/PHASE3_REVIEW.md`) - next · E AWS · F jobs ·
+- [x] **Phase 3 PR E** (built; not applied yet - Sumit's AWS steps in `docs/AWS.md`) - Terraform `infra/bootstrap` (state
+      bucket, GitHub OIDC deploy + read-only plan roles, permissions boundary, empty secrets, alert topic; run in CloudShell)
+      and `infra/demo` (VPC without NAT, ALB, ECS Fargate web+ai, RDS, ECR, CloudWatch dashboard + 4 alarms, autoscaling
+      1-3); workflows: Infra checks + plan comment, AWS demo apply/deploy/load test/destroy
+- [ ] **Phase 3** (plan: `docs/PHASE3_REVIEW.md`) - next · F jobs ·
       G pre-trade check + stress test (2D) · H+I agent + evals
 
 ## Layout
@@ -99,6 +103,9 @@ ai-service/          # Python FastAPI AI service (port 8001, internal only)
 tests/app.test.js    # Jest + Supertest (isolation, auth, ledger, AI proxy, idempotency, maintenance, /internal)
 observability/       # grafana-dashboard.json, alert-rules.yaml (queries checked against Prometheus fed by the app)
 loadtest/            # k6 read-mix.js, trade-mix.js, report.js; docker-compose.loadtest.yml; .github/workflows/loadtest.yml
+infra/               # Terraform (docs/AWS.md): bootstrap/ (once, CloudShell: cloudshell.sh), demo/ (AWS demo stack),
+                     #   scripts/deploy.sh (build -> migrate task -> roll out), checkov/ (custom rule: roles need the boundary)
+  lib/dbUrl.js       # (src/lib) DATABASE_URL from DB_HOST/DB_USER/DB_PASSWORD (RDS); scripts/with-db-url.js wraps a command
 tests/ledger.pg.test.js # real Postgres (TEST_DATABASE_URL; CI sets it): constraints, 20 parallel buys, idempotency, reset
 ai-service/tests/    # pytest
 docs/                # PHASE1_REPORT.md, PHASE2_PLAN.md, DEPLOYMENT.md
@@ -141,6 +148,8 @@ docs/                # PHASE1_REPORT.md, PHASE2_PLAN.md, DEPLOYMENT.md
   `npm run build` (Express then serves it on :3000); `npm run e2e` against a server started with `FAKE_MARKET_DATA=1`
 - AI service: `cd ai-service && python -m venv .venv && .venv/bin/pip install -r requirements-dev.txt && .venv/bin/uvicorn main:app --port 8001`; tests `.venv/bin/pytest -q`
 - Everything: `cp .env.example .env` then `docker compose up --build`
+- Terraform (1.15.9): `terraform -chdir=infra/<stack> init -backend=false && terraform -chdir=infra/<stack> validate`;
+  `terraform fmt -recursive infra`; Checkov: `checkov -d infra --framework terraform --external-checks-dir infra/checkov`
 
 ## Rules for Claude Code
 - Every query on trades/portfolio MUST filter by `req.user.id`; every new trade/portfolio/AI route uses `requireAuth`
@@ -149,6 +158,10 @@ docs/                # PHASE1_REPORT.md, PHASE2_PLAN.md, DEPLOYMENT.md
 - Ledger schema change: edit `prisma/schema.prisma`, `npx prisma migrate dev --name <what>`, add CHECKs by hand in the SQL;
   CI fails if the schema and migrations disagree. Money columns are NUMERIC; quantities are whole shares
 - `/internal/*` is reachable from the internet: token-only, and every route there stays read-only unless reviewed
+  (the one exception, `GET /internal/demo-fault`, only exists with `DEMO_FAULTS=1`, set only by the AWS demo stack)
+- AWS: no access keys anywhere (GitHub OIDC only); every IAM role a stack creates is named `nivesh-demo-*`/`nivesh-jobs-*`
+  and sets `permissions_boundary` (Checkov rule CKV2_NIVESH_1); secret VALUES never go into Terraform (empty secrets,
+  typed by Sumit); every Checkov finding is fixed or skipped inline with a reason; tag everything via provider default_tags
 - Telemetry: never put JWTs, keys, emails or bodies into spans, metric labels or logs; metric labels stay low-cardinality
   (route templates, never raw URLs or user ids); new metrics go in `src/lib/metrics.js` and on the dashboard
 - Python: type hints everywhere; FastAPI endpoints have docstrings (+ response_model)

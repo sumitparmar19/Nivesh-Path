@@ -171,6 +171,15 @@ Phase 3 plan and decisions: `docs/PHASE3_REVIEW.md` (D1-D10 approved; D10 = MIT)
 - k6: `loadtest/` + `.github/workflows/loadtest.yml` (manual + PRs touching the load test), cache on vs `CACHE_DISABLED=1`,
   cache hit rate from a Prometheus in the compose overlay; numbers in `docs/PERFORMANCE.md` with the run link.
 
+### Phase 3 PR E - AWS demo stack (built; apply is Sumit's step, docs/AWS.md)
+- `infra/bootstrap` (CloudShell, `cloudshell.sh`): S3 state (native lockfile), GitHub OIDC with TWO roles (deploy: only
+  `environment:aws-demo`; plan: only `pull_request`, ReadOnlyAccess minus data reads), `nivesh-workload-boundary` that every
+  stack-created role must carry, empty secrets `nivesh-path/demo` + `nivesh-path/jobs`, SNS `nivesh-path-alerts`.
+- `infra/demo`: no NAT (tasks in public subnets with public IPs, SG-restricted; RDS private), Cloud Map DNS
+  (`web|ai.nivesh.internal`), RDS-managed password -> DB_* -> `src/lib/dbUrl.js`; deploys register task revisions from the
+  latest one (services ignore task_definition in Terraform). `DEPLOY_PLATFORM=aws-demo` labels What's new.
+- Costs from the AWS price list: about $0.107/hour (~$2.56/day) while up; ~$1/month always-on.
+
 ### Known risks to handle in later phases
 1. **Cold start** for the Behavioral Mirror (still open after 2C): new users have no history -> add a demo account with realistic
    seeded trades and **CSV import** of real broker history (Robinhood / Webull / Zerodha) in Phase 2C.
