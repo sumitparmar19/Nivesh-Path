@@ -109,5 +109,10 @@ describe("Behavioral Mirror", () => {
     expect(await screen.findByText("Fresh headline")).toBeInTheDocument();
     expect(calls.find((c) => c.method === "POST" && c.url === "/api/patterns/analyze")?.body).toEqual({ timezone: expect.any(String) });
   });
-});
 
+  it("explains rule v3: the 5-day move from the closes this site saves, Finnhub until six are stored", async () => {
+    mockApi(BASE);
+    open();
+    expect(await screen.findByText(/closing prices this site saves every weekday once six are stored for a stock \(rule v3\)/)).toBeInTheDocument();
+  });
+});
