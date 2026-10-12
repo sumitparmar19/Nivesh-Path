@@ -58,19 +58,24 @@ function start() {
     resourceFromAttributes({ "service.name": process.env.OTEL_SERVICE_NAME || "nivesh-web", "service.namespace": "nivesh-path" })
   );
 
+  // Standard switches: OTEL_TRACES_EXPORTER / OTEL_METRICS_EXPORTER / OTEL_LOGS_EXPORTER = "none" turn one signal off
+  // (the load test sends metrics only); OTEL_METRIC_EXPORT_INTERVAL in ms (default 30 s).
+  const on = (signal) => (process.env[`OTEL_${signal}_EXPORTER`] || "otlp").toLowerCase() !== "none";
   const tracerProvider = new NodeTracerProvider({
     resource,
-    spanProcessors: [new BatchSpanProcessor(redactingSpanExporter(new OTLPTraceExporter()))],
+    spanProcessors: on("TRACES") ? [new BatchSpanProcessor(redactingSpanExporter(new OTLPTraceExporter()))] : [],
   });
   tracerProvider.register(); // W3C trace context: outgoing calls to the AI service carry `traceparent`
 
   const meterProvider = new MeterProvider({
     resource,
-    readers: [new PeriodicExportingMetricReader({ exporter: new OTLPMetricExporter(), exportIntervalMillis: 30000 })],
+    readers: on("METRICS")
+      ? [new PeriodicExportingMetricReader({ exporter: new OTLPMetricExporter(), exportIntervalMillis: Number(process.env.OTEL_METRIC_EXPORT_INTERVAL) || 30000 })]
+      : [],
   });
   metrics.setGlobalMeterProvider(meterProvider);
 
-  const loggerProvider = new LoggerProvider({ resource, processors: [new BatchLogRecordProcessor(new OTLPLogExporter())] });
+  const loggerProvider = new LoggerProvider({ resource, processors: on("LOGS") ? [new BatchLogRecordProcessor(new OTLPLogExporter())] : [] });
   logs.setGlobalLoggerProvider(loggerProvider);
 
   const ignored = (path) => path === "/health" || path.startsWith("/assets/") || /\.(js|css|png|svg|ico|woff2?|map)$/.test(path);

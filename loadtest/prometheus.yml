@@ -1,0 +1,7 @@
+# Prometheus for the load test only (docker-compose.loadtest.yml): receives the web service's OpenTelemetry metrics
+# over OTLP (--web.enable-otlp-receiver) so the workflow can read the cache hit rate of each run. It names metrics
+# the same way Grafana Cloud does (nivesh_cache_requests_total, ...).
+global:
+  scrape_interval: 15s
+otlp:
+  promote_resource_attributes: [service.name, service.namespace]
