@@ -1,8 +1,57 @@
 # Phase 3 · PR B report: the ledger move (MongoDB → Postgres)
 
-**Status:** built and tested against a real MongoDB and Postgres. The live cutover is yours to run (about 5 minutes, all in DigitalOcean), after PR A's steps are done and PR B is merged.
+**Status:** merged, and **the live cutover is done** (Oct 12, 2026). The live site's money is now in PostgreSQL (Neon), and **A1 live acceptance is met**. The evidence is in §0.
 
 ---
+
+## 0. Live cutover result (Oct 12, 2026)
+
+All outputs below are as reported from the DigitalOcean Console (user ids and amounts only).
+
+**1. Dry run** (`--dry-run`):
+```
+Users: 1 · trades to copy: 6 · legacy rows without a user: 1 · trades of deleted users: 0 (0 users)
+user 6ac1c0e915d46720fa877935: cash 70283.89, 6 trades
+Rounding changes (0)
+No blocking problems.
+```
+
+**2. Pause:** `LEDGER_MAINTENANCE=1` on web.
+
+**3. Copy** (`--migrate`):
+```
+user 6ac1c0e915d46720fa877935: created, 6 copied, 0 already there
+Copied. Now run --verify.
+```
+
+**4. Verify** (`--verify`):
+```
+match · cash 70283.89 · 6 trade(s) · INTC 89, META 7, MSFT 7, QQQ 4, SPY 11
+All users match (1). Safe to set LEDGER_BACKEND=postgres.
+```
+
+**5. Switch:** `LEDGER_BACKEND=postgres` set and `LEDGER_MAINTENANCE` deleted, in one save, between about **18:26 and 18:43 UTC**. The exact time is in DigitalOcean → Activity.
+
+**6. Checks after the switch:**
+- The runtime log shows `Ledger: postgres`.
+- What's new shows **"Money ledger: PostgreSQL (Neon)"** and "All systems go".
+- A new trade works (a DIA buy).
+- **Behavioral Mirror:**
+  - impulse control 100 ("8 of your 8 checked trades");
+  - diversification 83 (largest position DIA, 16.59% of the account);
+  - 0 patterns.
+- `db-check`:
+  ```
+  {"ok":true,"server":"PostgreSQL 18.6","migrations":["20261011225621_ledger_init"],"accounts":1,"trades":8}
+  ```
+  That's the 6 copied trades plus 2 new ones.
+
+**What the outputs show:**
+- 0 rounding changes;
+- 0 blocking problems;
+- cash and every holding matched to the cent;
+- the one legacy row without a user was left behind, as designed (nobody could see it).
+
 
 ## 1. Your steps, in order (all in a browser)
 
@@ -111,7 +160,11 @@ Planted bugs for these:
 - Restored; all pass.
 
 ## 4. Real numbers
-- None yet from live data. The dry-run and verify output from your cutover are the numbers. The verify output gets attached to the PR, as the instructions ask, along with the count of rounding changes.
+- **Live cutover** (§0, from Sumit's Console output):
+  - 1 account and 6 trades moved;
+  - 0 rounding changes, 0 blocking problems;
+  - verify "All users match (1)", with cash 70,283.89 equal to the cent;
+  - afterwards Postgres held 1 account and 8 trades (6 copied + 2 new).
 
 ## 5. Limits, said plainly
 - **The rollback loses Postgres-only trades from MongoDB's point of view.** `--export-since` lists them, but there is no automatic copy back; with one active user it's quicker to redo them by hand. Say if you want a `--copy-back` mode.
@@ -119,6 +172,6 @@ Planted bugs for these:
 - **Verify compares cost basis within one cent**, not exactly, because prices are rounded to 4 places. A position large enough to move more than a cent would show up as a mismatch, not pass silently.
 - **"Start over" after the switch only resets Postgres** (as noted in PR A). The MongoDB copy stays as the backup.
 
-## 6. Resume bullets (measured only; fill in N after the cutover)
-- Migrated a live paper-trading ledger from MongoDB to PostgreSQL with a repeat-safe copy tool (dry-run, verify, rollback export) that checks every account's cash and holdings to the cent before the switch. Cutover took about 5 minutes of paused trading, with verify output attached as proof (N users, N trades).
+## 6. Resume bullets (measured only)
+- Migrated a live paper-trading ledger from MongoDB to PostgreSQL (Neon) with a repeat-safe copy tool (dry-run, verify, rollback export). It checked every account's cash and holdings to the cent before the switch: 0 rounding changes, 0 blocking problems, every account matched. New trades and the Behavioral Mirror worked on Postgres straight after.
 - Built the move so a rerun never duplicates or overwrites newer data: keys are the original ids, and a per-user conflict check is proven by a test that fails when the check is removed.

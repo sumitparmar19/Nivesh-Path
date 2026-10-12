@@ -1,7 +1,40 @@
 # Phase 3 · PR A report: Postgres ledger foundation + secret scan
 
-**Status:** built and tested. The live site keeps running on the MongoDB ledger (`LEDGER_BACKEND=mongo`) until the PR B cutover. Postgres gets its tables but no data yet.
+**Status:** merged and **live**. Neon is set up, the migration job applied the schema, and the site switched to Postgres in the PR B cutover on Oct 12, 2026. Live evidence is in §0; open items are in `docs/PHASE3_LIVE_STATUS.md`.
 **Plan and decisions:** `docs/PHASE3_REVIEW.md` (D1–D9 as recommended, D10 = MIT).
+
+## 0. Live result (Oct 12, 2026, reported by Sumit and the planning chat)
+
+**Credentials** (Step 1):
+- The live `MONGO_URL` points to **Sumit's own Atlas cluster**, database `niveshpath`. This was checked with the Step 1a command.
+- The leaked `dhrumil` user on `niveshpathcluster.egrir` is **not in Sumit's account and not used by the live site.** Its owner has to delete it; it can't reach the live data.
+- **Still to confirm:**
+  - roll the leaked Stripe key (the account is Sumit's; no Stripe variable is set any more);
+  - regenerate the Finnhub key.
+- **Optional:** a least-privilege `nivesh-live` user.
+- The resume line about rotation waits for these.
+
+**`AI_INTERNAL_TOKEN`** (Step 3): it was already set on both web and ai.
+
+**Neon** (Step 2):
+- Project `nivesh-path`, region AWS us-east-1, branch `production`, database `neondb`.
+- **Neon runs PostgreSQL 18.6.** CI, docker-compose and the AWS demo moved to 18 to match.
+- The pooled URL ends with `&pgbouncer=true` and keeps Neon's `&channel_binding=require`. Prisma works with both.
+
+**App Spec** (Step 4):
+- web: `LEDGER_BACKEND` and `DATABASE_URL` (SECRET), with `scope: RUN_TIME`.
+- ai: `WEB_INTERNAL_URL=${web.PRIVATE_URL}`.
+- The `migrate` PRE_DEPLOY job, with `DATABASE_URL` + `DIRECT_URL`.
+- `.do/app.yaml` now mirrors the live spec.
+
+**Checks** (Step 5):
+- The migrate job applied `20261011225621_ledger_init`.
+- `db-check` before the cutover:
+  ```
+  {"ok":true,"server":"PostgreSQL 18.6","migrations":["20261011225621_ledger_init"],"accounts":0,"trades":0}
+  ```
+- What's new showed "Money ledger: MongoDB" and the AI memory rebuild "Done · 5 trades for 1 users in 0.3s".
+
 
 ---
 
@@ -250,4 +283,4 @@ They are in public history, so deleting the files doesn't help. Only rotating th
 ## 6. Resume bullets (measured only)
 - Moved a paper-trading app's money ledger toward PostgreSQL with Prisma Migrate: `NUMERIC` money, database CHECK constraints and row-level locking (`SELECT … FOR UPDATE`). In CI against real Postgres, 20 concurrent orders across two app instances never overspent: exactly 10 filled and cash ended at $0.00.
 - Added idempotent order submission (Idempotency-Key, unique per user): 5 simultaneous duplicate submissions produce exactly 1 trade, verified in CI. A zero-downtime switch (`LEDGER_BACKEND`, maintenance mode) supports the cutover and rollback.
-- Added full-history secret scanning (gitleaks, checksum-pinned) to CI. It found live database, market-data and payment credentials in an early commit, and new leaks now fail the build. (Add "the credentials were rotated" only once Sumit confirms the rotation is done.)
+- Added full-history secret scanning (gitleaks, checksum-pinned) to CI. It found database, market-data and payment credentials in an early commit, and new leaks now fail the build. (Add "the credentials were rotated" only once Sumit confirms Stripe and Finnhub are done.)

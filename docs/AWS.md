@@ -31,7 +31,7 @@ flowchart LR
       mig["ECS one-off task · migrate<br/>prisma migrate deploy"]
     end
     subgraph priv["Private subnets · no route to the internet"]
-      rds[("RDS PostgreSQL 16<br/>db.t4g.micro · encrypted<br/>money ledger")]
+      rds[("RDS PostgreSQL 18<br/>db.t4g.micro · encrypted<br/>money ledger")]
     end
     alb -->|":3000"| web
     web -->|"ai.nivesh.internal:8001"| ai
@@ -228,7 +228,7 @@ for i in $(seq 1 10); do curl -s -o /dev/null -w "%{http_code} " -H "X-Internal-
 | Network | VPC `10.20.0.0/16`; 2 public + 2 private subnets in 2 AZs; internet gateway; **no NAT**; the default security group has no rules |
 | Load balancer | Internet-facing ALB. Target group on web:3000 with health check `/health` every 15 s. `idle_timeout` 130 s (above the app's 120 s AI timeout). Invalid headers dropped. HTTPS listener when `certificate_arn` is set |
 | ECS | Cluster with Container Insights off (cost). **web:** 0.25 vCPU / 0.5 GB, 1–3 tasks, target 60% CPU. **ai:** 0.5 vCPU / 1 GB, 1 task, container health check on `/health`. **migrate:** 0.25 / 0.5, one-off. Deployment circuit breaker with rollback. Private DNS `*.nivesh.internal` (Cloud Map: plain DNS, no sidecar proxy eating task memory) |
-| RDS | PostgreSQL 16, `db.t4g.micro`, 20 GB gp3, encrypted, private, single-AZ, 1-day backups. `skip_final_snapshot` and no deletion protection, because it's destroyed after each demo and holds only demo data |
+| RDS | PostgreSQL 18 (the same major as production on Neon, 18.6), `db.t4g.micro`, 20 GB gp3, encrypted, private, single-AZ, 1-day backups. `skip_final_snapshot` and no deletion protection, because it's destroyed after each demo and holds only demo data |
 | ECR | `nivesh-demo/web`, `nivesh-demo/ai`. Immutable tags (the git commit), scan on push, newest 10 images kept. `force_delete`, so destroy also removes images |
 | Logs | `/nivesh-demo/{web,ai,migrate}`, kept 7 days |
 | Dashboard | Requests/min, 5xx (app and load balancer), p50/p95 response time, healthy web tasks (shows scaling), ECS CPU/memory, RDS CPU/connections |

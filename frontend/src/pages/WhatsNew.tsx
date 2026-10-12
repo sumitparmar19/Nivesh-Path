@@ -13,8 +13,13 @@ function rows(s: SystemStatus | undefined): [string, string, Dot][] {
   if (!s) return [];
   const ai = s.ai;
   const idx = ai.vectorIndex;
+  // The counts come from the rebuild at the AI service's last start, not live (new trades since then aren't in them).
+  const users = idx?.users ?? 0;
+  const when = idx?.finishedAt
+    ? ` at last restart, ${new Date(idx.finishedAt).toLocaleString([], { month: "short", day: "numeric", hour: "numeric", minute: "2-digit" })}`
+    : "";
   const indexText: Record<string, [string, Dot]> = {
-    ok: [`Done · ${idx?.transactions ?? 0} trades for ${idx?.users ?? 0} users in ${(idx?.seconds ?? 0).toFixed(1)}s`, "ok"],
+    ok: [`Done${when} · ${idx?.transactions ?? 0} trades for ${users} ${users === 1 ? "user" : "users"} in ${(idx?.seconds ?? 0).toFixed(1)}s`, "ok"],
     running: ["Rebuilding now…", "warn"],
     pending: ["Starting…", "warn"],
     failed: ["Failed - advisor runs without history", "bad"],

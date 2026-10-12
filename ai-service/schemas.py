@@ -125,6 +125,7 @@ class IndexStatus(BaseModel):
     users: int = 0
     transactions: int = 0
     seconds: float = 0.0
+    finished_at: str | None = None  # when the rebuild finished (UTC); counts are a snapshot from then
 
 
 class MemoryStatus(BaseModel):

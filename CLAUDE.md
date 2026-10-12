@@ -35,9 +35,10 @@ Live: https://nivesh-path-vzeak.ondigitalocean.app (custom domain pending) · Re
       over checked trades only, Advisor weights include cash, one Diversification formula, time-zone dates, AI_INTERNAL_TOKEN
 - [x] **Phase 3 PR A** - Postgres ledger foundation (Prisma, ledger store interface, `FOR UPDATE`, Idempotency-Key,
       `LEDGER_MAINTENANCE`, token-only `/internal/trades*` read by the AI service, gitleaks full-history scan, MIT license);
-      `LEDGER_BACKEND` still `mongo` on the live site until the PR B cutover
+      (live: Neon, PostgreSQL 18.6)
 - [x] **Phase 3 PR B** - `scripts/migrate-ledger.js` (dry-run/migrate/verify/export-since) + `docs/LEDGER_CUTOVER.md`;
-      What's new shows which ledger holds the money. Live cutover is Sumit's step (runbook)
+      What's new shows which ledger holds the money. **Live cutover done Oct 12, 2026: `LEDGER_BACKEND=postgres`**
+      (verify "All users match (1)"; live status in `docs/PHASE3_LIVE_STATUS.md`)
 - [x] **Phase 3 PR C+D** - OpenTelemetry in both services (off unless `OTEL_EXPORTER_OTLP_ENDPOINT`), redacting exporter,
       metrics + JSON logs with trace ids, Grafana dashboard + 3 alerts (`observability/`, `docs/OBSERVABILITY.md`);
       k6 read/trade mixes + `loadtest.yml` workflow (cache on vs `CACHE_DISABLED=1`), `docs/PERFORMANCE.md`
@@ -138,7 +139,7 @@ docs/                # PHASE1_REPORT.md, PHASE2_PLAN.md, DEPLOYMENT.md
   Playwright; legacy static HTML in `public/` kept as rollback
 - Backend: Node 22, Express 4, MongoDB (Mongoose), Redis cache (optional), JWT (jsonwebtoken + bcryptjs), Helmet, rate limiting
 - AI: FastAPI, LangChain (`langchain-core`), Anthropic Python SDK, ChromaDB; model from `CLAUDE_MODEL` (now `claude-opus-5-5`)
-- Ledger (Phase 3): Postgres 16 (Neon in production) via Prisma 6.19.3 (`binaryTargets` include musl for Alpine)
+- Ledger (Phase 3): Postgres 18 everywhere (Neon 18.6 in production; CI, docker-compose and the AWS RDS demo on 18) via Prisma 6.19.3 (`binaryTargets` include musl for Alpine)
 
 ## Commands
 - Backend: `npm install && npm run dev` (port 3000; `npm install` runs `prisma generate`); tests `npm test`

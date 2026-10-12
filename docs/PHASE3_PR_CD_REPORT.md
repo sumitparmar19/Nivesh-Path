@@ -1,8 +1,36 @@
 # Phase 3 · PR C+D report: observability (OpenTelemetry → Grafana) and load tests (k6)
 
-**Status:** built, CI green, load test run in CI. On the live site nothing changes until you add the Grafana variables: telemetry is off without them.
+**Status:** merged and **exporting from the live site** (Grafana Cloud). One live bug, log export, was found and fixed in the next PR. The dashboard, alerts and the two screenshots are still to do. See §0.
 
 ---
+
+## 0. Live result (Oct 12, 2026)
+
+**Set up:**
+- A Grafana Cloud stack with OTLP endpoint `https://otlp-gateway-prod-us-east-2.grafana.net/otlp`. us-east-2 is fine.
+- Both components have `OTEL_EXPORTER_OTLP_ENDPOINT`, `OTEL_EXPORTER_OTLP_HEADERS` (encrypted, `Basic%20…`), `OTEL_SERVICE_NAME` (`nivesh-web` / `nivesh-ai`) and `OTEL_RESOURCE_ATTRIBUTES=deployment.environment=production`.
+
+**Working:**
+- The web log shows **`Telemetry: exporting over OTLP`**.
+- Request log lines carry `trace_id`/`span_id`.
+- Traces and metrics export.
+
+**Bug found live:**
+- Every log batch failed with `TypeError: Cannot read properties of undefined (reading 'export')`, so no log line reached Grafana.
+- **Cause:** the batch processor was built with the old constructor signature.
+- **Fixed** in the follow-up PR (`docs/PHASE3_FIX_LOG_EXPORT_REPORT.md`), with a test that sends a real batch to a local OTLP receiver. On the old code that test fails with the same error.
+- If `OTEL_LOGS_EXPORTER=none` was set on web as a workaround, delete it after that fix deploys.
+
+**Security:**
+- The first Grafana token appeared in a screenshot.
+- A new token (`nivesh-path-2`) replaces it, and the first one is to be deleted. **Confirm both.**
+
+**Still to do (your §1 steps 14–17):**
+- import the dashboard;
+- create the 3 alerts and the email contact point;
+- run the alert test (screenshot);
+- the joined trace (screenshot).
+
 
 ## 1. Your steps, in order (all in a browser)
 

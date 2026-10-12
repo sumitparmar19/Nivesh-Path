@@ -180,6 +180,12 @@ Phase 3 plan and decisions: `docs/PHASE3_REVIEW.md` (D1-D10 approved; D10 = MIT)
   latest one (services ignore task_definition in Terraform). `DEPLOY_PLATFORM=aws-demo` labels What's new.
 - Costs from the AWS price list: about $0.107/hour (~$2.56/day) while up; ~$1/month always-on.
 
+### Live status (Oct 12, 2026) - see docs/PHASE3_LIVE_STATUS.md
+- The live ledger is Postgres (Neon 18.6) since the cutover. CI, compose and the RDS demo moved to 18.
+- Fixed live: log export crashed every batch (`BatchLogRecordProcessor({ exporter })`, tests/telemetryLogExport.test.js).
+- The AI memory rebuild status now carries `finished_at`, so What's new shows "at last restart, <time>" (a start-up snapshot, not live).
+- Open: Stripe key roll, Finnhub regenerate, Grafana token swap, dashboard + alerts, AWS bootstrap.
+
 ### Known risks to handle in later phases
 1. **Cold start** for the Behavioral Mirror (still open after 2C): new users have no history -> add a demo account with realistic
    seeded trades and **CSV import** of real broker history (Robinhood / Webull / Zerodha) in Phase 2C.

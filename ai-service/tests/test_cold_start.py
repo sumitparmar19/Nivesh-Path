@@ -213,3 +213,15 @@ def test_delete_memory_forgets_only_that_user(db: Any, vectors: VectorService) -
     assert vectors.count(str(ALICE)) == 0
     assert vectors.count(str(BOB)) == 1
     assert client.delete(f"/api/ai/memory/{ALICE}").json() == {"deleted": False}
+
+
+def test_rebuild_records_when_it_finished(db: Any, vectors: VectorService) -> None:
+    """The status shows a start-up snapshot; finished_at says when it was taken (UTC), so it isn't read as live."""
+    from datetime import datetime, timedelta, timezone
+
+    report = rebuild_vector_index(vectors, TradeStore(db))
+    assert report.finished_at is not None
+    finished = datetime.fromisoformat(report.finished_at)
+    assert finished.tzinfo is not None and finished.utcoffset() == timedelta(0)
+    assert abs(datetime.now(timezone.utc) - finished) < timedelta(minutes=1)
+    assert rebuild_vector_index(vectors, None).finished_at is None  # disabled: no rebuild ran
