@@ -11,7 +11,8 @@ Owner: Sumit Parmar (MS CS @ UB, graduating Dec 2026, targeting SWE / Full-Stack
 Live: https://nivesh-path-vzeak.ondigitalocean.app (custom domain pending) · Repo: sumitparmar19/Nivesh-Path
 
 **Plan:** `docs/PHASE2_PLAN.md` (read its "Implementation notes" first - they override the plan text); Phase 3:
-`docs/PHASE3_REVIEW.md` (decisions D1-D10, PR plan A-I) and the per-PR reports `docs/PHASE3_PR_*_REPORT.md`.
+`docs/PHASE3_REVIEW.md` (decisions D1-D10, PR plan A-I) and the per-PR reports `docs/PHASE3_PR_*_REPORT.md`
+(all of Part 1 together: `docs/PHASE3_FULL_REPORT.md`).
 **History:** `docs/PHASE1_REPORT.md`.
 
 ## Current progress
@@ -37,7 +38,10 @@ Live: https://nivesh-path-vzeak.ondigitalocean.app (custom domain pending) · Re
       `LEDGER_BACKEND` still `mongo` on the live site until the PR B cutover
 - [x] **Phase 3 PR B** - `scripts/migrate-ledger.js` (dry-run/migrate/verify/export-since) + `docs/LEDGER_CUTOVER.md`;
       What's new shows which ledger holds the money. Live cutover is Sumit's step (runbook)
-- [ ] **Phase 3** (plan: `docs/PHASE3_REVIEW.md`) - next · C+D observability + k6 · E AWS · F jobs ·
+- [x] **Phase 3 PR C+D** - OpenTelemetry in both services (off unless `OTEL_EXPORTER_OTLP_ENDPOINT`), redacting exporter,
+      metrics + JSON logs with trace ids, Grafana dashboard + 3 alerts (`observability/`, `docs/OBSERVABILITY.md`);
+      k6 read/trade mixes + `loadtest.yml` workflow (cache on vs `CACHE_DISABLED=1`), `docs/PERFORMANCE.md`
+- [ ] **Phase 3** (plan: `docs/PHASE3_REVIEW.md`) - next · E AWS · F jobs ·
       G pre-trade check + stress test (2D) · H+I agent + evals
 
 ## Layout
@@ -64,6 +68,9 @@ src/
   lib/ledgerStore.pg.js    # Prisma: accounts + trades, SELECT ... FOR UPDATE per order, idempotency, Decimal money
   lib/db.js          # lazy shared PrismaClient
   lib/ledgerMigration.js # MongoDB -> Postgres move: plan (pure), apply (repeat-safe), verify (to the cent), tradesSince
+  telemetry.js       # OpenTelemetry (loaded first by server.js); off unless OTEL_EXPORTER_OTLP_ENDPOINT; redacting exporter
+  lib/metrics.js     # app metrics (http duration by route template, trades, detections, cache, AI calls, ai_service_up)
+  lib/logger.js      # pino JSON logs (trace ids, scrubbed) - use logger, not console; lib/redact.js scrubbing rules
   routes/internal.js # /internal/trades/users, /internal/trades?userId= - X-Internal-Token only (404 otherwise), for the AI
 prisma/              # schema.prisma + migrations (CHECK constraints are hand-added in migration SQL); `npx prisma migrate dev`
   lib/               # cache (Redis or memory), quotes (Finnhub), portfolio math, aiClient
@@ -90,6 +97,8 @@ ai-service/          # Python FastAPI AI service (port 8001, internal only)
   startup.py                      # cold-start rebuild of ChromaDB from MongoDB (runs at boot)
   services/portfolio_analytics.py # deterministic metrics + rule-based fallback
 tests/app.test.js    # Jest + Supertest (isolation, auth, ledger, AI proxy, idempotency, maintenance, /internal)
+observability/       # grafana-dashboard.json, alert-rules.yaml (queries checked against Prometheus fed by the app)
+loadtest/            # k6 read-mix.js, trade-mix.js, report.js; docker-compose.loadtest.yml; .github/workflows/loadtest.yml
 tests/ledger.pg.test.js # real Postgres (TEST_DATABASE_URL; CI sets it): constraints, 20 parallel buys, idempotency, reset
 ai-service/tests/    # pytest
 docs/                # PHASE1_REPORT.md, PHASE2_PLAN.md, DEPLOYMENT.md
@@ -140,6 +149,8 @@ docs/                # PHASE1_REPORT.md, PHASE2_PLAN.md, DEPLOYMENT.md
 - Ledger schema change: edit `prisma/schema.prisma`, `npx prisma migrate dev --name <what>`, add CHECKs by hand in the SQL;
   CI fails if the schema and migrations disagree. Money columns are NUMERIC; quantities are whole shares
 - `/internal/*` is reachable from the internet: token-only, and every route there stays read-only unless reviewed
+- Telemetry: never put JWTs, keys, emails or bodies into spans, metric labels or logs; metric labels stay low-cardinality
+  (route templates, never raw URLs or user ids); new metrics go in `src/lib/metrics.js` and on the dashboard
 - Python: type hints everywhere; FastAPI endpoints have docstrings (+ response_model)
 - All new code has error handling; external services (Claude, Finnhub, Redis, AI service) must fail gracefully
 - Every new file starts with a brief comment explaining what it does and why it exists

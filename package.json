@@ -11,7 +11,19 @@
     "db:migrate": "prisma migrate deploy"
   },
   "jest": {
-    "maxWorkers": 1
+    "testEnvironment": "node",
+    "testMatch": [
+      "**/tests/**/*.test.js"
+    ],
+    "testPathIgnorePatterns": [
+      "/node_modules/",
+      "/public/",
+      "/ai-service/"
+    ],
+    "modulePathIgnorePatterns": [
+      "<rootDir>/public/",
+      "<rootDir>/ai-service/"
+    ]
   },
   "engines": {
     "node": ">=18"
@@ -26,7 +38,27 @@
   "author": "Sumit Parmar",
   "license": "MIT",
   "dependencies": {
+    "@opentelemetry/api": "1.9.1",
+    "@opentelemetry/api-logs": "0.223.0",
+    "@opentelemetry/core": "2.12.0",
+    "@opentelemetry/exporter-logs-otlp-proto": "0.223.0",
+    "@opentelemetry/exporter-metrics-otlp-proto": "0.223.0",
+    "@opentelemetry/exporter-trace-otlp-proto": "0.223.0",
+    "@opentelemetry/instrumentation": "0.223.0",
+    "@opentelemetry/instrumentation-express": "0.71.0",
+    "@opentelemetry/instrumentation-http": "0.223.0",
+    "@opentelemetry/instrumentation-mongodb": "0.76.0",
+    "@opentelemetry/instrumentation-pino": "0.69.0",
+    "@opentelemetry/instrumentation-redis": "0.71.0",
+    "@opentelemetry/instrumentation-undici": "0.33.0",
+    "@opentelemetry/resources": "2.12.0",
+    "@opentelemetry/sdk-logs": "0.223.0",
+    "@opentelemetry/sdk-metrics": "2.12.0",
+    "@opentelemetry/sdk-trace-base": "2.12.0",
+    "@opentelemetry/sdk-trace-node": "2.12.0",
+    "@opentelemetry/semantic-conventions": "1.43.0",
     "@prisma/client": "6.19.3",
+    "@prisma/instrumentation": "6.19.3",
     "@sentry/node": "^11.4.0",
     "bcryptjs": "^3.0.3",
     "cors": "^2.8.5",
@@ -36,6 +68,7 @@
     "helmet": "^8.3.0",
     "jsonwebtoken": "^9.0.3",
     "mongoose": "^8.13.2",
+    "pino": "10.4.0",
     "prisma": "6.19.3",
     "redis": "^6.3.0"
   },
@@ -43,20 +76,5 @@
     "jest": "^30.5.2",
     "nodemon": "^3.1.9",
     "supertest": "^7.3.1"
-  },
-  "jest": {
-    "testEnvironment": "node",
-    "testMatch": [
-      "**/tests/**/*.test.js"
-    ],
-    "testPathIgnorePatterns": [
-      "/node_modules/",
-      "/public/",
-      "/ai-service/"
-    ],
-    "modulePathIgnorePatterns": [
-      "<rootDir>/public/",
-      "<rootDir>/ai-service/"
-    ]
   }
 }

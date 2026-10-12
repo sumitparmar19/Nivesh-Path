@@ -1,0 +1,107 @@
+# Load test (Phase 3, PR D): starts the whole stack with docker compose (made-up market data, Postgres ledger), runs
+# the k6 read mix and trade mix with the cache ON, then again with the cache OFF (CACHE_DISABLED=1), and publishes
+# requests/s, p50/p95/p99, error rate and cache hit rate. Manual (Actions -> "Load test" -> Run workflow), and on PRs
+# that change the load test itself. Claude is never called. Results: the run summary + the "loadtest-results"
+# artifact; docs/PERFORMANCE.md quotes a run and links it.
+name: Load test
+
+on:
+  workflow_dispatch:
+    inputs:
+      read_vus:
+        description: "Virtual users for the read mix"
+        default: "20"
+      trade_vus:
+        description: "Virtual users for the trade mix"
+        default: "10"
+      duration:
+        description: "Steady-state duration of each run (after a 20 s ramp-up)"
+        default: "2m"
+  pull_request:
+    paths:
+      - "loadtest/**"
+      - ".github/workflows/loadtest.yml"
+      - "docker-compose.loadtest.yml"
+
+permissions:
+  contents: read
+
+jobs:
+  k6:
+    name: k6 load test (cache on vs off)
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+    env:
+      READ_VUS: ${{ inputs.read_vus || '20' }}
+      TRADE_VUS: ${{ inputs.trade_vus || '10' }}
+      DURATION: ${{ inputs.duration || '2m' }}
+      COMPOSE: docker compose -f docker-compose.yml -f docker-compose.loadtest.yml
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install k6 1.4.0 (checksum-pinned)
+        run: |
+          curl -sSfL -o k6.tgz https://github.com/grafana/k6/releases/download/v1.4.0/k6-v1.4.0-linux-amd64.tar.gz
+          echo "58fa87283f5d5b11bc6824d9204e8a38266c9977f2c4d0a960ce1b5beeaae517  k6.tgz" | sha256sum -c -
+          tar -xzf k6.tgz && sudo mv k6-v1.4.0-linux-amd64/k6 /usr/local/bin/k6 && k6 version
+
+      - name: Write the CI-only .env (no real keys; FAKE_MARKET_DATA needs none)
+        run: |
+          {
+            echo "JWT_SECRET=loadtest-only-secret"
+            echo "AI_INTERNAL_TOKEN=loadtest-internal-token"
+            echo "LEDGER_BACKEND=postgres"
+          } > .env
+
+      - name: Build the images
+        run: $COMPOSE build
+
+      - name: Run cache ON, then cache OFF
+        run: |
+          mkdir -p results
+          wait_up() {
+            for i in $(seq 1 90); do
+              curl -sf http://localhost:3000/health >/dev/null && curl -sf http://localhost:9090/-/ready >/dev/null && return 0
+              sleep 2
+            done
+            $COMPOSE logs backend | tail -50; return 1
+          }
+          cache_counters() { # cumulative cache lookups since the backend started -> {hits, total}
+            sleep 8 # one metric export (every 5 s)
+            q() { curl -s --data-urlencode "query=$1" http://localhost:9090/api/v1/query | jq -r '.data.result[0].value[1] // "0"'; }
+            echo "{\"hits\": $(q 'sum(nivesh_cache_requests_total{result="hit"})'), \"total\": $(q 'sum(nivesh_cache_requests_total)')}" > "$1"
+          }
+          for mode in on off; do
+            export CACHE_DISABLED=$([ "$mode" = off ] && echo 1 || echo 0)
+            $COMPOSE up -d
+            wait_up
+            k6 run -q -e BASE_URL=http://localhost:3000 -e VUS=$READ_VUS -e DURATION=$DURATION \
+              --summary-export=results/read-$mode.json loadtest/read-mix.js | tee results/read-$mode.txt
+            cache_counters results/cache-read-$mode.json
+            k6 run -q -e BASE_URL=http://localhost:3000 -e VUS=$TRADE_VUS -e DURATION=$DURATION \
+              --summary-export=results/trade-$mode.json loadtest/trade-mix.js | tee results/trade-$mode.txt
+            cache_counters results/cache-trade-$mode.json
+            $COMPOSE logs --no-color backend > results/backend-$mode.log 2>&1 || true
+            $COMPOSE down -v # fresh databases for the next run
+          done
+
+      - name: Summary
+        if: always()
+        run: |
+          {
+            echo "## Load test results"
+            echo
+            echo "Runner: \`${{ runner.os }}\`, $(nproc) vCPU, $(free -g | awk '/Mem:/{print $2}') GB RAM (GitHub-hosted ubuntu-latest; k6 and the whole stack share it)."
+            echo "Read mix: $READ_VUS virtual users; trade mix: $TRADE_VUS; each holds for $DURATION after a 20 s ramp-up; 1 s think time."
+            echo "Commit: \`${{ github.event.pull_request.head.sha || github.sha }}\` · Run: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}"
+            echo
+            node loadtest/report.js results
+          } | tee results/summary.md | tee -a "$GITHUB_STEP_SUMMARY" # also printed in the job log
+          echo "Cache counters (cumulative per backend start):"; for f in results/cache-*.json; do echo "$f $(cat "$f")"; done
+
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: loadtest-results
+          path: results/
+          retention-days: 90

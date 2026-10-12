@@ -163,6 +163,14 @@ Phase 3 plan and decisions: `docs/PHASE3_REVIEW.md` (D1-D10 approved; D10 = MIT)
   (never 1970); **PR F's nightly job goes through token-protected `/internal` endpoints on web** (held tickers, price
   snapshots, concentration check) so AWS stores no database credentials - no `nivesh-jobs` Atlas user; no copy-back mode.
 
+### Phase 3 PR C+D - observability + load tests (built; live needs Sumit's Grafana Cloud values)
+- OpenTelemetry in both services, OFF unless `OTEL_EXPORTER_OTLP_ENDPOINT` is set; hand-picked instrumentations (no
+  sdk-node/gRPC): +8 MB RSS measured. W3C trace context joins web -> AI; redacting exporter in both services.
+- Metrics/dashboard/alerts: `observability/`; every query validated against Prometheus 3.5 fed by the app's OTLP metrics
+  (Grafana Cloud uses the same names, `job="nivesh-path/nivesh-web"`).
+- k6: `loadtest/` + `.github/workflows/loadtest.yml` (manual + PRs touching the load test), cache on vs `CACHE_DISABLED=1`,
+  cache hit rate from a Prometheus in the compose overlay; numbers in `docs/PERFORMANCE.md` with the run link.
+
 ### Known risks to handle in later phases
 1. **Cold start** for the Behavioral Mirror (still open after 2C): new users have no history -> add a demo account with realistic
    seeded trades and **CSV import** of real broker history (Robinhood / Webull / Zerodha) in Phase 2C.

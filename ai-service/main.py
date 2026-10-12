@@ -34,9 +34,9 @@ from services.web_trades import HttpTradeStore, TradeSource
 from services.portfolio_analytics import compute_metrics, rule_based_insight
 from services.vector_service import VectorService, history_lines
 from startup import RebuildReport, rebuild_user, rebuild_vector_index
+import telemetry
 
-logging.basicConfig(level=logging.INFO)
-logging.getLogger("httpx").setLevel(logging.WARNING)  # one line per request (and user id) is noise
+telemetry.configure_logging()  # JSON lines with trace ids
 logger = logging.getLogger("ai-service")
 
 settings = get_settings()
@@ -105,6 +105,7 @@ app = FastAPI(
     description="Portfolio AI Advisor: Claude + LangChain + ChromaDB RAG.",
     lifespan=lifespan,
 )
+telemetry.setup(app)  # OpenTelemetry, only when OTEL_EXPORTER_OTLP_ENDPOINT is set
 app.add_middleware(
     CORSMiddleware,
     allow_origins=settings.allowed_origins,
