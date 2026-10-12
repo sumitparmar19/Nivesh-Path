@@ -8,6 +8,8 @@
 #   ai:      ANTHROPIC_API_KEY, MONGO_URL (behavioral pattern results), AI_INTERNAL_TOKEN (same value as web: the AI
 #            service then only answers the web component, and it reads trades from web's /internal API), SENTRY_DSN
 # Cutover switches (web, see docs/PHASE3_REVIEW.md 2.4): LEDGER_BACKEND=mongo|postgres, LEDGER_MAINTENANCE=1.
+# Observability (both components, docs/OBSERVABILITY.md): OTEL_EXPORTER_OTLP_ENDPOINT, OTEL_EXPORTER_OTLP_HEADERS (SECRET),
+#   OTEL_SERVICE_NAME (nivesh-web | nivesh-ai), OTEL_RESOURCE_ATTRIBUTES=deployment.environment=production.
 name: nivesh-path
 region: nyc
 services:

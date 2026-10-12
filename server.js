@@ -55,7 +55,11 @@ async function start() {
   if (mongoReady) {
     // Re-check Behavioral Mirror events saved under older rules (repeat-safe; runs in the background).
     const { migrateBehaviorEvents } = require("./src/lib/behaviorMigration");
-    migrateBehaviorEvents({ BehaviorEvent: require("./src/models/BehaviorEvent"), ledgerStore: app.locals.ledgerStore });
+    migrateBehaviorEvents({
+      BehaviorEvent: require("./src/models/BehaviorEvent"),
+      ledgerStore: app.locals.ledgerStore,
+      log: { log: (m) => logger.info(m), warn: (m) => logger.warn(m) },
+    });
   }
   const server = app.listen(config.port, () => {
     logger.info(`Nivesh-Path running on http://localhost:${config.port}`);
@@ -63,6 +67,7 @@ async function start() {
 
   // Deploys stop the old container with SIGTERM: finish in-flight requests, then close the database pools.
   process.once("SIGTERM", () => {
+    server.closeIdleConnections(); // keep-alive sockets (e.g. the AI service's client) would hold close() open
     server.close(async () => {
       await require("./src/lib/db").disconnectPrisma().catch(() => {});
       await telemetry.shutdown();
