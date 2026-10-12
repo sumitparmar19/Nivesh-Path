@@ -27,3 +27,4 @@ chroma_data/
 *.tfplan
 crash.log
 infra/bootstrap/backend.tf
+infra/jobs/build/

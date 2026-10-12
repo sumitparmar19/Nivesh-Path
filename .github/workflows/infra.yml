@@ -8,9 +8,9 @@ name: Infra
 on:
   push:
     branches: [main, "claude/**"]
-    paths: ["infra/**", ".github/workflows/infra.yml", ".github/workflows/aws-demo-*.yml"]
+    paths: ["infra/**", ".github/workflows/infra.yml", ".github/workflows/aws-demo-*.yml", ".github/workflows/aws-jobs.yml"]
   pull_request:
-    paths: ["infra/**", ".github/workflows/infra.yml", ".github/workflows/aws-demo-*.yml"]
+    paths: ["infra/**", ".github/workflows/infra.yml", ".github/workflows/aws-demo-*.yml", ".github/workflows/aws-jobs.yml"]
 
 permissions:
   contents: read
@@ -34,7 +34,7 @@ jobs:
         run: terraform fmt -check -recursive -diff infra
       - name: terraform validate (every stack)
         run: |
-          for stack in infra/bootstrap infra/demo; do
+          for stack in infra/bootstrap infra/demo infra/jobs; do
             echo "== $stack"
             terraform -chdir="$stack" init -backend=false -input=false -lockfile=readonly >/dev/null
             terraform -chdir="$stack" validate

@@ -1,0 +1,99 @@
+# AWS nightly job (Phase 3, PR F): apply the infra/jobs stack, run the job once now, or remove it.
+# Manual only, main only, in the aws-demo environment (Sumit approves), with the same OIDC deploy role as the
+# demo (planning-chat decision Q3). The job itself then runs on its own schedule: weekdays 4:30 pm New York.
+name: "AWS jobs: nightly job"
+
+on:
+  workflow_dispatch:
+    inputs:
+      action:
+        description: "apply = create/update the job; run-now = start one run and wait for it; destroy = remove the job"
+        type: choice
+        options: [apply, run-now, destroy]
+        default: apply
+      confirm:
+        description: 'For destroy only: type "destroy"'
+        required: false
+
+permissions:
+  contents: read
+  id-token: write
+
+concurrency:
+  group: aws-jobs
+  cancel-in-progress: false
+
+env:
+  TF_VERSION: 1.15.9
+  TF_DIR: infra/jobs
+
+jobs:
+  jobs:
+    name: ${{ inputs.action }}
+    if: github.ref == 'refs/heads/main' && (inputs.action != 'destroy' || inputs.confirm == 'destroy')
+    runs-on: ubuntu-latest
+    environment: aws-demo
+    timeout-minutes: 40
+    steps:
+      - uses: actions/checkout@v4
+      - uses: hashicorp/setup-terraform@v3
+        with:
+          terraform_version: ${{ env.TF_VERSION }}
+          terraform_wrapper: false
+      - uses: aws-actions/configure-aws-credentials@v4
+        with:
+          role-to-assume: ${{ vars.AWS_ROLE_ARN }}
+          aws-region: ${{ vars.AWS_REGION || 'us-east-1' }}
+      - name: terraform init
+        run: |
+          BUCKET="nivesh-path-tfstate-$(aws sts get-caller-identity --query Account --output text)"
+          terraform -chdir="$TF_DIR" init -input=false -lockfile=readonly -backend-config="bucket=$BUCKET"
+
+      - name: terraform plan + apply
+        if: inputs.action == 'apply'
+        run: |
+          terraform -chdir="$TF_DIR" plan -input=false -out=jobs.tfplan
+          terraform -chdir="$TF_DIR" apply -input=false jobs.tfplan
+          {
+            echo "## Nightly job applied"
+            echo "- Schedule: $(terraform -chdir="$TF_DIR" output -raw schedule)"
+            echo "- State machine: $(terraform -chdir="$TF_DIR" output -raw console_url)"
+            echo "- Next: run this workflow with **run-now** once to check it end to end."
+          } >> "$GITHUB_STEP_SUMMARY"
+
+      - name: Run the job once and wait
+        if: inputs.action == 'run-now'
+        run: |
+          SM=$(terraform -chdir="$TF_DIR" output -raw state_machine_arn)
+          EXEC=$(aws stepfunctions start-execution --state-machine-arn "$SM" --input '{"source":"manual"}' --query executionArn --output text)
+          echo "Started $EXEC"
+          STATUS=RUNNING
+          for _ in $(seq 1 100); do
+            STATUS=$(aws stepfunctions describe-execution --execution-arn "$EXEC" --query status --output text)
+            [ "$STATUS" != "RUNNING" ] && break
+            sleep 15
+          done
+          aws stepfunctions describe-execution --execution-arn "$EXEC" --query output --output text > output.json || true
+          {
+            echo "## Nightly job run: $STATUS"
+            echo "Execution: \`${EXEC##*:}\`"
+            echo
+            if [ -s output.json ] && [ "$(cat output.json)" != "None" ]; then
+              echo "Held tickers: $(jq -c '.held.symbols' output.json)"
+              echo
+              echo "Closes saved: $(jq '[.snapshots[] | select(.saved == true)] | length' output.json) · skipped (market open): $(jq '[.snapshots[] | select(.saved == false and .failed == false)] | length' output.json) · failed: $(jq '[.snapshots[] | select(.failed == true)] | length' output.json)"
+              echo
+              echo "Concentration check: $(jq -c '.concentration.result' output.json)"
+            else
+              echo "Last steps:"
+              echo '```'
+              aws stepfunctions get-execution-history --execution-arn "$EXEC" --reverse-order --max-items 6 \
+                --query 'events[].[type, executionFailedEventDetails.error || taskFailedEventDetails.error || ``]' --output text
+              echo '```'
+            fi
+          } | tee -a "$GITHUB_STEP_SUMMARY"
+          [ "$STATUS" = "SUCCEEDED" ]
+
+      - name: terraform destroy
+        if: inputs.action == 'destroy'
+        run: terraform -chdir="$TF_DIR" destroy -input=false -auto-approve
