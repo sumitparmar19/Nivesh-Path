@@ -93,10 +93,11 @@ jobs:
             echo
             echo "Runner: \`${{ runner.os }}\`, $(nproc) vCPU, $(free -g | awk '/Mem:/{print $2}') GB RAM (GitHub-hosted ubuntu-latest; k6 and the whole stack share it)."
             echo "Read mix: $READ_VUS virtual users; trade mix: $TRADE_VUS; each holds for $DURATION after a 20 s ramp-up; 1 s think time."
-            echo "Commit: \`${{ github.sha }}\` · Run: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}"
+            echo "Commit: \`${{ github.event.pull_request.head.sha || github.sha }}\` · Run: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}"
             echo
             node loadtest/report.js results
-          } | tee results/summary.md >> "$GITHUB_STEP_SUMMARY"
+          } | tee results/summary.md | tee -a "$GITHUB_STEP_SUMMARY" # also printed in the job log
+          echo "Cache counters (cumulative per backend start):"; for f in results/cache-*.json; do echo "$f $(cat "$f")"; done
 
       - uses: actions/upload-artifact@v4
         if: always()
