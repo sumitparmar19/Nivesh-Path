@@ -1,15 +1,11 @@
-# DigitalOcean App Platform spec (GitHub Student Pack credit).
+# DigitalOcean App Platform spec (GitHub Student Pack credit). Mirrors the LIVE spec as of Oct 12, 2026
+# (docs/PHASE3_LIVE_STATUS.md: after the Postgres cutover and the Grafana setup).
 # Deploy: DigitalOcean dashboard -> Apps -> Create App -> "Import from app spec" (or `doctl apps create --spec .do/app.yaml`).
 # Changing this file does NOT change the live app: paste edits into Settings -> App Spec -> Edit (DigitalOcean).
-# Secrets are NOT listed here: add them in the dashboard (Settings -> component -> Environment Variables, tick Encrypt):
-#   web:     MONGO_URL, FINNHUB_API_KEY, JWT_SECRET, AI_INTERNAL_TOKEN, DATABASE_URL (Neon pooled, with pgbouncer=true),
-#            SENTRY_DSN (optional), RESEND_API_KEY + CONTACT_TO_EMAIL (optional)
-#   migrate: DATABASE_URL (same as web), DIRECT_URL (Neon direct, for migrations)
-#   ai:      ANTHROPIC_API_KEY, MONGO_URL (behavioral pattern results), AI_INTERNAL_TOKEN (same value as web: the AI
-#            service then only answers the web component, and it reads trades from web's /internal API), SENTRY_DSN
-# Cutover switches (web, see docs/PHASE3_REVIEW.md 2.4): LEDGER_BACKEND=mongo|postgres, LEDGER_MAINTENANCE=1.
-# Observability (both components, docs/OBSERVABILITY.md): OTEL_EXPORTER_OTLP_ENDPOINT, OTEL_EXPORTER_OTLP_HEADERS (SECRET),
-#   OTEL_SERVICE_NAME (nivesh-web | nivesh-ai), OTEL_RESOURCE_ATTRIBUTES=deployment.environment=production.
+# SECRET entries below are listed by name only: their values are typed in the dashboard (Encrypt ticked) and never
+# committed. DigitalOcean shows them as encrypted (EV[...]) when you open the live spec.
+# Cutover switches (web, docs/LEDGER_CUTOVER.md): LEDGER_BACKEND=mongo|postgres (now postgres), LEDGER_MAINTENANCE=1
+#   (only during a copy; not set now). Observability: docs/OBSERVABILITY.md.
 name: nivesh-path
 region: nyc
 services:
@@ -31,8 +27,32 @@ services:
         value: ${ai.PRIVATE_URL}
       - key: PUBLIC_BASE_URL
         value: ${APP_URL}
-      - key: LEDGER_BACKEND
-        value: mongo
+      - key: LEDGER_BACKEND # Postgres ledger since the Oct 12, 2026 cutover (rollback: mongo)
+        value: postgres
+        scope: RUN_TIME
+      - key: DATABASE_URL # Neon pooled URL with &pgbouncer=true
+        type: SECRET
+        scope: RUN_TIME
+      - key: MONGO_URL
+        type: SECRET
+      - key: FINNHUB_API_KEY
+        type: SECRET
+      - key: JWT_SECRET
+        type: SECRET
+      - key: AI_INTERNAL_TOKEN # same value as on ai
+        type: SECRET
+      - key: RESEND_API_KEY # optional: contact-form email
+        type: SECRET
+      - key: CONTACT_TO_EMAIL
+        type: SECRET
+      - key: OTEL_EXPORTER_OTLP_ENDPOINT # Grafana Cloud -> Connections -> OpenTelemetry (OTLP)
+        value: https://otlp-gateway-prod-us-east-2.grafana.net/otlp
+      - key: OTEL_EXPORTER_OTLP_HEADERS # Authorization=Basic%20<token from Grafana>
+        type: SECRET
+      - key: OTEL_SERVICE_NAME
+        value: nivesh-web
+      - key: OTEL_RESOURCE_ATTRIBUTES
+        value: deployment.environment=production
 
   - name: ai
     github:
@@ -51,8 +71,22 @@ services:
     envs:
       - key: CLAUDE_MODEL
         value: claude-opus-5-5
-      - key: WEB_INTERNAL_URL
+      - key: WEB_INTERNAL_URL # the AI service reads trades from web's token-only /internal API
         value: ${web.PRIVATE_URL}
+      - key: ANTHROPIC_API_KEY
+        type: SECRET
+      - key: MONGO_URL # behavioral pattern results
+        type: SECRET
+      - key: AI_INTERNAL_TOKEN # same value as on web
+        type: SECRET
+      - key: OTEL_EXPORTER_OTLP_ENDPOINT
+        value: https://otlp-gateway-prod-us-east-2.grafana.net/otlp
+      - key: OTEL_EXPORTER_OTLP_HEADERS
+        type: SECRET
+      - key: OTEL_SERVICE_NAME
+        value: nivesh-ai
+      - key: OTEL_RESOURCE_ATTRIBUTES
+        value: deployment.environment=production
 
 jobs:
   # Applies new Postgres ledger migrations before each deploy. If it fails, the deploy stops and the running
@@ -67,3 +101,8 @@ jobs:
     instance_count: 1
     instance_size_slug: apps-s-1vcpu-0.5gb
     run_command: npx --no-install prisma migrate deploy
+    envs:
+      - key: DATABASE_URL # Neon pooled (same as web)
+        type: SECRET
+      - key: DIRECT_URL # Neon direct (no -pooler): migrations can't run through the pooler
+        type: SECRET
