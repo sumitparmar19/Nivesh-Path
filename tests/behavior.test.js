@@ -518,6 +518,20 @@ describe("/api/patterns routes", () => {
     expect(payload.events[0].facts.percentFromHigh).toBe(0.99); // computed in code, not by the AI
   });
 
+  test("analyze sends the coach numbers only (rule v3's fiveDaySource label stays out; the AI schema accepts numbers)", async () => {
+    const { app, deps } = setup();
+    const a = await newUser(app);
+    await trade(app, a, "FOMO", 1);
+    const stored = (await request(app).get("/api/patterns").set(auth(a))).body.patterns[0];
+    expect(stored.facts.fiveDaySource).toBe("finnhub"); // the card still gets it
+    await request(app).post("/api/patterns/analyze").set(auth(a));
+    const [, payload] = deps.aiClient.analyzeBehavior.mock.calls[0];
+    const values = Object.values(payload.events[0].facts);
+    expect(values.length).toBeGreaterThan(0);
+    for (const v of values) expect(v === null || ["number", "boolean"].includes(typeof v)).toBe(true);
+    expect(payload.events[0].facts.fiveDaySource).toBeUndefined();
+  });
+
   test("AI service down: analyze answers 503 with a message, insight answers null", async () => {
     const down = async () => { throw new Error("ECONNREFUSED"); };
     const { app } = setup({ aiClient: { ingestTransactions: async () => ({}), analyzeBehavior: down, behaviorInsight: down } });

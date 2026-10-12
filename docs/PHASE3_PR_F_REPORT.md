@@ -95,7 +95,7 @@ Never paste a token into any chat.
 
 | Suite | Before | After | New |
 |---|---|---|---|
-| Jest | 187 | **220** | `nightlyJob.test.js` (19): v3 boundaries (6 vs 5 closes, age 5 vs 6 days, span 8 vs 9 days, bad rows, newest 6 used), which day a quote closes (after 4 pm, during the session, weekend, New York not UTC, missing data), the detector's source and fallbacks, the nightly all-users check, `heldSymbols`. `jobsLambda.test.js` (5): routes + token, read once, error names, bad input never calls web, a failed token read is retried. `app.test.js` (+6): the three routes (token-only, held tickers, save once then update, skipped during the session, 400/502/503, concentration counts). `priceSnapshots.pg.test.js` (3, real Postgres): CHECKs, upsert keeps one row, `recent()` feeds rule v3 |
+| Jest | 187 | **221** | `nightlyJob.test.js` (19): v3 boundaries (6 vs 5 closes, age 5 vs 6 days, span 8 vs 9 days, bad rows, newest 6 used), which day a quote closes (after 4 pm, during the session, weekend, New York not UTC, missing data), the detector's source and fallbacks, the nightly all-users check, `heldSymbols`. `jobsLambda.test.js` (5): routes + token, read once, error names, bad input never calls web, a failed token read is retried. `behavior.test.js` (+1): the coach gets numbers only. `app.test.js` (+6): the three routes (token-only, held tickers, save once then update, skipped during the session, 400/502/503, concentration counts). `priceSnapshots.pg.test.js` (3, real Postgres): CHECKs, upsert keeps one row, `recent()` feeds rule v3 |
 | pytest | 54 | 54 | |
 | Vitest | 112 | **114** | card wording for snapshot vs Finnhub moves; the Mirror explains rule v3 |
 
@@ -116,6 +116,12 @@ Never paste a token into any chat.
 | The detector ignores the saved closes | 2 detector tests |
 
 All restored; all pass.
+
+**A real bug CI found in my first push:**
+- The Playwright test on the Postgres ledger failed at "Get my insight" (503).
+- **Cause:** the AI coach's schema accepts only numbers, true/false or empty values in pattern facts (every figure is computed in code). The new `fiveDaySource` label is text, so the AI service answered 422.
+- **Fix:** web now sends the coach only the numeric facts (`coachFacts` in `src/routes/patterns.js`). The label stays on the card.
+- **New test:** "analyze sends the coach numbers only". It fails with the old line and passes with the fix.
 
 ## 4. Real numbers
 
