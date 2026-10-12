@@ -9,6 +9,7 @@ from __future__ import annotations
 
 import json
 import logging
+import time
 
 import anthropic
 from langchain_core.messages import SystemMessage
@@ -17,6 +18,7 @@ from langchain_core.prompts import ChatPromptTemplate
 from config import Settings
 from schemas import AIInsight, BehaviorCoaching, BehaviorRequest, PortfolioMetrics
 from services.behavior_coach import facts_block
+from telemetry import record_llm_call
 
 logger = logging.getLogger(__name__)
 
@@ -121,6 +123,7 @@ class LLMService:
         system = next(str(m.content) for m in messages if isinstance(m, SystemMessage))
         user = next(str(m.content) for m in messages if not isinstance(m, SystemMessage))
 
+        started = time.monotonic()
         try:
             response = self._client.beta.messages.parse(
                 model=self.model,
@@ -134,11 +137,23 @@ class LLMService:
                 fallbacks="default",
             )
         except anthropic.RateLimitError as exc:
+            record_llm_call(self.model, time.monotonic() - started, "rate_limited")
             raise LLMUnavailableError("Claude rate limit reached") from exc
         except anthropic.APIStatusError as exc:
+            record_llm_call(self.model, time.monotonic() - started, f"http_{exc.status_code}")
             raise LLMUnavailableError(f"Claude API error {exc.status_code}") from exc
         except anthropic.APIConnectionError as exc:
+            record_llm_call(self.model, time.monotonic() - started, "unreachable")
             raise LLMUnavailableError("Could not reach the Claude API") from exc
+
+        usage = getattr(response, "usage", None)
+        record_llm_call(
+            getattr(response, "model", None) or self.model,
+            time.monotonic() - started,
+            str(response.stop_reason or "ok"),
+            int(getattr(usage, "input_tokens", 0) or 0),
+            int(getattr(usage, "output_tokens", 0) or 0),
+        )
 
         if response.stop_reason == "refusal":
             raise LLMUnavailableError("Claude declined to answer")
