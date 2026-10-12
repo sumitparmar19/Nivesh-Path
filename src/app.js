@@ -99,8 +99,9 @@ function createApp(deps = {}) {
       const h = await aiClient.health();
       ai = { reachable: true, llmConfigured: Boolean(h.llm_configured), model: h.model || null, vectorIndex: null };
       if (h.vector_index) {
-        const { status, users, transactions, seconds } = h.vector_index;
+        const { status, users, transactions, seconds, finished_at: finishedAt } = h.vector_index;
         ai.vectorIndex = { status, users, transactions, seconds };
+        if (finishedAt) ai.vectorIndex.finishedAt = finishedAt; // counts are from that moment (start-up), not live
       }
     } catch (err) {
       // AI service unreachable: report it rather than failing the page

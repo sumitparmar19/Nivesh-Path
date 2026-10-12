@@ -433,6 +433,16 @@ describe("AI memory and status", () => {
     expect(JSON.stringify(res.body)).not.toContain("secret-user");
   });
 
+  test("status passes on when the AI memory rebuild finished (its counts are from then, not live)", async () => {
+    const health = async () => ({
+      llm_configured: true, model: "claude-test",
+      vector_index: { status: "ok", users: 1, transactions: 5, seconds: 0.3, finished_at: "2026-10-12T18:40:05+00:00", failed_users: ["secret-user"] },
+    });
+    const res = await request(setup({ aiClient: { health } }).app).get("/api/status");
+    expect(res.body.ai.vectorIndex).toEqual({ status: "ok", users: 1, transactions: 5, seconds: 0.3, finishedAt: "2026-10-12T18:40:05+00:00" });
+    expect(JSON.stringify(res.body)).not.toContain("secret-user");
+  });
+
   test("status says the AI is unreachable instead of failing", async () => {
     const { app } = setup({ aiClient: { health: async () => Promise.reject(new Error("down")) } });
     const res = await request(app).get("/api/status");
