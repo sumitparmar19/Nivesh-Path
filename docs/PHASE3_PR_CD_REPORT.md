@@ -116,4 +116,4 @@ No existing test was edited.
 
 ## 6. Resume bullets (measured only)
 - Instrumented a Node/Express + Python/FastAPI app with OpenTelemetry. One trade is one distributed trace (94 spans across both services, Postgres included), metrics feed a 15-panel Grafana dashboard and 3 alerts, and a redacting exporter is proven by tests to drop tokens, keys and emails. Memory cost measured at about 8 MB per instance.
-- Built a k6 load-test pipeline in GitHub Actions that boots the full 7-service stack. Measured read-path p95 latency of 9.6 ms with Redis caching vs 22.3 ms without (2.3×) at a 99.7% cache hit rate, and 0 errors across about 42,000 requests including concurrent Postgres-backed orders.
+- Built a k6 load-test pipeline in GitHub Actions that boots the full 6-service stack (web, AI, Postgres, MongoDB, Redis, Prometheus). Measured read-path p95 latency of 9.6 ms with Redis caching vs 22.3 ms without (2.3×) at a 99.7% cache hit rate, and 0 errors across about 42,000 requests including concurrent Postgres-backed orders.
