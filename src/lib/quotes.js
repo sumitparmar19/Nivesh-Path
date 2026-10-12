@@ -1,5 +1,6 @@
 // Finnhub quote client with caching, so the API key never leaves the server.
 const { config } = require("../config");
+const { logger } = require("./logger");
 
 const SYMBOL_RE = /^[A-Z.]{1,10}$/;
 
@@ -41,7 +42,7 @@ function createQuoteService({ cache, fetchImpl = fetch, apiKey = config.finnhubA
     const out = {};
     results.forEach((r, i) => {
       if (r.status === "fulfilled" && r.value && r.value.c) out[symbols[i]] = r.value;
-      else console.error(`Quote fetch failed for ${symbols[i]}:`, r.reason ? r.reason.message : r.value);
+      else logger.error("Quote fetch failed for %s: %s", symbols[i], r.reason ? r.reason.message : r.value);
     });
     return out;
   }

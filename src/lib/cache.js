@@ -1,5 +1,9 @@
-// Small TTL cache: uses Redis when REDIS_URL is set, otherwise an in-process Map.
+// Small TTL cache: uses Redis when REDIS_URL is set, otherwise an in-process Map. Every lookup is counted as a hit
+// or miss per cache (the key prefix, e.g. "quote" or "metrics") for the Grafana dashboard. CACHE_DISABLED=1 turns
+// caching off entirely (every lookup misses): the load test's "cache off" run uses it to measure what the cache saves.
 const { config } = require("../config");
+const { logger } = require("./logger");
+const { recordCache } = require("./metrics");
 
 class MemoryCache {
   constructor() {
@@ -25,9 +29,9 @@ class RedisCache {
   constructor(url) {
     const { createClient } = require("redis");
     this.client = createClient({ url });
-    this.client.on("error", (err) => console.error("Redis error:", err.message));
+    this.client.on("error", (err) => logger.error("Redis error: %s", err.message));
     this.ready = this.client.connect().catch((err) => {
-      console.error("Redis unavailable, caching disabled:", err.message);
+      logger.error("Redis unavailable, caching disabled: %s", err.message);
       this.client = null;
     });
   }
@@ -46,8 +50,31 @@ class RedisCache {
   }
 }
 
-function createCache() {
-  return config.redisUrl ? new RedisCache(config.redisUrl) : new MemoryCache();
+/** No caching at all: every get misses, every set is dropped (CACHE_DISABLED=1). */
+class NullCache {
+  async get() {
+    return null;
+  }
+
+  async set() {}
 }
 
-module.exports = { createCache, MemoryCache };
+/** Wraps a cache so each get() records a hit or miss for its key prefix. */
+function countedCache(inner) {
+  return {
+    inner,
+    async get(key) {
+      const value = await inner.get(key);
+      recordCache(String(key).split(":")[0] || "other", value !== null && value !== undefined);
+      return value;
+    },
+    set: (key, value, ttl) => inner.set(key, value, ttl),
+  };
+}
+
+function createCache({ disabled = process.env.CACHE_DISABLED === "1" } = {}) {
+  if (disabled) return countedCache(new NullCache());
+  return countedCache(config.redisUrl ? new RedisCache(config.redisUrl) : new MemoryCache());
+}
+
+module.exports = { createCache, MemoryCache, NullCache, countedCache };

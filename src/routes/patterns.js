@@ -6,6 +6,7 @@ const mongoose = require("mongoose");
 const rateLimit = require("express-rate-limit");
 const { requireAuth } = require("../middleware/auth");
 const rules = require("../lib/behaviorRules");
+const { logger } = require("../lib/logger");
 
 const TYPES = ["panic_sell", "fomo_buy", "overconcentration"];
 const SEVERITIES = ["low", "medium", "high"];
@@ -206,7 +207,7 @@ function patternRoutes({ BehaviorEvent, ledger, aiClient, detector }) {
       try {
         res.json({ ...(await aiClient.analyzeBehavior(req.user.id, payload)), stale: false });
       } catch (err) {
-        console.warn("[patterns/analyze] AI service unavailable:", err.message);
+        logger.warn("[patterns/analyze] AI service unavailable: %s", err.message);
         res.status(503).json({ error: "The AI coach is unavailable right now. Please try again in a minute." });
       }
     } catch (err) {

@@ -26,6 +26,8 @@ const { createMailer } = require("./lib/mailer");
 const { createMarketData } = require("./lib/marketData");
 const { mountSpa, mountSpaNotFound } = require("./spa");
 const { fakeFetch, FAKE_API_KEY } = require("./lib/fakeMarket");
+const { logger, requestLog } = require("./lib/logger");
+const { httpMetrics, routeOf } = require("./lib/metrics");
 
 const LEGACY_PAGES = {
   "/index.html": "/AAPL.html",
@@ -73,6 +75,9 @@ function createApp(deps = {}) {
 
   const app = express();
   app.disable("x-powered-by");
+  // Request duration by route template (metrics) and one JSON log line per API request. Both no-ops in tests.
+  app.use(httpMetrics);
+  app.use(requestLog(routeOf));
   // CSP is off because the existing pages load scripts/styles from several CDNs inline.
   app.use(helmet({ contentSecurityPolicy: false, crossOriginEmbedderPolicy: false }));
   app.use(cors());
@@ -126,6 +131,7 @@ function createApp(deps = {}) {
   // React app (frontend/dist): enabled routes take over, and the legacy URLs they replace redirect to them.
   app.locals.reactRoutes = mountSpa(app, deps.spa || {});
   app.locals.ledgerStore = ledgerStore;
+  app.locals.aiClient = aiClient;
 
   // Old page URLs (company-name pages, removed marketing pages) keep working via permanent redirects.
   app.get("/", (req, res) => res.redirect(302, "/psk/index.html"));
@@ -139,7 +145,7 @@ function createApp(deps = {}) {
   // eslint-disable-next-line no-unused-vars
   app.use((err, req, res, next) => {
     const status = err.status || 500;
-    if (status >= 500) console.error(err);
+    if (status >= 500) logger.error({ err }, "unhandled error");
     if (deps.onError) deps.onError(err);
     res.status(status).json({ error: status >= 500 && !err.status ? "Internal server error" : err.message });
   });

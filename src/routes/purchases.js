@@ -3,6 +3,8 @@
 const express = require("express");
 const { createLedger } = require("../lib/ledger");
 const { requireAuth } = require("../middleware/auth");
+const { logger } = require("../lib/logger");
+const { recordTrade } = require("../lib/metrics");
 
 function purchaseRoutes({ ledger: sharedLedger, Purchase, User, quotes, aiClient, BehaviorEvent, detector }) {
   const router = express.Router();
@@ -24,6 +26,7 @@ function purchaseRoutes({ ledger: sharedLedger, Purchase, User, quotes, aiClient
       const tx = result.transaction;
 
       // A retry of an order that already went through: same answer, nothing new to remember or check.
+      recordTrade(tx.transactionType, result.replayed ? "replayed" : "filled");
       if (result.replayed) {
         return res.status(200).json({ success: true, newBalance: result.newBalance, transaction: tx, purchase: tx, behavior: null, replayed: true });
       }
@@ -34,7 +37,7 @@ function purchaseRoutes({ ledger: sharedLedger, Purchase, User, quotes, aiClient
           .ingestTransactions(req.user.id, [
             { symbol: tx.name, quantity: tx.quantity, price: tx.price, transaction_type: tx.transactionType, timestamp: tx.timestamp },
           ])
-          .catch((err) => console.warn("AI ingest skipped:", err.message));
+          .catch((err) => logger.warn("AI ingest skipped: %s", err.message));
       }
 
       // Behavioral Mirror: wait at most ~1.5s so the trade panel can show a note; detection keeps running (and
@@ -86,10 +89,10 @@ function purchaseRoutes({ ledger: sharedLedger, Purchase, User, quotes, aiClient
       const result = await ledger.reset(req.user.id);
       if (BehaviorEvent) {
         // Their trades are gone, so are the patterns found in them (best effort: never fail the reset).
-        await BehaviorEvent.deleteMany({ userId: req.user.id }).catch((err) => console.warn("Patterns not cleared:", err.message));
+        await BehaviorEvent.deleteMany({ userId: req.user.id }).catch((err) => logger.warn("Patterns not cleared: %s", err.message));
       }
       if (aiClient && aiClient.deleteMemory) {
-        aiClient.deleteMemory(req.user.id).catch((err) => console.warn("AI memory not cleared:", err.message));
+        aiClient.deleteMemory(req.user.id).catch((err) => logger.warn("AI memory not cleared: %s", err.message));
       }
       return res.json({ success: true, ...result });
     } catch (err) {

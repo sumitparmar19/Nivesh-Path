@@ -4,6 +4,7 @@ const bcrypt = require("bcryptjs");
 const jwt = require("jsonwebtoken");
 const { config } = require("../config");
 const { requireAuth } = require("../middleware/auth");
+const { logger } = require("../lib/logger");
 
 function publicUser(user) {
   return {
@@ -49,7 +50,7 @@ function authRoutes({ User, ledgerStore }) {
       const user = await User.create({ name, email: normalizedEmail, mobile, passwordHash });
       return res.status(201).json({ message: "Registration successful", token: signToken(user), user: publicUser(user) });
     } catch (err) {
-      console.error("Register error:", err);
+      logger.error({ err }, "Register error");
       return res.status(500).json({ message: "Registration failed" });
     }
   });
@@ -66,7 +67,7 @@ function authRoutes({ User, ledgerStore }) {
 
       return res.json({ token: signToken(user), user: publicUser(user), ...publicUser(user) });
     } catch (err) {
-      console.error("Login error:", err);
+      logger.error({ err }, "Login error");
       return res.status(500).json({ message: "Login failed" });
     }
   });
