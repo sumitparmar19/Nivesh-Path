@@ -75,7 +75,12 @@ function start() {
   });
   metrics.setGlobalMeterProvider(meterProvider);
 
-  const loggerProvider = new LoggerProvider({ resource, processors: on("LOGS") ? [new BatchLogRecordProcessor(new OTLPLogExporter())] : [] });
+  // sdk-logs 0.2xx takes an options object ({ exporter }); passing the exporter itself left it undefined and every
+  // log batch threw "Cannot read properties of undefined (reading 'export')" (tests/telemetryLogExport.test.js).
+  const loggerProvider = new LoggerProvider({
+    resource,
+    processors: on("LOGS") ? [new BatchLogRecordProcessor({ exporter: new OTLPLogExporter() })] : [],
+  });
   logs.setGlobalLoggerProvider(loggerProvider);
 
   const ignored = (path) => path === "/health" || path.startsWith("/assets/") || /\.(js|css|png|svg|ico|woff2?|map)$/.test(path);

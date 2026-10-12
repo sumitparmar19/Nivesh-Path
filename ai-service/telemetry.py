@@ -161,6 +161,21 @@ def record_llm_call(model: str, seconds: float, outcome: str, input_tokens: int 
 _providers: list[Any] = []
 
 
+def log_provider(resource: Any) -> Any:
+    """A LoggerProvider that batches log records to the OTLP endpoint (OTEL_EXPORTER_OTLP_ENDPOINT + /v1/logs).
+
+    Kept separate so a test can send a real batch through exactly what setup() uses
+    (tests/test_telemetry.py::test_a_real_log_batch_reaches_the_otlp_endpoint).
+    """
+    from opentelemetry.exporter.otlp.proto.http._log_exporter import OTLPLogExporter
+    from opentelemetry.sdk._logs import LoggerProvider
+    from opentelemetry.sdk._logs.export import BatchLogRecordProcessor
+
+    provider = LoggerProvider(resource=resource)
+    provider.add_log_record_processor(BatchLogRecordProcessor(OTLPLogExporter()))
+    return provider
+
+
 def setup(app: Any) -> bool:
     """Install exporters and instrument the FastAPI app, httpx and pymongo. Returns whether telemetry is on.
 
@@ -170,14 +185,12 @@ def setup(app: Any) -> bool:
         return False
     try:
         from opentelemetry._logs import set_logger_provider
-        from opentelemetry.exporter.otlp.proto.http._log_exporter import OTLPLogExporter
         from opentelemetry.exporter.otlp.proto.http.metric_exporter import OTLPMetricExporter
         from opentelemetry.exporter.otlp.proto.http.trace_exporter import OTLPSpanExporter
         from opentelemetry.instrumentation.fastapi import FastAPIInstrumentor
         from opentelemetry.instrumentation.httpx import HTTPXClientInstrumentor
         from opentelemetry.instrumentation.pymongo import PymongoInstrumentor
-        from opentelemetry.sdk._logs import LoggerProvider, LoggingHandler
-        from opentelemetry.sdk._logs.export import BatchLogRecordProcessor
+        from opentelemetry.sdk._logs import LoggingHandler
         from opentelemetry.sdk.metrics import MeterProvider
         from opentelemetry.sdk.metrics.export import PeriodicExportingMetricReader
         from opentelemetry.sdk.resources import Resource
@@ -198,8 +211,7 @@ def setup(app: Any) -> bool:
         metrics.set_meter_provider(meter_provider)
         _instruments.clear()
 
-        logger_provider = LoggerProvider(resource=resource)
-        logger_provider.add_log_record_processor(BatchLogRecordProcessor(OTLPLogExporter()))
+        logger_provider = log_provider(resource)
         set_logger_provider(logger_provider)
         logging.getLogger().addHandler(LoggingHandler(level=logging.INFO, logger_provider=logger_provider))
 

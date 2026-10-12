@@ -116,6 +116,16 @@ Create each in Grafana: **Alerting → Alert rules → + New alert rule**.
 - **Memory cost on the web service.** Resident memory after 400 requests plus one metric export, two runs each, telemetry **off: 104 MB / 104 MB**; **on: 111 MB / 112 MB**. That's about **+8 MB**, well below the 40–60 MB I estimated in the review, because only the instrumentations the app uses are loaded and there is no gRPC.
 - **Shutdown.** It flushes the exporters: SIGTERM to exit took 1.8 s.
 
+## 5b. Fixed after going live: log export (Oct 12, 2026)
+- **Symptom on the live web service:** after almost every burst of requests, `TypeError: Cannot read properties of undefined (reading 'export')` from `BatchLogRecordProcessorBase`. Traces and metrics were fine; **no log line reached Grafana**.
+- **Cause:** `@opentelemetry/sdk-logs` 0.2xx builds its batch processor from an options object (`{ exporter }`). `src/telemetry.js` passed the exporter itself, so the processor's exporter was `undefined`.
+- **Why the tests missed it:** they checked scrubbing on in-memory spans and logs, but never pushed a log batch through the real processor and exporter.
+- **Fix:** `new BatchLogRecordProcessor({ exporter: new OTLPLogExporter() })`.
+- **New tests:**
+  - **Node:** `tests/telemetryLogExport.test.js` sends a real batch from a child `node` process (as in production) to a local OTLP receiver. It checks that a direct log record and a line from the app's pino logger both arrive, with the email already scrubbed, and that no export error occurs. With the old line it fails with the exact live error.
+  - **AI service:** its log pipeline was already correct. `test_a_real_log_batch_reaches_the_otlp_endpoint` now proves it with a real HTTP receiver.
+- **Workaround to undo:** if `OTEL_LOGS_EXPORTER=none` was set on web, delete it after this fix is deployed. Logs then appear in Grafana → Explore → the `…-logs` (Loki) data source, `service_name="nivesh-web"`.
+
 ## 6. Limits
 - **Not tested live yet.** I couldn't reach Grafana Cloud from here. The live checks are steps 4–6 above, plus the alert test.
 - **New counter series may read 0 on the dashboard.** Prometheus `increase()`/`rate()` ignore a brand-new counter series' first value, so the very first detection of a new type can be missing from a panel until it happens again.
