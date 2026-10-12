@@ -961,6 +961,85 @@ describe("internal API (/internal/*, AI service -> web)", () => {
     expect((await request(noToken).get("/internal/demo-fault")).status).toBe(404);
   });
 
+  describe("nightly job routes (/internal/jobs/*, PR F)", () => {
+    const { createMemorySnapshotStore } = require("../src/lib/priceSnapshots");
+    const afterClose = Date.parse("2026-10-12T20:30:00Z"); // 4:30 pm New York
+    const tradedAt = Math.floor(Date.parse("2026-10-12T20:00:00Z") / 1000);
+    function jobsApp({ quote = { c: 187.25, t: tradedAt }, snapshots = createMemorySnapshotStore(), checkAllUsers } = {}) {
+      const detector = { detectWithin: async () => [], checkPrices: async () => [], checkAllUsers: checkAllUsers || (async () => ({ users: 2, created: 1, failed: 0 })) };
+      const { app, deps } = setup({ internalToken: TOKEN, snapshots, detector, quotes: { getQuote: async () => quote, getQuotes: async () => ({}) } });
+      return { app, deps, snapshots };
+    }
+    const auth = (r) => r.set("X-Internal-Token", TOKEN);
+
+    test("all three need the token (404 without it, like everything under /internal)", async () => {
+      const { app } = jobsApp();
+      expect((await request(app).get("/internal/jobs/held-tickers")).status).toBe(404);
+      expect((await request(app).post("/internal/jobs/snapshots/AAPL")).status).toBe(404);
+      expect((await request(app).post("/internal/jobs/concentration-check").set("X-Internal-Token", "nope")).status).toBe(404);
+    });
+
+    test("held-tickers lists stocks someone still holds", async () => {
+      const { app, deps } = jobsApp();
+      await deps.Purchase.create({ userId: "a".repeat(24), name: "TSLA", price: 10, quantity: 2, transactionType: "buy" });
+      await deps.Purchase.create({ userId: "b".repeat(24), name: "AAPL", price: 10, quantity: 1, transactionType: "buy" });
+      await deps.Purchase.create({ userId: "b".repeat(24), name: "AAPL", price: 11, quantity: 1, transactionType: "sell" });
+      const res = await auth(request(app).get("/internal/jobs/held-tickers"));
+      expect(res.status).toBe(200);
+      expect(res.body).toEqual({ symbols: ["TSLA"] });
+    });
+
+    test("snapshot saves the day's close once; a repeat run updates the same day", async () => {
+      const { app, snapshots } = jobsApp();
+      const realNow = Date.now;
+      Date.now = () => afterClose;
+      try {
+        const first = await auth(request(app).post("/internal/jobs/snapshots/aapl"));
+        expect(first.status).toBe(200);
+        expect(first.body).toEqual({ symbol: "AAPL", saved: true, created: true, tradingDate: "2026-10-12", close: 187.25 });
+        const again = await auth(request(app).post("/internal/jobs/snapshots/AAPL"));
+        expect(again.body).toMatchObject({ saved: true, created: false, tradingDate: "2026-10-12" });
+      } finally {
+        Date.now = realNow;
+      }
+      expect(await snapshots.recent("AAPL")).toEqual([{ tradingDate: "2026-10-12", close: 187.25 }]);
+    });
+
+    test("snapshot during market hours is skipped, not saved", async () => {
+      const { app, snapshots } = jobsApp({ quote: { c: 150, t: Math.floor(Date.now() / 1000) } });
+      const realNow = Date.now;
+      Date.now = () => Date.parse("2026-10-12T17:00:00Z"); // 1 pm New York
+      try {
+        const res = await auth(request(app).post("/internal/jobs/snapshots/AAPL"));
+        expect(res.status).toBe(200);
+        expect(res.body.saved).toBe(false);
+        expect(res.body.skipped).toMatch(/market still open/);
+      } finally {
+        Date.now = realNow;
+      }
+      expect(await snapshots.recent("AAPL")).toEqual([]);
+    });
+
+    test("snapshot: bad ticker 400, quote failure 502 (the job retries), no Postgres 503", async () => {
+      expect((await auth(request(jobsApp().app).post("/internal/jobs/snapshots/AAPL1"))).status).toBe(400);
+      const failing = setup({ internalToken: TOKEN, snapshots: createMemorySnapshotStore(), detector: { checkAllUsers: async () => ({}) }, quotes: { getQuote: async () => { const e = new Error("Quote provider returned 429"); e.status = 502; throw e; } } });
+      const res = await auth(request(failing.app).post("/internal/jobs/snapshots/AAPL"));
+      expect(res.status).toBe(502);
+      expect(res.body.error).toMatch(/429/);
+      const noPg = setup({ internalToken: TOKEN, snapshots: null, detector: { checkAllUsers: async () => ({}) } });
+      expect((await auth(request(noPg.app).post("/internal/jobs/snapshots/AAPL"))).status).toBe(503);
+    });
+
+    test("concentration-check runs the detector for every user and returns its counts", async () => {
+      const checkAllUsers = jest.fn(async () => ({ users: 3, created: 2, failed: 0 }));
+      const { app } = jobsApp({ checkAllUsers });
+      const res = await auth(request(app).post("/internal/jobs/concentration-check"));
+      expect(res.status).toBe(200);
+      expect(res.body).toEqual({ users: 3, created: 2, failed: 0 });
+      expect(checkAllUsers).toHaveBeenCalledTimes(1);
+    });
+  });
+
   test("tokensMatch compares in constant time and handles different lengths", () => {
     const { tokensMatch } = require("../src/routes/internal");
     expect(tokensMatch("abc", "abc")).toBe(true);

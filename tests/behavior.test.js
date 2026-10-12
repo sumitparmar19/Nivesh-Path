@@ -213,7 +213,7 @@ describe("behavior detector", () => {
     const { d, BehaviorEvent } = detector({ Purchase, momentum: async () => ({ week52High: 101, fiveDayReturn: 18 }) });
     const out = await d.detect({ userId: "u1", trade: { ...t } });
     expect(out).toHaveLength(1);
-    expect(BehaviorEvent.rows[0]).toMatchObject({ userId: "u1", patternType: "fomo_buy", severity: "high", symbol: "HYPE", tradeId: t._id, ruleVersion: 2 });
+    expect(BehaviorEvent.rows[0]).toMatchObject({ userId: "u1", patternType: "fomo_buy", severity: "high", symbol: "HYPE", tradeId: t._id, ruleVersion: rules.RULE_VERSION });
     expect(BehaviorEvent.rows[0].facts).toMatchObject({ percentFromHigh: 0.99, quantity: 3 });
     expect(Purchase.rows[0].behaviorCheckedAt).toBeInstanceOf(Date);
   });
@@ -313,7 +313,7 @@ describe("behavior rule clean-up", () => {
     const { Purchase, BehaviorEvent } = await seed();
     const counts = await migrateBehaviorEvents({ BehaviorEvent, Purchase, log: quiet });
     expect(counts).toMatchObject({ checked: 3, deleted: 1, regraded: 1, unchanged: 1 });
-    expect(BehaviorEvent.rows.map((e) => [e.symbol, e.severity, e.ruleVersion])).toEqual([["HYPE", "high", 2], ["NVDA", "low", 2]]);
+    expect(BehaviorEvent.rows.map((e) => [e.symbol, e.severity, e.ruleVersion])).toEqual([["HYPE", "high", rules.RULE_VERSION], ["NVDA", "low", rules.RULE_VERSION]]);
   });
 
   test("change 4: the trade of a deleted false alarm stays as a clean checked trade; pre-2C trades stay unchecked", async () => {

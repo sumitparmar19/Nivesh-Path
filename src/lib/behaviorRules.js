@@ -9,7 +9,33 @@ const round2 = (n) => Math.round(n * 100) / 100;
 const isNum = (v) => typeof v === "number" && Number.isFinite(v);
 
 // Rule version stored on every event; the start-up clean-up re-checks older events with these rules.
-const RULE_VERSION = 2;
+// v3 (PR F): the 5-day move comes from our own daily closes once enough are stored (fiveDayFromSnapshots),
+// else from Finnhub as before. Thresholds are unchanged, so re-grading v2 events changes nothing.
+const RULE_VERSION = 3;
+
+// Rule v3: a 5-trading-day move needs 6 closes (the latest and the one 5 sessions earlier). The newest close must
+// be recent (a weekend plus a holiday is 4 days; 5 leaves one day of slack), and the 6 must not span a missed job
+// day (5 sessions + a weekend + a holiday = 8 calendar days). Otherwise the detector falls back to Finnhub.
+const SNAPSHOT_CLOSES_NEEDED = 6;
+const SNAPSHOT_MAX_AGE_DAYS = 5;
+const SNAPSHOT_MAX_SPAN_DAYS = 8;
+const DAY_MS = 24 * 60 * 60 * 1000;
+const dayNumber = (isoDate) => Math.floor(Date.parse(`${isoDate}T00:00:00Z`) / DAY_MS);
+
+/**
+ * The 5-day return (%) from stored daily closes, oldest first ({ tradingDate: "YYYY-MM-DD", close }), or null
+ * when there aren't enough recent, unbroken closes. `today` is the New York date of "now" (YYYY-MM-DD).
+ */
+function fiveDayFromSnapshots(rows, today) {
+  if (!Array.isArray(rows) || rows.length < SNAPSHOT_CLOSES_NEEDED || typeof today !== "string") return null;
+  const last6 = rows.slice(-SNAPSHOT_CLOSES_NEEDED);
+  if (!last6.every((r) => r && isNum(r.close) && r.close > 0 && typeof r.tradingDate === "string")) return null;
+  const first = last6[0];
+  const latest = last6[last6.length - 1];
+  if (dayNumber(today) - dayNumber(latest.tradingDate) > SNAPSHOT_MAX_AGE_DAYS) return null;
+  if (dayNumber(latest.tradingDate) - dayNumber(first.tradingDate) > SNAPSHOT_MAX_SPAN_DAYS) return null;
+  return { fiveDayReturn: round2(((latest.close - first.close) / first.close) * 100), asOf: latest.tradingDate };
+}
 
 // Daily figures (5-day return) can miss today's move, so both are used: the drop is the larger of the two
 // drops and the run-up the larger of the two rises. Taking the larger one never counts today twice.
@@ -23,7 +49,7 @@ function moves({ fiveDayReturn, todayChange }) {
  * Panic sell: selling at a loss (below your average cost) after the stock fell at least 5% in 5 days or
  * today. Selling at or above cost after a dip is taking profit, not panic.
  */
-function panicSell({ side, symbol, price, fiveDayReturn, todayChange, avgCost, quantity }) {
+function panicSell({ side, symbol, price, fiveDayReturn, todayChange, avgCost, quantity, fiveDaySource }) {
   if (side !== "sell" || !isNum(price)) return null;
   const { drop } = moves({ fiveDayReturn, todayChange });
   if (drop === null || drop < 5) return null;
@@ -36,6 +62,7 @@ function panicSell({ side, symbol, price, fiveDayReturn, todayChange, avgCost, q
     facts.vsCostPct = round2(((price - avgCost) / avgCost) * 100); // negative = sold at a loss
   }
   if (isNum(quantity)) facts.quantity = quantity;
+  if (fiveDaySource) facts.fiveDaySource = fiveDaySource; // v3: "snapshots" (our daily closes) or "finnhub"
   return { patternType: "panic_sell", severity, symbol, facts };
 }
 
@@ -44,7 +71,7 @@ function panicSell({ side, symbol, price, fiveDayReturn, todayChange, avgCost, q
  * 52-week high:  run-up >= 15% and within 2% of the high -> high;  >= 10% and within 3% -> medium;
  * >= 5% and within 5% -> low;  >= 15% even further from the high -> low (still chasing a fast move).
  */
-function fomoBuy({ side, symbol, price, week52High, dayHigh, fiveDayReturn, todayChange, quantity }) {
+function fomoBuy({ side, symbol, price, week52High, dayHigh, fiveDayReturn, todayChange, quantity, fiveDaySource }) {
   if (side !== "buy" || !isNum(price) || price <= 0) return null;
   const { runUp } = moves({ fiveDayReturn, todayChange });
   if (runUp === null || runUp < 5) return null;
@@ -64,6 +91,7 @@ function fomoBuy({ side, symbol, price, week52High, dayHigh, fiveDayReturn, toda
     fiveDayReturn: isNum(fiveDayReturn) ? round2(fiveDayReturn) : null, todayChange: isNum(todayChange) ? round2(todayChange) : null,
   };
   if (isNum(quantity)) facts.quantity = quantity;
+  if (fiveDaySource) facts.fiveDaySource = fiveDaySource;
   return { patternType: "fomo_buy", severity, symbol, facts };
 }
 
@@ -74,10 +102,10 @@ function fomoBuy({ side, symbol, price, week52High, dayHigh, fiveDayReturn, toda
 function regrade(event) {
   const f = event.facts || {};
   if (event.patternType === "panic_sell") {
-    return panicSell({ side: "sell", symbol: event.symbol, price: f.price, fiveDayReturn: f.fiveDayReturn, todayChange: f.todayChange, avgCost: f.avgCost, quantity: f.quantity });
+    return panicSell({ side: "sell", symbol: event.symbol, price: f.price, fiveDayReturn: f.fiveDayReturn, todayChange: f.todayChange, avgCost: f.avgCost, quantity: f.quantity, fiveDaySource: f.fiveDaySource });
   }
   if (event.patternType === "fomo_buy") {
-    return fomoBuy({ side: "buy", symbol: event.symbol, price: f.price, week52High: f.week52High, fiveDayReturn: f.fiveDayReturn, todayChange: f.todayChange, quantity: f.quantity });
+    return fomoBuy({ side: "buy", symbol: event.symbol, price: f.price, week52High: f.week52High, fiveDayReturn: f.fiveDayReturn, todayChange: f.todayChange, quantity: f.quantity, fiveDaySource: f.fiveDaySource });
   }
   return { patternType: event.patternType, severity: event.severity, symbol: event.symbol, facts: f };
 }
@@ -144,4 +172,7 @@ function diversification(largestPercent) {
   return Math.max(0, Math.min(100, Math.round(100 - (largestPercent || 0))));
 }
 
-module.exports = { panicSell, fomoBuy, regrade, concentration, shouldRecordConcentration, scores, diversification, SEVERITY_RANK, CONCENTRATION_LIMIT, RULE_VERSION };
+module.exports = {
+  panicSell, fomoBuy, regrade, concentration, shouldRecordConcentration, scores, diversification, fiveDayFromSnapshots,
+  SEVERITY_RANK, CONCENTRATION_LIMIT, RULE_VERSION, SNAPSHOT_CLOSES_NEEDED, SNAPSHOT_MAX_AGE_DAYS, SNAPSHOT_MAX_SPAN_DAYS,
+};

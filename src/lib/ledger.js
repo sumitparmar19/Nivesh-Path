@@ -108,13 +108,22 @@ function createLedger({ store, User, Purchase, quotes, maintenance = () => false
     return buildHoldings(await ledgerStore.listTrades(userId, { order: "asc" }));
   }
 
+  /** Tickers that at least one user holds now (net shares > 0), sorted: what the nightly job snapshots. */
+  async function heldSymbols() {
+    const symbols = new Set();
+    for (const userId of await ledgerStore.usersWithTrades()) {
+      for (const h of await holdings(userId)) if (h.quantity > 0) symbols.add(h.symbol);
+    }
+    return [...symbols].sort();
+  }
+
   // "Start over": delete the user's trades and put the wallet back to $100,000 (serialised with trades).
   async function reset(userId) {
     assertOpen();
     return ledgerStore.resetAccount(String(userId));
   }
 
-  return { execute, summary, holdings, reset, assertOpen, store: ledgerStore };
+  return { execute, summary, holdings, heldSymbols, reset, assertOpen, store: ledgerStore };
 }
 
 module.exports = { createLedger, idempotencyKey, STARTING_CASH, MAX_QUANTITY, MAINTENANCE_MESSAGE, REUSED_KEY_MESSAGE };

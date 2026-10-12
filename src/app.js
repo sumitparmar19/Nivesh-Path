@@ -22,6 +22,8 @@ const { internalRoutes } = require("./routes/internal");
 const { createLedger } = require("./lib/ledger");
 const { createLedgerStore } = require("./lib/ledgerStore");
 const { createBehaviorDetector } = require("./lib/behaviorDetector");
+const { createPgSnapshotStore } = require("./lib/priceSnapshots");
+const { getPrisma } = require("./lib/db");
 const { createMailer } = require("./lib/mailer");
 const { createMarketData } = require("./lib/marketData");
 const { mountSpa, mountSpaNotFound } = require("./spa");
@@ -67,10 +69,16 @@ function createApp(deps = {}) {
   const mailer = deps.mailer || createMailer();
   const BehaviorEvent = deps.BehaviorEvent || require("./models/BehaviorEvent");
   // One ledger for the whole app: MongoDB or Postgres (LEDGER_BACKEND); LEDGER_MAINTENANCE=1 pauses trading.
-  const ledgerStore = deps.ledgerStore || createLedgerStore({ backend: deps.ledgerBackend || config.ledgerBackend, User, Purchase });
+  const ledgerBackend = deps.ledgerBackend || config.ledgerBackend;
+  const ledgerStore = deps.ledgerStore || createLedgerStore({ backend: ledgerBackend, User, Purchase });
   const maintenance = () => (deps.ledgerMaintenance !== undefined ? Boolean(deps.ledgerMaintenance) : process.env.LEDGER_MAINTENANCE === "1");
   const ledger = createLedger({ store: ledgerStore, quotes, maintenance });
-  const detector = deps.detector === undefined ? createBehaviorDetector({ BehaviorEvent, ledgerStore, marketData, ledger }) : deps.detector;
+  // Daily closes (PR F) live next to the Postgres ledger; with the MongoDB ledger there are none (rule v3 then
+  // always falls back to Finnhub's 5-day move, exactly like v2).
+  const snapshots = deps.snapshots !== undefined
+    ? deps.snapshots
+    : ledgerBackend === "postgres" && config.databaseUrl ? createPgSnapshotStore({ prisma: getPrisma() }) : null;
+  const detector = deps.detector === undefined ? createBehaviorDetector({ BehaviorEvent, ledgerStore, marketData, ledger, snapshots }) : deps.detector;
   const internalToken = deps.internalToken !== undefined ? deps.internalToken : config.aiInternalToken;
 
   const app = express();
@@ -120,7 +128,9 @@ function createApp(deps = {}) {
 
   // Service-to-service (AI service -> web): token-only, never a user JWT; 404 unless AI_INTERNAL_TOKEN is set.
   const demoFaults = deps.demoFaults !== undefined ? Boolean(deps.demoFaults) : process.env.DEMO_FAULTS === "1"; // AWS demo only
-  app.use(internalRoutes({ ledgerStore, token: internalToken, demoFaults }));
+  // The nightly job's routes (/internal/jobs/*, PR F) use the same token.
+  const jobs = detector ? { ledger, quotes, snapshots, detector, log: logger } : null;
+  app.use(internalRoutes({ ledgerStore, token: internalToken, demoFaults, jobs }));
 
   app.use(optionalAuth);
   app.use(stockRoutes({ quotes, marketData }));
