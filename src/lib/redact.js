@@ -3,7 +3,7 @@
 // names a credential or header that carries one; in every string value, replace emails, bearer tokens and secret
 // query parameters (Finnhub sends its API key as ?token=...). Request bodies are never recorded in the first place.
 
-const SECRET_KEY_RE = /authorization|cookie|x-internal-token|idempotency-key|password|secret|api[-_]?key|jwt|session|email/i;
+const SECRET_KEY_RE = /authorization|cookie|x[-_]internal[-_]token|idempotency[-_]key|password|secret|api[-_]?key|jwt|session|email/i;
 const EMAIL_RE = /[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\.[A-Za-z]{2,}/g;
 const BEARER_RE = /\b(Bearer|Basic)\s+[A-Za-z0-9._~+/=-]+/gi;
 const SECRET_PARAM_RE = /([?&](?:token|apikey|api_key|key|access_token|password|secret)=)[^&#\s]*/gi;
