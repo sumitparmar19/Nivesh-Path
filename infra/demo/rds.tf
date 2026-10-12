@@ -19,7 +19,7 @@ resource "aws_db_instance" "ledger" {
   #checkov:skip=CKV2_AWS_30:Query logging costs per GB for a short-lived demo database.
   identifier     = "${local.name}-ledger"
   engine         = "postgres"
-  engine_version = "16"
+  engine_version = "18" # same major as production (Neon runs 18); RDS has offered 18 since Nov 2025
   instance_class = var.db_instance_class
 
   allocated_storage = 20
