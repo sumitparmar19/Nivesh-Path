@@ -14,6 +14,7 @@ from __future__ import annotations
 import logging
 import time
 from dataclasses import asdict, dataclass, field
+from datetime import datetime, timezone
 
 from services.mongo_store import TradeStore
 from services.web_trades import TradeSource
@@ -32,6 +33,7 @@ class RebuildReport:
     users: int = 0
     transactions: int = 0
     seconds: float = 0.0
+    finished_at: str | None = None  # ISO 8601 UTC; the counts are from this moment (start-up), not live
     error: str | None = None
     failed_users: list[str] = field(default_factory=list)
 
@@ -78,6 +80,7 @@ def rebuild_vector_index(
         logger.exception("ChromaDB rebuild from MongoDB failed")
         report.status, report.error = "failed", type(exc).__name__
     report.seconds = round(time.monotonic() - started, 3)
+    report.finished_at = datetime.now(timezone.utc).isoformat(timespec="seconds")
     logger.info(
         "ChromaDB rebuild %s: %d users, %d trades in %.2fs",
         report.status, report.users, report.transactions, report.seconds,

@@ -278,7 +278,8 @@ export interface SystemStatus {
     reachable: boolean;
     llmConfigured?: boolean;
     model?: string | null;
-    vectorIndex?: { status: IndexStatus; users: number; transactions: number; seconds: number } | null;
+    /** The AI memory rebuild at the AI service's last start; finishedAt (ISO, UTC) says when the counts were taken. */
+    vectorIndex?: { status: IndexStatus; users: number; transactions: number; seconds: number; finishedAt?: string } | null;
   };
   /** Where cash and trades live (Phase 3 cutover), and whether trading is paused for it. */
   ledger?: { backend: "mongo" | "postgres"; tradingPaused: boolean };
