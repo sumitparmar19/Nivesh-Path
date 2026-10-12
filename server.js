@@ -2,6 +2,8 @@
 // OpenTelemetry must load before anything else so it can instrument http/express/mongodb/redis/fetch (no-op unless
 // OTEL_EXPORTER_OTLP_ENDPOINT is set).
 const telemetry = require("./src/telemetry");
+// AWS demo: RDS hands over host/user/password separately; build DATABASE_URL before config.js reads it.
+require("./src/lib/dbUrl").applyDatabaseUrl(process.env);
 const mongoose = require("mongoose");
 const { config } = require("./src/config");
 const { createApp } = require("./src/app");

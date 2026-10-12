@@ -250,4 +250,4 @@ They are in public history, so deleting the files doesn't help. Only rotating th
 ## 6. Resume bullets (measured only)
 - Moved a paper-trading app's money ledger toward PostgreSQL with Prisma Migrate: `NUMERIC` money, database CHECK constraints and row-level locking (`SELECT … FOR UPDATE`). In CI against real Postgres, 20 concurrent orders across two app instances never overspent: exactly 10 filled and cash ended at $0.00.
 - Added idempotent order submission (Idempotency-Key, unique per user): 5 simultaneous duplicate submissions produce exactly 1 trade, verified in CI. A zero-downtime switch (`LEDGER_BACKEND`, maintenance mode) supports the cutover and rollback.
-- Added full-history secret scanning (gitleaks, checksum-pinned) to CI. It found live database, market-data and payment credentials in an early commit; they were rotated and new leaks now fail the build.
+- Added full-history secret scanning (gitleaks, checksum-pinned) to CI. It found live database, market-data and payment credentials in an early commit, and new leaks now fail the build. (Add "the credentials were rotated" only once Sumit confirms the rotation is done.)
