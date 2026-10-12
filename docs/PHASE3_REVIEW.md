@@ -135,7 +135,7 @@
 - **Bootstrap:** Terraform downloaded inside CloudShell (blocking issue 6). State uses native S3 locking (`use_lockfile`, Terraform ≥ 1.10); no DynamoDB.
 - **One secret → two secrets:**
   - `nivesh-path/demo` (demo stack: Mongo URL, JWT secret, Finnhub, Anthropic, internal token);
-  - `nivesh-path/jobs` (nightly job: Neon URL, Mongo URL, Finnhub).
+  - `nivesh-path/jobs` (nightly job: the web service's internal token and Finnhub only; **updated after the PR B review**: the job reaches data through token-protected `/internal` endpoints, so it holds no database credentials).
   - The demo's **RDS password isn't typed by anyone**: RDS creates and stores it in Secrets Manager itself (`manage_master_user_password`).
   - Two narrow secrets give least privilege: the nightly job can't read the Anthropic key.
 - **MongoDB Atlas network access:**
@@ -255,7 +255,7 @@
 4. **MongoDB Atlas → Network Access:** confirm `0.0.0.0/0` is allowed (or add it).
 5. **Secrets Manager → `nivesh-path/demo` → Retrieve secret value → Edit:**
    - keys `MONGO_URL` (a **separate demo database name** in the same cluster is recommended, so demo test users don't mix with live ones), `JWT_SECRET` (new random value), `FINNHUB_API_KEY`, `ANTHROPIC_API_KEY`, `AI_INTERNAL_TOKEN` (new random value);
-   - **`nivesh-path/jobs`:** `DATABASE_URL` (Neon pooled), `MONGO_URL` (live), `FINNHUB_API_KEY`.
+   - **`nivesh-path/jobs`:** `AI_INTERNAL_TOKEN` (same value as the live site) and `FINNHUB_API_KEY`. No database URLs (decided in the PR B review).
 6. **Confirm the SNS email** sent to the address used at bootstrap.
 7. Optional: **ACM DNS record** at Namecheap for `aws.<domain>` (only once the domain exists).
 

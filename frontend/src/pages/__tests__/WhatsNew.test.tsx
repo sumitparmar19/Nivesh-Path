@@ -43,4 +43,15 @@ describe("What's new", () => {
     open();
     expect(screen.getByText("Pre-trade check")).toBeInTheDocument(); // 2C shipped; 2D is next on the roadmap
   });
+
+  it("shows which ledger holds the money, and a paused-trading warning during the cutover", async () => {
+    mockApi({ "GET /api/status": { ...OK, ledger: { backend: "postgres", tradingPaused: false } } });
+    const view = open();
+    expect(await within(await screen.findByTestId("status-list")).findByText("PostgreSQL (Neon)")).toBeInTheDocument();
+    view.unmount();
+    mockApi({ "GET /api/status": { ...OK, ledger: { backend: "mongo", tradingPaused: true } } });
+    open();
+    expect(await screen.findByText("MongoDB · trading paused for an upgrade")).toBeInTheDocument();
+    expect(screen.getByText("Partly degraded")).toBeInTheDocument();
+  });
 });

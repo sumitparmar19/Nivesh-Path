@@ -142,7 +142,8 @@ Phase 3 plan and decisions: `docs/PHASE3_REVIEW.md` (D1-D10 approved; D10 = MIT)
 - **Schema** (`prisma/`): `accounts` (cash NUMERIC(14,2)) + `trades` (24-hex ObjectId ids, INTEGER whole shares, price
   NUMERIC(14,4)); CHECK constraints live in the migration SQL. Users/auth/events stay in MongoDB (D4).
 - **Idempotency-Key** header (React `TradePanel`, legacy `trade.js`): reused only while the same order is retried after an
-  unclear failure; a replay returns 200 + `replayed: true` and skips detection and AI ingest. Unique per (user, key).
+  unclear failure; a replay returns 200 + `replayed: true` and skips detection and AI ingest; the same key with a
+  different order is 422 (review decision Q3). Unique per (user, key).
 - **`LEDGER_MAINTENANCE=1`**: trades, reset and account delete -> 503; reads keep working (for the PR B cutover).
 - **`/internal/trades*`** (Node): token-only (`AI_INTERNAL_TOKEN`, constant-time), 404 for everything when unset/wrong. The
   AI service reads trades there when `WEB_INTERNAL_URL` + token are set (`services/web_trades.py`), else MongoDB.
@@ -150,7 +151,17 @@ Phase 3 plan and decisions: `docs/PHASE3_REVIEW.md` (D1-D10 approved; D10 = MIT)
 - **CI**: Postgres service + `migrate deploy` + schema/migration drift check; `secret-scan` (gitleaks 8.30.1, sha256-pinned,
   full history; `.gitleaksignore` = the first commit's leaked credentials, rotation is on Sumit's list); e2e runs on both
   ledgers; the Docker job migrates, queries and boots the built Alpine image on Postgres.
-- Next: PR B (`scripts/migrate-ledger.js` dry-run/migrate/verify/export-since + `docs/LEDGER_CUTOVER.md`).
+
+### Phase 3 PR B - ledger move (built; cutover is Sumit's live step)
+- `src/lib/ledgerMigration.js` + `scripts/migrate-ledger.js`: dry-run / migrate / verify / export-since. Reads MongoDB only;
+  keeps trade ids; rounds half-up (cash/total 2, price 4) and lists every change; fractional shares and bad rows block.
+- Re-run safe (keyed by Mongo ids); refuses users with Postgres-only trades, refuses while `LEDGER_BACKEND=postgres`, and
+  `--migrate` needs `LEDGER_MAINTENANCE=1` (`--force` for tests). Runbook: `docs/LEDGER_CUTOVER.md`.
+- `/api/status` -> `ledger: {backend, tradingPaused}` shown on What's new ("Money ledger").
+- About a week after the cutover: D-cleanup PR removes the Mongo ledger path (data stays as backup).
+- Review decisions (planning chat, PR B): trades with no timestamp get their ObjectId creation time + a dry-run note
+  (never 1970); **PR F's nightly job goes through token-protected `/internal` endpoints on web** (held tickers, price
+  snapshots, concentration check) so AWS stores no database credentials - no `nivesh-jobs` Atlas user; no copy-back mode.
 
 ### Known risks to handle in later phases
 1. **Cold start** for the Behavioral Mirror (still open after 2C): new users have no history -> add a demo account with realistic

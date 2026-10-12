@@ -18,36 +18,46 @@ The secret scan found real credentials in the repo's **first commit** (`e666745`
 
 They are in public history, so deleting the files doesn't help. Only rotating them does.
 
-**1a. MongoDB Atlas: one user per environment, then delete `dhrumil`** (this covers your additions 1 and 2)
-1. Sign in at cloud.mongodb.com and open the project that holds `niveshpathcluster`.
-   - If you can't find that cluster in any of your projects, it isn't yours (the user name suggests a former teammate's). Tell its owner to delete the user. Then do steps 2–6 on the cluster your live site actually uses.
+**1a. First, find out which cluster your live site uses.** DigitalOcean doesn't show encrypted values, so ask the app:
+- DigitalOcean → your app → **Console** → **web** → run:
+  ```
+  node -e "const u=new URL(process.env.MONGO_URL); console.log(u.username, u.hostname)"
+  ```
+- It prints the user name and the cluster host, never the password, e.g. `dhrumil niveshpathcluster.egrir.mongodb.net`.
+- **If that cluster is in your own Atlas account:** do 1b on it.
+- **If it belongs to someone else** (for example a former teammate's `niveshpathcluster`):
+  - only its owner can delete `dhrumil`. Ask them to.
+  - create a free cluster in **your own** Atlas account, and do 1b there.
+  - moving the data across is a separate step; tell me and I'll write it up. Atlas has a "Migrate data" tool, and `mongodump`/`mongorestore` also work.
+
+**1b. MongoDB Atlas: one user per environment, then delete `dhrumil`** (this covers your additions 1 and 2)
+1. Sign in at cloud.mongodb.com and open the project with the cluster from 1a.
 2. **Find the live database name:** Database → Browse Collections. The live database is the one with the `users`, `purchases` and `behavioral_events` collections. Note its name; it is called `<live-db>` below.
 3. **Create the live user:** Security → Database Access → **Add New Database User**.
    - Authentication: Password. Username: `nivesh-live`.
    - Click **Autogenerate Secure Password**, then **Copy**. Keep it in the clipboard only until step 5.
    - Database User Privileges → **Add Specific Privilege** → role `readWrite`, database `<live-db>`, collection left empty.
    - Click **Add User**.
-4. **Build the new connection string:** Database → **Connect** → Drivers. Copy the string; it looks like `mongodb+srv://<username>:<db_password>@niveshpathcluster.xxxxx.mongodb.net/?retryWrites=true&w=majority...`.
+4. **Build the new connection string:** Database → **Connect** → Drivers. Copy the string; it looks like `mongodb+srv://<username>:<db_password>@<cluster>.xxxxx.mongodb.net/?retryWrites=true&w=majority...`.
    - Replace `<username>` with `nivesh-live` and `<db_password>` with the copied password.
    - Put the database name right after `.net/`, so it reads `.net/<live-db>?retryWrites=...`.
 5. **Update it everywhere it's used:** DigitalOcean → your app → Settings.
    - **web** component → Environment Variables → `MONGO_URL` → Edit → paste → keep **Encrypt** ticked → Save.
    - Do the same on the **ai** component.
    - DigitalOcean redeploys. Wait for "Deployed", then log in to the live site and open Portfolio to confirm your data is there.
+   - Re-run the command from 1a: it should now print `nivesh-live`.
 6. **Revoke the old user:** Database Access → `dhrumil` → **Delete**. Also delete any other old user you don't recognise.
 7. **Demo user (used in Part 2):** add `nivesh-demo` the same way, with `readWrite` on a new database named `niveshpath_demo`.
    - Typing the name is enough; Atlas creates the database on first write.
    - Save the password in AWS Secrets Manager in Part 2, not anywhere else.
-8. **Jobs user (used in PR F):** add `nivesh-jobs` with `readWrite` on `niveshpath_jobs` only, as you asked.
-   - With that scope, the nightly job can't write live users' Behavioral Mirror events directly. In PR F I'll have it send them through the web service's token-protected internal API instead, which also keeps the rule code in one place (Node).
-   - If you'd rather give `nivesh-jobs` access to the live database, tell me before PR F.
+8. **No jobs user** (decided in review, Q1). The nightly job (PR F) will talk only to the web service's token-protected internal API: list the stocks people hold, save the daily prices, run the concentration check. So AWS holds no database passwords at all, only the internal token and the Finnhub key.
 9. Network Access stays as it is for now. Part 2 changes it.
 
-**1b. Finnhub:** sign in at finnhub.io → Dashboard → API key.
+**1c. Finnhub:** sign in at finnhub.io → Dashboard → API key.
 - Generate a new key, or contact Finnhub support to revoke the old one if your plan has no regenerate option.
 - Put the new key in DigitalOcean → **web** → `FINNHUB_API_KEY` (Encrypt on) → Save.
 
-**1c. Stripe:** dashboard.stripe.com → Developers → API keys → the Secret key row → **⋯ → Roll key** (expire now).
+**1d. Stripe:** dashboard.stripe.com → Developers → API keys → the Secret key row → **⋯ → Roll key** (expire now).
 - The app no longer uses Stripe, so there's nothing to update.
 - If that Stripe account isn't yours, tell its owner.
 
@@ -228,7 +238,7 @@ They are in public history, so deleting the files doesn't help. Only rotating th
 ## 5. Limits, said plainly
 - **I can't reach the live site, Neon or DigitalOcean.** Steps 4–5 are the live verification.
 - **The Mongo store's lock is still per process** (one web instance today). The Postgres store's row lock works across instances; that's one reason for the move.
-- **A replay doesn't compare the order body:** the same key with a different order returns the original trade. The browser only reuses a key for the identical order. Keys never expire (fine at this size).
+- **Reusing a key for a different order** (other ticker, side or share count) is refused with 422 "This order key was already used for a different order." (added in PR B, after review). The browser only reuses a key for the identical order. Keys never expire (fine at this size).
 - **The AI rebuild makes one request per user.** Fine for a small site; I'll paginate if it grows.
 - **`/api/me` overlays the Postgres cash, but login/register/profile-update responses still carry the MongoDB `cashBalance`.** No page shows that field (cash on screen always comes from `/api/portfolio/*`). It goes away in the D-cleanup PR.
 - **After the cutover, "Start over" resets Postgres only.** The pre-cutover MongoDB trades stay as the rollback copy. Account deletion removes both.

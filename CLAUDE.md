@@ -35,7 +35,9 @@ Live: https://nivesh-path-vzeak.ondigitalocean.app (custom domain pending) · Re
 - [x] **Phase 3 PR A** - Postgres ledger foundation (Prisma, ledger store interface, `FOR UPDATE`, Idempotency-Key,
       `LEDGER_MAINTENANCE`, token-only `/internal/trades*` read by the AI service, gitleaks full-history scan, MIT license);
       `LEDGER_BACKEND` still `mongo` on the live site until the PR B cutover
-- [ ] **Phase 3** (plan: `docs/PHASE3_REVIEW.md`) - next PR B ledger move/cutover · C+D observability + k6 · E AWS · F jobs ·
+- [x] **Phase 3 PR B** - `scripts/migrate-ledger.js` (dry-run/migrate/verify/export-since) + `docs/LEDGER_CUTOVER.md`;
+      What's new shows which ledger holds the money. Live cutover is Sumit's step (runbook)
+- [ ] **Phase 3** (plan: `docs/PHASE3_REVIEW.md`) - next · C+D observability + k6 · E AWS · F jobs ·
       G pre-trade check + stress test (2D) · H+I agent + evals
 
 ## Layout
@@ -61,6 +63,7 @@ src/
   lib/ledgerStore.mongo.js # User.cashBalance + `purchases` (per-user in-process lock) - rollback path until retired
   lib/ledgerStore.pg.js    # Prisma: accounts + trades, SELECT ... FOR UPDATE per order, idempotency, Decimal money
   lib/db.js          # lazy shared PrismaClient
+  lib/ledgerMigration.js # MongoDB -> Postgres move: plan (pure), apply (repeat-safe), verify (to the cent), tradesSince
   routes/internal.js # /internal/trades/users, /internal/trades?userId= - X-Internal-Token only (404 otherwise), for the AI
 prisma/              # schema.prisma + migrations (CHECK constraints are hand-added in migration SQL); `npx prisma migrate dev`
   lib/               # cache (Redis or memory), quotes (Finnhub), portfolio math, aiClient
@@ -74,7 +77,8 @@ models/Stock1.js     # Trade model "Purchase": userId, name(=ticker), price, qua
 public/              # LEGACY static UI (rollback while React is live; its URLs 301 to React routes): search.html (Markets), <TICKER>.html stock pages (generated),
                      #   stock.html?symbol= (any ticker), portfolio, transactions, advisor, watchlist, whats-new
 public/psk/pages/    # about (+FAQ), contect (contact form), login, signup, user-dashboard (Account)
-scripts/             # gen-stock-pages.py + stock-page.template.html (regenerate the 12 stock pages), check-finnhub.js
+scripts/             # gen-stock-pages.py + stock-page.template.html (regenerate the 12 stock pages), check-finnhub.js,
+                     #   migrate-ledger.js (cutover tool, see docs/LEDGER_CUTOVER.md), db-check.js (Postgres check)
 public/assets/       # nivesh.css, nivesh.js (shared navbar/sidebar/footer, toasts, NP.authFetch, NP.stocks), trade.js,
                      #   stock-page.js (all stock pages), stock.css
 public/psk/          # landing (index.html), about, contact, login/signup, account (served at /psk/...)
@@ -95,7 +99,8 @@ docs/                # PHASE1_REPORT.md, PHASE2_PLAN.md, DEPLOYMENT.md
 - `POST /api/register` (returns token) · `POST /api/login` (mobile or email) · `GET /api/me`
 - `POST /api/store-purchase` (aliases `/store-purchase`, `/api/trades`): `{symbol, quantity, price, type: "BUY"|"SELL"}`
   -> `{success, newBalance, transaction}`; server prices from Finnhub, 400 on insufficient funds / not enough shares /
-  non-whole quantity; optional `Idempotency-Key` header (8-100 of `[A-Za-z0-9_-]`): a repeat returns 200 `replayed: true`
+  non-whole quantity; optional `Idempotency-Key` header (8-100 of `[A-Za-z0-9_-]`): the same order again returns 200
+  `replayed: true`; the same key with a different order (ticker/side/shares) is 422
 - `GET /internal/trades/users` · `GET /internal/trades?userId=` - service-to-service, `X-Internal-Token` only (404 otherwise)
 - `GET /api/transactions` · `GET /api/portfolio/holdings` · `GET /api/portfolio/cash-balance` (cash, holdings value, total P&L)
 - `POST /api/ai/analyze-portfolio` -> FastAPI with `user_id`; `POST /api/ai/transactions` (FastAPI) indexes trades per user
@@ -121,7 +126,8 @@ docs/                # PHASE1_REPORT.md, PHASE2_PLAN.md, DEPLOYMENT.md
 
 ## Commands
 - Backend: `npm install && npm run dev` (port 3000; `npm install` runs `prisma generate`); tests `npm test`
-  (Postgres suite: `TEST_DATABASE_URL=... npx prisma migrate deploy && TEST_DATABASE_URL=... npm test`); `node scripts/db-check.js`
+  (Postgres suites: `DATABASE_URL=$U DIRECT_URL=$U npx prisma migrate deploy && TEST_DATABASE_URL=$U npm test` with a
+  disposable database `$U`; Jest runs files one at a time because they share it); `node scripts/db-check.js`
 - Frontend: `cd frontend && npm install && npm run dev` (port 5173, proxies /api to :3000); `npm test`, `npm run typecheck`,
   `npm run build` (Express then serves it on :3000); `npm run e2e` against a server started with `FAKE_MARKET_DATA=1`
 - AI service: `cd ai-service && python -m venv .venv && .venv/bin/pip install -r requirements-dev.txt && .venv/bin/uvicorn main:app --port 8001`; tests `.venv/bin/pytest -q`
