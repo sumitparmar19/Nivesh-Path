@@ -22,6 +22,7 @@ on:
       - "loadtest/**"
       - ".github/workflows/loadtest.yml"
       - "docker-compose.loadtest.yml"
+      - "docker-compose.yml" # the stack it boots
 
 permissions:
   contents: read
