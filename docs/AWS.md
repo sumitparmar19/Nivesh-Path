@@ -283,3 +283,80 @@ Correction to my review: it estimated $1.5–2 a day. The price list gives about
 - **The AWS Free plan:** I can't confirm from here that every service used is open to Free-plan accounts. If one isn't, apply fails with a clear AccessDenied/SubscriptionRequired message, and upgrading to the Paid plan keeps the credits.
 - **The in-memory cache is per task.** With 3 web tasks, Finnhub sees up to 3× the calls of one. The load test therefore reads only 4 tickers by default.
 - **Load numbers from AWS will reflect 0.25 vCPU web tasks.** They aren't comparable 1:1 with the CI runner numbers in `PERFORMANCE.md`.
+
+## 8. The nightly job (`infra/jobs`, PR F)
+
+**What it does**, every weekday at 4:30 pm New York, half an hour after the US close (EventBridge Scheduler handles daylight saving):
+1. **List held tickers.** It asks the live web service which stocks anyone holds now.
+2. **Save each one's closing price** into Postgres `price_snapshots` (Neon), one row per stock per day.
+   - Two stocks at a time, with a 2-second pause after each. That keeps it under Finnhub's 60 calls a minute.
+   - A failed stock is retried 4 times with backoff. If it still fails, it's recorded and the others carry on.
+   - A repeat run or a market holiday updates the same day's row instead of adding one.
+3. **Re-check overconcentration for every user,** with the same no-duplicate / re-warn rules as after a trade. A stock that grew past 35% overnight is flagged the next evening, even if the user never opens the app.
+4. **Email on failure.**
+   - Any step failing after retries, or the token being rejected, emails the alert topic and ends the run as failed.
+   - Some closes missing: one email lists them. The concentration check still ran.
+   - A run that hits the 30-minute limit triggers a CloudWatch alarm email.
+
+**Rule v3** (`src/lib/behaviorRules.js`, `fiveDayFromSnapshots`):
+- Once **6 closes** (5 trading days of change) are stored for a stock, the Behavioral Mirror takes its 5-day move from them.
+- Requirements: the newest is at most 5 days old, and the 6 span at most 8 calendar days, so a missed run never passes off a longer window as "5 days".
+- Before that, or if anything is off, it uses Finnhub's daily figure, exactly like v2.
+- Thresholds didn't change. Every event records `fiveDaySource` (`snapshots` / `finnhub`), and the pattern card says when the move came from our closes.
+
+```mermaid
+flowchart LR
+  sched["EventBridge Scheduler<br/>Mon-Fri 16:30 America/New_York"] --> sfn
+  subgraph sfn["Step Functions · nivesh-jobs-nightly"]
+    list["List held tickers"] --> map["For each ticker (2 at a time, 2 s pause):<br/>save today's close · retry ×4"]
+    map --> conc["Concentration check<br/>for every user"]
+    conc --> ok{"any close<br/>missing?"}
+  end
+  list & map & conc -->|"Lambda nivesh-jobs-runner<br/>X-Internal-Token"| web["LIVE web service (DigitalOcean)<br/>/internal/jobs/*"]
+  web --> pg[("Neon Postgres<br/>price_snapshots")]
+  web --> mongo[("MongoDB Atlas<br/>behavioral_events")]
+  web --> finnhub["Finnhub quote"]
+  ok -->|yes| sns["SNS email"]
+  sfn -.->|"failure after retries"| sns
+  secret["Secrets Manager<br/>nivesh-path/jobs: AI_INTERNAL_TOKEN only"] -.-> list
+```
+
+**Why it goes through web and not straight to the databases** (PR B review, Q1):
+- AWS holds **no database credentials and no Finnhub key**, only the internal token.
+- The web service's own code does the work: the same ledger, the same quote cache, the same detector.
+- The Lambda is a small HTTP client (one file) with no dependencies.
+
+**The three web routes,** all token-only (404 for everything else, like the rest of `/internal`):
+
+| Route | Does | Writes |
+|---|---|---|
+| `GET /internal/jobs/held-tickers` | lists tickers with net shares > 0 across all users | nothing |
+| `POST /internal/jobs/snapshots/:symbol` | gets the quote; if the session is over, saves its close for that trading day | one `price_snapshots` row |
+| `POST /internal/jobs/concentration-check` | the concentration rule for every user with trades | Behavioral Mirror events (as after a trade) |
+
+The snapshot route refuses to save while the market is open (before 4:00 pm New York on the quote's own day), so a manual daytime run can't store an intraday price as a close.
+
+### 8.1 Runbook (Sumit)
+Prerequisites: the bootstrap is done (§4.1), and the live site runs the PR F code (merged and deployed).
+1. **Choose the token.** DigitalOcean doesn't show an encrypted value again, so make a new one and put it in three places:
+   - CloudShell: `openssl rand -hex 32` → copy the output.
+   - DigitalOcean → web → `AI_INTERNAL_TOKEN` → paste → Save.
+   - DigitalOcean → ai → `AI_INTERNAL_TOKEN` → the **same** value → Save. Both redeploy.
+   - AWS → Secrets Manager → `nivesh-path/jobs` → Retrieve secret value → **Set secret value** → key `AI_INTERNAL_TOKEN`, the same value → Save.
+
+   No `FINNHUB_API_KEY` is needed here; web fetches the quotes. Leave that key out, or delete it if you added it.
+2. **Apply:** GitHub → Actions → **AWS jobs: nightly job** → Run workflow → action `apply` → **Approve**.
+3. **Run it once now:** the same workflow → action `run-now` → Approve.
+   - The summary shows the held tickers, the closes saved, skipped and failed, and the concentration check's counts.
+   - Run it after 4:00 pm New York. During market hours every close is "skipped", by design.
+4. **Check** (send me the run link and a screenshot): the Behavioral Mirror's pattern list (any new overconcentration note), and the email on a failure.
+5. **Turn it off:** action `destroy` + type `destroy`. The saved closes stay in Neon.
+
+### 8.2 Cost (AWS Price List, us-east-1)
+
+| Item | Unit price | Per month (about 22 weekday runs, about 10 held stocks) |
+|---|---|---|
+| Step Functions (standard) | first 4,000 state transitions free, then $0.000025 each | about 27 transitions a run, about 600 a month: **$0** |
+| Lambda (arm64, 128 MB) | $0.0000002 per request; $0.0000133334 per GB-second | about 260 calls of about 1 s: under $0.001, and inside the free tier anyway |
+| EventBridge Scheduler, CloudWatch logs + 1 alarm, SNS email | free tiers | $0 |
+| Secrets Manager `nivesh-path/jobs` | $0.40 per secret-month | already counted in §6 (always on) |

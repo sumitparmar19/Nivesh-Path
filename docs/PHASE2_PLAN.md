@@ -186,6 +186,14 @@ Phase 3 plan and decisions: `docs/PHASE3_REVIEW.md` (D1-D10 approved; D10 = MIT)
 - The AI memory rebuild status now carries `finished_at`, so What's new shows "at last restart, <time>" (a start-up snapshot, not live).
 - Open: Stripe key roll, Finnhub regenerate, Grafana token swap, dashboard + alerts, AWS bootstrap.
 
+### Phase 3 PR F - nightly job + rule v3 (built; AWS apply is Sumit's step, docs/AWS.md §8)
+- Job: EventBridge Scheduler (Mon-Fri 16:30 America/New_York) -> Step Functions (Map, 2 at a time, retries, per-ticker
+  failures recorded, SNS email) -> one Lambda (infra/jobs/lambda/index.js, no deps) -> web /internal/jobs/*. AWS holds only
+  the internal token (nivesh-path/jobs); web fetches quotes and writes Postgres/Mongo with its own code.
+- `price_snapshots` (Prisma migration, PK symbol+trading_date, CHECKs); `closeFromQuote` refuses intraday prices.
+- Rule v3: `fiveDayFromSnapshots` needs 6 closes, newest <= 5 days old, span <= 8 days; else Finnhub. `facts.fiveDaySource`.
+  Thresholds unchanged, so the start-up clean-up only bumps v2 events to v3.
+
 ### Known risks to handle in later phases
 1. **Cold start** for the Behavioral Mirror (still open after 2C): new users have no history -> add a demo account with realistic
    seeded trades and **CSV import** of real broker history (Robinhood / Webull / Zerodha) in Phase 2C.
