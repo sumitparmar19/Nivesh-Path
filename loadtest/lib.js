@@ -7,7 +7,10 @@ import { check } from "k6";
 export const BASE = __ENV.BASE_URL || "http://localhost:3000";
 export const VUS = Number(__ENV.VUS || 20);
 export const DURATION = __ENV.DURATION || "2m";
-export const SYMBOLS = ["AAPL", "MSFT", "NVDA", "TSLA", "AMZN", "GOOGL", "META", "NFLX", "JPM", "WMT", "XOM", "KO"];
+// SYMBOLS=AAPL,MSFT,... narrows the list: the AWS run uses real Finnhub data (60 calls/minute on the free plan).
+export const SYMBOLS = __ENV.SYMBOLS
+  ? __ENV.SYMBOLS.split(",").map((s) => s.trim().toUpperCase()).filter(Boolean)
+  : ["AAPL", "MSFT", "NVDA", "TSLA", "AMZN", "GOOGL", "META", "NFLX", "JPM", "WMT", "XOM", "KO"];
 
 export const pick = (list) => list[Math.floor(Math.random() * list.length)];
 

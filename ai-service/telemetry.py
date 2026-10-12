@@ -20,7 +20,7 @@ from typing import Any
 from opentelemetry import metrics, trace
 
 SECRET_KEY_RE = re.compile(
-    r"authorization|cookie|x-internal-token|idempotency-key|password|secret|api[-_]?key|jwt|session|email", re.I
+    r"authorization|cookie|x[-_]internal[-_]token|idempotency[-_]key|password|secret|api[-_]?key|jwt|session|email", re.I
 )
 EMAIL_RE = re.compile(r"[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\.[A-Za-z]{2,}")
 BEARER_RE = re.compile(r"\b(Bearer|Basic)\s+[A-Za-z0-9._~+/=-]+", re.I)

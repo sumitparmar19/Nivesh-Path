@@ -1,0 +1,47 @@
+# AWS demo: build, migrate and deploy this commit to an existing demo stack (no infrastructure change).
+# Manual only, main only, aws-demo environment (Sumit approves). Use after "AWS demo: apply + deploy" has run once.
+name: "AWS demo: deploy"
+
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  id-token: write
+
+concurrency:
+  group: aws-demo
+  cancel-in-progress: false
+
+env:
+  TF_VERSION: 1.15.9
+  TF_DIR: infra/demo
+
+jobs:
+  deploy:
+    name: build + migrate + deploy
+    if: github.ref == 'refs/heads/main'
+    runs-on: ubuntu-latest
+    environment: aws-demo
+    timeout-minutes: 40
+    steps:
+      - uses: actions/checkout@v4
+      - uses: hashicorp/setup-terraform@v3
+        with:
+          terraform_version: ${{ env.TF_VERSION }}
+          terraform_wrapper: false
+      - uses: aws-actions/configure-aws-credentials@v4
+        with:
+          role-to-assume: ${{ vars.AWS_ROLE_ARN }}
+          aws-region: ${{ vars.AWS_REGION || 'us-east-1' }}
+          role-duration-seconds: 3600
+      - name: terraform init (outputs only)
+        run: |
+          BUCKET="nivesh-path-tfstate-$(aws sts get-caller-identity --query Account --output text)"
+          terraform -chdir="$TF_DIR" init -input=false -lockfile=readonly -backend-config="bucket=$BUCKET"
+      - name: Build, migrate, deploy
+        env:
+          IMAGE_TAG: ${{ github.sha }}
+        run: infra/scripts/deploy.sh
+      - name: Summary
+        run: echo "Deployed \`${GITHUB_SHA::7}\` to $(terraform -chdir="$TF_DIR" output -raw app_url)" >> "$GITHUB_STEP_SUMMARY"

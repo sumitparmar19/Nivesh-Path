@@ -282,6 +282,8 @@ export interface SystemStatus {
   };
   /** Where cash and trades live (Phase 3 cutover), and whether trading is paused for it. */
   ledger?: { backend: "mongo" | "postgres"; tradingPaused: boolean };
+  /** Set only on the AWS demo stack (DEPLOY_PLATFORM=aws-demo); null on the live site. */
+  platform?: string | null;
   checkedAt: string;
 }
 

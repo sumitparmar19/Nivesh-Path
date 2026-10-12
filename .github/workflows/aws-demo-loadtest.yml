@@ -1,0 +1,113 @@
+# AWS demo: k6 against the load balancer, recording how many web tasks the autoscaler runs (Phase 3, PR E).
+# Manual only, main only, aws-demo environment (Sumit approves; it reads the stack's outputs and ECS service
+# counts with the deploy role). Uses the read mix from loadtest/ with a few tickers only (real Finnhub data on AWS).
+# Results: the run summary (latency table + scaling timeline) and the "aws-loadtest" artifact; docs/PERFORMANCE.md
+# quotes a run and links it.
+name: "AWS demo: load test"
+
+on:
+  workflow_dispatch:
+    inputs:
+      vus:
+        description: "Virtual users (enough to push one 0.25 vCPU web task past 60% CPU)"
+        default: "50"
+      duration:
+        description: "Steady-state duration (scale-out needs about 3 minutes of high CPU)"
+        default: "8m"
+      symbols:
+        description: "Tickers to read (each costs Finnhub calls once per cache period, per task)"
+        default: "AAPL,MSFT,NVDA,TSLA"
+
+permissions:
+  contents: read
+  id-token: write
+
+concurrency:
+  group: aws-demo
+  cancel-in-progress: false
+
+env:
+  TF_VERSION: 1.15.9
+  TF_DIR: infra/demo
+
+jobs:
+  k6:
+    name: k6 read mix against the ALB + scaling timeline
+    if: github.ref == 'refs/heads/main'
+    runs-on: ubuntu-latest
+    environment: aws-demo
+    timeout-minutes: 40
+    steps:
+      - uses: actions/checkout@v4
+      - uses: hashicorp/setup-terraform@v3
+        with:
+          terraform_version: ${{ env.TF_VERSION }}
+          terraform_wrapper: false
+      - uses: aws-actions/configure-aws-credentials@v4
+        with:
+          role-to-assume: ${{ vars.AWS_ROLE_ARN }}
+          aws-region: ${{ vars.AWS_REGION || 'us-east-1' }}
+      - name: Install k6 1.4.0 (checksum-pinned)
+        run: |
+          curl -sSfL -o k6.tgz https://github.com/grafana/k6/releases/download/v1.4.0/k6-v1.4.0-linux-amd64.tar.gz
+          echo "58fa87283f5d5b11bc6824d9204e8a38266c9977f2c4d0a960ce1b5beeaae517  k6.tgz" | sha256sum -c -
+          tar -xzf k6.tgz && sudo mv k6-v1.4.0-linux-amd64/k6 /usr/local/bin/k6
+      - name: Stack outputs
+        id: stack
+        run: |
+          BUCKET="nivesh-path-tfstate-$(aws sts get-caller-identity --query Account --output text)"
+          terraform -chdir="$TF_DIR" init -input=false -lockfile=readonly -backend-config="bucket=$BUCKET" >/dev/null
+          echo "url=$(terraform -chdir="$TF_DIR" output -raw app_url)" >> "$GITHUB_OUTPUT"
+          echo "cluster=$(terraform -chdir="$TF_DIR" output -raw cluster)" >> "$GITHUB_OUTPUT"
+      - name: Run k6 while sampling the web service every 20 s
+        env:
+          URL: ${{ steps.stack.outputs.url }}
+          CLUSTER: ${{ steps.stack.outputs.cluster }}
+          VUS: ${{ inputs.vus }}
+          DURATION: ${{ inputs.duration }}
+          SYMBOLS: ${{ inputs.symbols }}
+        run: |
+          mkdir -p results
+          sample() {
+            while true; do
+              echo "$(date -u +%H:%M:%S) $(aws ecs describe-services --cluster "$CLUSTER" --services web \
+                --query 'services[0].[desiredCount,runningCount]' --output text)" >> results/scaling.txt
+              sleep 20
+            done
+          }
+          sample & SAMPLER=$!
+          set +e
+          k6 run -q -e BASE_URL="$URL" -e VUS="$VUS" -e DURATION="$DURATION" -e SYMBOLS="$SYMBOLS" \
+            --summary-export=results/read-aws.json loadtest/read-mix.js | tee results/read-aws.txt
+          echo "k6 exit code: $?" | tee -a results/read-aws.txt
+          set -e
+          sleep 120 # two more samples' worth after the load stops (scale-in is slower on purpose)
+          kill "$SAMPLER" || true
+      - name: Summary
+        if: always()
+        env:
+          URL: ${{ steps.stack.outputs.url }}
+        run: |
+          {
+            echo "## AWS demo load test"
+            echo "Target: $URL · ${{ inputs.vus }} virtual users · ${{ inputs.duration }} hold after a 20 s ramp-up · 1 s think time · tickers ${{ inputs.symbols }}"
+            echo "Commit: \`${GITHUB_SHA::7}\` · Run: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}"
+            echo
+            if [ -f results/read-aws.json ]; then
+              jq -r '.metrics as $m | "| Requests/s | p50 | p95 | p99 | Error rate | Requests |\n|---|---|---|---|---|---|\n| \($m.http_reqs.rate*10|round/10) | \($m.http_req_duration["p(50)"]*10|round/10) ms | \($m.http_req_duration["p(95)"]*10|round/10) ms | \($m.http_req_duration["p(99)"]*10|round/10) ms | \($m.http_req_failed.value*1000|round/10)% | \($m.http_reqs.count) |"' results/read-aws.json
+            fi
+            echo
+            echo "Web tasks (UTC time, desired, running), sampled every 20 s:"
+            echo '```'
+            cat results/scaling.txt 2>/dev/null || echo "(no samples)"
+            echo '```'
+            if [ -f results/scaling.txt ]; then
+              echo "Most web tasks running: $(awk '{ if ($3 > m) m = $3 } END { print m + 0 }' results/scaling.txt)"
+            fi
+          } | tee -a "$GITHUB_STEP_SUMMARY"
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: aws-loadtest
+          path: results/
+          retention-days: 90

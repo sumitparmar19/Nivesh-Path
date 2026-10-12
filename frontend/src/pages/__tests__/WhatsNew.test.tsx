@@ -54,4 +54,20 @@ describe("What's new", () => {
     expect(await screen.findByText("MongoDB · trading paused for an upgrade")).toBeInTheDocument();
     expect(screen.getByText("Partly degraded")).toBeInTheDocument();
   });
+
+  it("says when the app runs on the AWS demo stack, with RDS as the ledger", async () => {
+    mockApi({ "GET /api/status": { ...OK, platform: "aws-demo", ledger: { backend: "postgres", tradingPaused: false } } });
+    open();
+    const list = await screen.findByTestId("status-list");
+    expect(await within(list).findByText("AWS (demo stack, temporary)")).toBeInTheDocument();
+    expect(within(list).getByText("PostgreSQL (AWS RDS)")).toBeInTheDocument();
+    expect(within(list).queryByText("PostgreSQL (Neon)")).not.toBeInTheDocument();
+  });
+
+  it("shows no hosting row on the live site", async () => {
+    mockApi({ "GET /api/status": { ...OK, platform: null } });
+    open();
+    expect(await screen.findByText("All systems go")).toBeInTheDocument();
+    expect(screen.queryByText("Hosted on")).not.toBeInTheDocument();
+  });
 });

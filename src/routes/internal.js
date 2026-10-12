@@ -3,6 +3,8 @@
 // The web component is public, so these routes only exist when AI_INTERNAL_TOKEN is set, and every request must
 // carry it in X-Internal-Token (compared in constant time). Anything else under /internal is a plain JSON 404,
 // so the routes can't be told apart from missing ones.
+// DEMO_FAULTS=1 (set only in the AWS demo stack, infra/demo) adds GET /internal/demo-fault, which answers 500 on
+// purpose so the CloudWatch 5xx alarm can be tested once; it is behind the same token as everything else here.
 const crypto = require("crypto");
 const express = require("express");
 const rateLimit = require("express-rate-limit");
@@ -28,7 +30,7 @@ function toAiTrade(t) {
   };
 }
 
-function internalRoutes({ ledgerStore, token }) {
+function internalRoutes({ ledgerStore, token, demoFaults = false }) {
   const router = express.Router();
   const notFound = (req, res) => res.status(404).json({ error: "Not found" });
 
@@ -61,6 +63,12 @@ function internalRoutes({ ledgerStore, token }) {
       return next(err);
     }
   });
+
+  if (demoFaults) {
+    router.get("/internal/demo-fault", (req, res) => {
+      res.status(500).json({ error: "Deliberate error for the alarm test (DEMO_FAULTS=1)." });
+    });
+  }
 
   router.use("/internal", notFound);
   return router;

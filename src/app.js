@@ -111,12 +111,15 @@ function createApp(deps = {}) {
       ai,
       // Which store holds the money (no database call: this endpoint is polled, and Neon sleeps when idle).
       ledger: { backend: ledgerStore.kind, tradingPaused: maintenance() },
+      // Set only by the AWS demo stack (infra/demo), so What's new can say the visitor isn't on the live site.
+      platform: process.env.DEPLOY_PLATFORM || null,
       checkedAt: new Date().toISOString(),
     });
   });
 
   // Service-to-service (AI service -> web): token-only, never a user JWT; 404 unless AI_INTERNAL_TOKEN is set.
-  app.use(internalRoutes({ ledgerStore, token: internalToken }));
+  const demoFaults = deps.demoFaults !== undefined ? Boolean(deps.demoFaults) : process.env.DEMO_FAULTS === "1"; // AWS demo only
+  app.use(internalRoutes({ ledgerStore, token: internalToken, demoFaults }));
 
   app.use(optionalAuth);
   app.use(stockRoutes({ quotes, marketData }));

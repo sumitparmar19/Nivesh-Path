@@ -10,9 +10,20 @@ export interface Release {
 
 export const RELEASES: Release[] = [
   {
-    title: "Watched and load-tested",
+    title: "A copy that runs on AWS",
     tag: "Phase 3 · Oct 2026",
     isNew: true,
+    intro: "The whole app can now be started on Amazon Web Services for demos and load tests, then taken down again. This site keeps running where it is; your account and money aren't copied.",
+    points: [
+      ["Built from code.", "Network, load balancer, containers, database and alarms are all described in Terraform and created by an approved GitHub workflow, without any stored cloud passwords."],
+      ["Scales under load.", "The web service adds containers when it gets busy and removes them afterwards; alarms email the owner if errors or slowness last."],
+      ["Clearly labelled.", "On the AWS copy, the status panel below says \"Hosted on: AWS (demo stack, temporary)\", so it can't be mistaken for this site."],
+    ],
+    links: [{ to: "/markets", label: "Go to Markets" }],
+  },
+  {
+    title: "Watched and load-tested",
+    tag: "Phase 3 · Oct 2026",
     intro: "The site now reports how it's doing, and its speed was measured under load. Nothing about your data is shared.",
     points: [
       ["Live monitoring.", "Every request, trade, Behavioral Mirror check and AI call is measured and traced across both services, with alerts if errors, slowness or an AI outage last more than a few minutes."],
