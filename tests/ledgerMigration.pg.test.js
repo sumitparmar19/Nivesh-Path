@@ -72,6 +72,24 @@ describe("ledger move: the plan (no database)", () => {
     expect(p.users[0].notes.join()).toMatch(/stored total 30.01 != price x quantity 30.00/);
   });
 
+  test("a trade with no usable date is not saved as 1970: it gets its id's creation time, and the dry run says so", () => {
+    const u = oid();
+    const id = new Types.ObjectId(Math.floor(Date.UTC(2026, 8, 15, 12) / 1000)).toHexString(); // made 2026-09-15 12:00 UTC
+    const bad = new Types.ObjectId(Math.floor(Date.UTC(2026, 8, 16, 12) / 1000)).toHexString();
+    const p = migration.plan([{ _id: u, cashBalance: 100 }], [
+      { ...trade(u, "AAPL", 1, 10, "buy", 1), _id: id, timestamp: undefined },
+      { ...trade(u, "AAPL", 1, 10, "buy", 1), _id: bad, timestamp: "not a date" },
+    ]);
+    const [a, b] = p.users[0].trades;
+    expect(a.executedAt.toISOString()).toBe("2026-09-15T12:00:00.000Z");
+    expect(b.executedAt.toISOString()).toBe("2026-09-16T12:00:00.000Z");
+    expect(p.users[0].notes).toEqual([
+      `trade ${id}: no timestamp (missing): using the time from its id, 2026-09-15T12:00:00.000Z`,
+      `trade ${bad}: no timestamp ("not a date"): using the time from its id, 2026-09-16T12:00:00.000Z`,
+    ]);
+    expect(p.users[0].trades.every((t) => t.executedAt.getUTCFullYear() !== 1970)).toBe(true);
+  });
+
   test("CLI arguments: dry run by default, --export-since needs a valid time", () => {
     expect(parseArgs([]).mode).toBe("--dry-run");
     expect(parseArgs(["--verify", "--json"])).toMatchObject({ mode: "--verify", json: true });

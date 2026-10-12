@@ -163,6 +163,18 @@ describeDb("Postgres ledger", () => {
       expect(Number((await account(id)).cash)).toBe(99800);
     });
 
+    test("the same key with a different order is a 422: no trade, no charge", async () => {
+      const id = Users.add();
+      const app = makeApp();
+      expect((await buy(app, id, "AAPL", 3, "pg-order-key-1")).status).toBe(201);
+      const different = await buy(app, id, "AAPL", 4, "pg-order-key-1");
+      expect(different.status).toBe(422);
+      expect(different.body.error).toBe("This order key was already used for a different order.");
+      expect((await buy(app, id, "TSLA", 3, "pg-order-key-1")).status).toBe(422);
+      expect(await prisma.trade.count({ where: { userId: id } })).toBe(1);
+      expect(Number((await account(id)).cash)).toBe(99700);
+    });
+
     test("keys are per user, and a malformed key is a 400", async () => {
       const [u1, u2] = [Users.add(), Users.add()];
       const app = makeApp();
