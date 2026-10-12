@@ -1,0 +1,128 @@
+# Grafana-managed alert rules for Nivesh-Path (Phase 3, PR C), in Grafana's alerting provisioning format.
+# Easiest path: create the three rules by hand in Grafana Cloud with these queries (docs/OBSERVABILITY.md, "Alerts").
+# This file is the exact definition, for the Grafana provisioning API or Terraform. Replace
+# PROMETHEUS_DATASOURCE_UID with your stack's Prometheus data source uid (Connections -> Data sources).
+# Every query was checked against Prometheus 3.5 fed by the app's own OTLP metrics (same names as Grafana Cloud).
+apiVersion: 1
+groups:
+- orgId: 1
+  name: nivesh-path
+  folder: Nivesh-Path
+  interval: 1m
+  rules:
+  - uid: nivesh-5xx-rate
+    title: 'Web: 5xx error rate above 2%'
+    condition: C
+    data:
+    - refId: A
+      relativeTimeRange:
+        from: 600
+        to: 0
+      datasourceUid: PROMETHEUS_DATASOURCE_UID
+      model:
+        expr: 100 * (sum(rate(nivesh_http_server_duration_seconds_count{job=~".*nivesh-web",http_response_status_class="5xx"}[5m])) or vector(0)) / clamp_min(sum(rate(nivesh_http_server_duration_seconds_count{job=~".*nivesh-web"}[5m])),
+          1e-9) and on() (sum(rate(nivesh_http_server_duration_seconds_count{job=~".*nivesh-web"}[5m])) > 0.05)
+        instant: true
+        refId: A
+    - refId: B
+      datasourceUid: __expr__
+      model:
+        type: reduce
+        expression: A
+        reducer: last
+        refId: B
+    - refId: C
+      datasourceUid: __expr__
+      model:
+        type: threshold
+        expression: B
+        refId: C
+        conditions:
+        - evaluator:
+            type: gt
+            params:
+            - 2
+    for: 5m
+    noDataState: OK
+    execErrState: Error
+    annotations:
+      summary: More than 2% of web requests returned a 5xx error for 5 minutes (counted only with at least 3 requests a minute).
+    labels:
+      service: nivesh-path
+  - uid: nivesh-p95-latency
+    title: 'Web: p95 latency above 1.5 s'
+    condition: C
+    data:
+    - refId: A
+      relativeTimeRange:
+        from: 600
+        to: 0
+      datasourceUid: PROMETHEUS_DATASOURCE_UID
+      model:
+        expr: histogram_quantile(0.95, sum by (le) (rate(nivesh_http_server_duration_seconds_bucket{job=~".*nivesh-web"}[5m]))) and on() (sum(rate(nivesh_http_server_duration_seconds_count{job=~".*nivesh-web"}[5m]))
+          > 0.05)
+        instant: true
+        refId: A
+    - refId: B
+      datasourceUid: __expr__
+      model:
+        type: reduce
+        expression: A
+        reducer: last
+        refId: B
+    - refId: C
+      datasourceUid: __expr__
+      model:
+        type: threshold
+        expression: B
+        refId: C
+        conditions:
+        - evaluator:
+            type: gt
+            params:
+            - 1.5
+    for: 10m
+    noDataState: OK
+    execErrState: Error
+    annotations:
+      summary: The slowest 5% of web requests took longer than 1.5 s for 10 minutes. Quiet periods (Neon waking from sleep) are excluded by the minimum-traffic condition.
+    labels:
+      service: nivesh-path
+  - uid: nivesh-ai-down
+    title: AI service health check failing
+    condition: C
+    data:
+    - refId: A
+      relativeTimeRange:
+        from: 600
+        to: 0
+      datasourceUid: PROMETHEUS_DATASOURCE_UID
+      model:
+        expr: max(nivesh_ai_service_up{job=~".*nivesh-web"})
+        instant: true
+        refId: A
+    - refId: B
+      datasourceUid: __expr__
+      model:
+        type: reduce
+        expression: A
+        reducer: last
+        refId: B
+    - refId: C
+      datasourceUid: __expr__
+      model:
+        type: threshold
+        expression: B
+        refId: C
+        conditions:
+        - evaluator:
+            type: lt
+            params:
+            - 1
+    for: 5m
+    noDataState: Alerting
+    execErrState: Error
+    annotations:
+      summary: The web service could not reach the AI service health check for 5 minutes, or the web service stopped sending metrics.
+    labels:
+      service: nivesh-path

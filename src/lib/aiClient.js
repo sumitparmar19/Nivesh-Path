@@ -1,16 +1,24 @@
 // HTTP client for the Python AI service (FastAPI, ai-service/).
 const { config } = require("../config");
+const { recordAiCall } = require("./metrics");
+
+// Metric label for a call: the path with user ids replaced, so the label set stays small.
+const operationOf = (method, path) => `${method} ${path.replace(/\/[0-9a-f]{24}(?=\/|$)/gi, "/:userId")}`;
 
 function createAiClient({ fetchImpl = fetch, baseUrl = config.aiServiceUrl, timeoutMs = 120000, internalToken = config.aiInternalToken } = {}) {
   // Shared secret the AI service checks when AI_INTERNAL_TOKEN is set (defence in depth: it isn't public).
   const auth = internalToken ? { "X-Internal-Token": internalToken } : {};
   async function request(method, path, body, ms = timeoutMs) {
-    const response = await fetchImpl(`${baseUrl}${path}`, {
-      method,
-      headers: { "Content-Type": "application/json", ...auth },
-      body: body === undefined ? undefined : JSON.stringify(body),
-      signal: AbortSignal.timeout(ms),
-    });
+    const started = process.hrtime.bigint();
+    const seconds = () => Number(process.hrtime.bigint() - started) / 1e9;
+    let response;
+    try {
+      response = await send(method, path, body, ms);
+    } catch (err) {
+      recordAiCall(operationOf(method, path), seconds(), "unreachable");
+      throw err;
+    }
+    recordAiCall(operationOf(method, path), seconds(), response.ok ? "ok" : `http_${response.status}`);
     const data = await response.json().catch(() => ({}));
     if (!response.ok) {
       const err = new Error(data.detail ? JSON.stringify(data.detail) : `AI service returned ${response.status}`);
@@ -18,6 +26,15 @@ function createAiClient({ fetchImpl = fetch, baseUrl = config.aiServiceUrl, time
       throw err;
     }
     return data;
+  }
+
+  function send(method, path, body, ms) {
+    return fetchImpl(`${baseUrl}${path}`, {
+      method,
+      headers: { "Content-Type": "application/json", ...auth },
+      body: body === undefined ? undefined : JSON.stringify(body),
+      signal: AbortSignal.timeout(ms),
+    });
   }
 
   const post = (path, body) => request("POST", path, body);
@@ -38,4 +55,4 @@ function createAiClient({ fetchImpl = fetch, baseUrl = config.aiServiceUrl, time
   };
 }
 
-module.exports = { createAiClient };
+module.exports = { createAiClient, operationOf };

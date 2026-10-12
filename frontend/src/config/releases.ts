@@ -10,9 +10,20 @@ export interface Release {
 
 export const RELEASES: Release[] = [
   {
-    title: "See where your money lives",
+    title: "Watched and load-tested",
     tag: "Phase 3 · Oct 2026",
     isNew: true,
+    intro: "The site now reports how it's doing, and its speed was measured under load. Nothing about your data is shared.",
+    points: [
+      ["Live monitoring.", "Every request, trade, Behavioral Mirror check and AI call is measured and traced across both services, with alerts if errors, slowness or an AI outage last more than a few minutes."],
+      ["Private by design.", "Monitoring never records passwords, keys, emails or what you send; it's checked by automated tests."],
+      ["Measured speed.", "Load tests run the real app with simulated users, with the cache on and off; the results are recorded in the project's performance report."],
+    ],
+    links: [{ to: "/markets", label: "Go to Markets" }],
+  },
+  {
+    title: "See where your money lives",
+    tag: "Phase 3 · Oct 2026",
     intro: "Your cash and trades are moving from MongoDB to a PostgreSQL ledger, where the database itself enforces the rules.",
     points: [
       ["Live ledger status.", "The status panel below shows which database holds your cash and trades right now."],

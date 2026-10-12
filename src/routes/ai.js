@@ -4,6 +4,7 @@ const rateLimit = require("express-rate-limit");
 const { requireAuth } = require("../middleware/auth");
 const { createLedger } = require("../lib/ledger");
 const { timeZone } = require("./patterns");
+const { logger } = require("../lib/logger");
 
 const round2 = (n) => Math.round(n * 100) / 100;
 
@@ -78,7 +79,7 @@ function aiRoutes({ ledger: sharedLedger, Purchase, User, Analysis, quotes, aiCl
           const saved = await Analysis.create({ userId: req.user.id, question, riskProfile, holdings: enriched, result });
           analysisId = String(saved._id);
         } catch (err) {
-          console.warn("Analysis not saved:", err.message);
+          logger.warn("Analysis not saved: %s", err.message);
         }
       }
       res.json({ ...result, analysisId });
