@@ -445,6 +445,19 @@ describe("AI memory and status", () => {
     const paused = setup({ ledgerMaintenance: true, ledgerStore: { kind: "postgres" } });
     expect((await request(paused.app).get("/api/status")).body.ledger).toEqual({ backend: "postgres", tradingPaused: true });
   });
+
+  test("status names the platform only when DEPLOY_PLATFORM is set (the AWS demo stack)", async () => {
+    const saved = process.env.DEPLOY_PLATFORM;
+    try {
+      delete process.env.DEPLOY_PLATFORM;
+      expect((await request(setup().app).get("/api/status")).body.platform).toBeNull();
+      process.env.DEPLOY_PLATFORM = "aws-demo";
+      expect((await request(setup().app).get("/api/status")).body.platform).toBe("aws-demo");
+    } finally {
+      if (saved === undefined) delete process.env.DEPLOY_PLATFORM;
+      else process.env.DEPLOY_PLATFORM = saved;
+    }
+  });
 });
 
 describe("account data is saved to the database", () => {
@@ -923,6 +936,19 @@ describe("internal API (/internal/*, AI service -> web)", () => {
     ]);
     expect((await request(app).get("/internal/trades?userId=../../etc").set("X-Internal-Token", TOKEN)).status).toBe(400);
     expect((await request(app).get("/internal/nope").set("X-Internal-Token", TOKEN)).status).toBe(404);
+  });
+
+  test("demo-fault (AWS alarm test) exists only with DEMO_FAULTS on, and only with the token", async () => {
+    const off = setup({ internalToken: TOKEN }).app;
+    expect((await request(off).get("/internal/demo-fault").set("X-Internal-Token", TOKEN)).status).toBe(404);
+    const { app } = setup({ internalToken: TOKEN, demoFaults: true });
+    expect((await request(app).get("/internal/demo-fault")).status).toBe(404);
+    expect((await request(app).get("/internal/demo-fault").set("X-Internal-Token", `${TOKEN}x`)).status).toBe(404);
+    const res = await request(app).get("/internal/demo-fault").set("X-Internal-Token", TOKEN);
+    expect(res.status).toBe(500);
+    expect(res.body.error).toMatch(/alarm test/);
+    const noToken = setup({ internalToken: "", demoFaults: true }).app;
+    expect((await request(noToken).get("/internal/demo-fault")).status).toBe(404);
   });
 
   test("tokensMatch compares in constant time and handles different lengths", () => {
