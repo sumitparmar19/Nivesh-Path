@@ -15,6 +15,22 @@ describe("telemetry is off unless OTEL_EXPORTER_OTLP_ENDPOINT is set", () => {
       expect(require("../src/telemetry").enabled).toBe(false);
     });
   });
+
+  test("the start-up line names the service (a copied OTEL_SERVICE_NAME showed as 'Services 1' on live)", () => {
+    jest.isolateModules(() => {
+      expect(require("../src/telemetry").startupLine()).toBe("Telemetry: off (OTEL_EXPORTER_OTLP_ENDPOINT not set)");
+    });
+    const saved = process.env.OTEL_SERVICE_NAME;
+    process.env.OTEL_SERVICE_NAME = "nivesh-ai";
+    try {
+      jest.isolateModules(() => expect(require("../src/telemetry").serviceName).toBe("nivesh-ai"));
+    } finally {
+      if (saved === undefined) delete process.env.OTEL_SERVICE_NAME;
+      else process.env.OTEL_SERVICE_NAME = saved;
+    }
+    const { startupLine } = require("../src/telemetry");
+    expect(startupLine(true, "nivesh-web")).toBe("Telemetry: exporting over OTLP as nivesh-web");
+  });
 });
 
 describe("redaction: no tokens, keys, passwords or emails in telemetry", () => {

@@ -111,7 +111,7 @@ class JsonFormatter(logging.Formatter):
             "level": record.levelname.lower(),
             "logger": record.name,
             "msg": redact_string(record.getMessage()),
-            "service": os.getenv("OTEL_SERVICE_NAME", "nivesh-ai"),
+            "service": service_name(),
         }
         if ctx.is_valid:
             entry["trace_id"] = format(ctx.trace_id, "032x")
@@ -176,6 +176,18 @@ def log_provider(resource: Any) -> Any:
     return provider
 
 
+def service_name() -> str:
+    """The name Grafana groups this service under (a copied OTEL_SERVICE_NAME once made it report as nivesh-web)."""
+    return os.getenv("OTEL_SERVICE_NAME", "nivesh-ai")
+
+
+def startup_line() -> str:
+    """The start-up log line, with the service name so a wrong OTEL_SERVICE_NAME shows in the console."""
+    if enabled():
+        return f"Telemetry: exporting over OTLP as {service_name()}"
+    return "Telemetry: off (OTEL_EXPORTER_OTLP_ENDPOINT not set)"
+
+
 def setup(app: Any) -> bool:
     """Install exporters and instrument the FastAPI app, httpx and pymongo. Returns whether telemetry is on.
 
@@ -198,7 +210,7 @@ def setup(app: Any) -> bool:
         from opentelemetry.sdk.trace.export import BatchSpanProcessor
 
         resource = Resource.create(
-            {"service.name": os.getenv("OTEL_SERVICE_NAME", "nivesh-ai"), "service.namespace": "nivesh-path"}
+            {"service.name": service_name(), "service.namespace": "nivesh-path"}
         )
         tracer_provider = TracerProvider(resource=resource)
         tracer_provider.add_span_processor(BatchSpanProcessor(RedactingSpanExporter(OTLPSpanExporter())))  # type: ignore[arg-type]
@@ -219,7 +231,7 @@ def setup(app: Any) -> bool:
         HTTPXClientInstrumentor().instrument()
         PymongoInstrumentor().instrument(capture_statement=False)
         _providers.extend([tracer_provider, meter_provider, logger_provider])
-        logging.getLogger(__name__).info("Telemetry: exporting over OTLP")
+        logging.getLogger(__name__).info(startup_line())
         return True
     except Exception:  # noqa: BLE001 - telemetry must never take the service down
         logging.getLogger(__name__).exception("OpenTelemetry disabled after a setup error")

@@ -52,7 +52,7 @@ async function start() {
   }
 
   const app = createApp({ onError });
-  logger.info(`Telemetry: ${telemetry.enabled ? "exporting over OTLP" : "off (OTEL_EXPORTER_OTLP_ENDPOINT not set)"}`);
+  logger.info(telemetry.startupLine());
   if (telemetry.enabled) require("./src/lib/metrics").watchAiService(app.locals.aiClient);
   if (mongoReady) {
     // Re-check Behavioral Mirror events saved under older rules (repeat-safe; runs in the background).
