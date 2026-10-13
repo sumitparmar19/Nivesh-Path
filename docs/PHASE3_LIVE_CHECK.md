@@ -235,9 +235,32 @@ The steps are on https://code.claude.com/docs/en/cloud-environments#network-acce
 - **Troubleshooting note.** `docs/OBSERVABILITY.md` §5c covers "Services 1": check `OTEL_SERVICE_NAME` per component, the start-up line, the two console checks, and the bracketed-paste tip.
 - **Part 1 evidence** is now in `docs/PHASE3_LIVE_STATUS.md`. It covers accounts, configuration, what Sumit did, issues 1–9, the monitoring evidence and what's still open. Hostnames, user names and the Grafana stack name are left out.
 
-## 7. Limits
-- **Not run against live** (network policy). Option A or B in §5 closes this.
-- **Market data was made up**, so real Finnhub responses (news, profile, rate limits) weren't exercised. The live run covers them.
-- **The AI ran rule-based,** with no Claude key here; the live run with the AI box ticked covers Claude.
+## 7. Live runs (GitHub "Live smoke test" workflow)
+
+| Run | When (UTC) | Result |
+|---|---|---|
+| [#1](https://github.com/sumitparmar19/Nivesh-Path/actions/runs/38457449171) | Oct 13, 19:46 | 7 passed, 1 failed (account), 2 not run |
+| [#2](https://github.com/sumitparmar19/Nivesh-Path/actions/runs/38469289309) | Oct 13, 21:16 | Same as run #1 |
+
+**Passed on the live site, both runs (tests 1–7):**
+- public pages, legacy redirects, `/api/status` (ledger `postgres`, AI configured), What's new ("All systems go");
+- `/internal/*` returns 404, security headers are set, no keys in the page;
+- register, wrong password, log in;
+- markets and stock detail, with real Finnhub data;
+- trading on the Postgres ledger: buy, sell, both clear errors, **double-click Buy gives exactly one trade**, and the same `Idempotency-Key` is replayed;
+- portfolio, transactions, Mirror, watchlist;
+- advisor memory, and **one Claude analysis per run** (15–17 s).
+
+**Bug 4, found by the live runs:** the Account page let you type into the profile fields before the profile had loaded. When it arrived, it replaced what you had typed. The test typed "Buffalo" into City right after opening the page; on live the profile arrives a moment later, so the saved city was empty. A slow connection does the same to a real person. Locally the profile loads instantly, so the local run passed.
+- **Fix:** the profile fields stay locked until the profile has loaded. The live test also waits for the profile before typing.
+- **Test:** a Vitest test checks that the fields are locked while loading. It fails without the fix.
+
+**Not reached in either run:** the contact email (test 9), deleting the test user (test 10), and the theme and password steps of test 8. Each run's safety net deleted its test user at the end through `DELETE /api/me`, because the password hadn't changed yet. Sumit can confirm with the Atlas filter in §5.
+
+**Claude calls used:** 2 (one per run), which is the limit the check set. The next run leaves the AI box **unticked**.
+
+## 8. Limits
+- **Live runs reached tests 1–7** (§7). The account, contact and delete steps run on live once the bug 4 fix is deployed.
+- **Real Finnhub data and Claude:** covered by the live runs only (§7). The local run used made-up prices and the rule-based AI.
 - **Grafana couldn't be checked from here.**
 - **Lighthouse ran on a local server.** Live numbers will be lower on the first load, because they include network latency.
