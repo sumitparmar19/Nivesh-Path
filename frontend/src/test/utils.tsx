@@ -36,7 +36,7 @@ export function mockApi(routes: Routes) {
     const key = Object.keys(routes).find((k) => k === `${method} ${url}`) || Object.keys(routes).find((k) => k === `${method} ${url.split("?")[0]}`);
     if (!key) return new Response(JSON.stringify({ error: "not found" }), { status: 404 });
     let value = routes[key];
-    if (typeof value === "function") value = (value as Handler)(body, init);
+    if (typeof value === "function") value = await (value as Handler)(body, init);
     if (value instanceof Response) return value;
     return new Response(JSON.stringify(value), { status: 200, headers: { "Content-Type": "application/json" } });
   });
