@@ -16,6 +16,17 @@ const isObjectId = (id) => mongoose.isValidObjectId(id);
 const notFound = (res) => res.status(404).json({ error: "Pattern not found" });
 
 /** A valid IANA time zone from the browser (e.g. "America/Los_Angeles"), or undefined. */
+
+// The AI coach takes numbers only (every figure is computed here; ai-service BehaviorEvent.facts is
+// dict[str, float | bool | None]). Labels such as rule v3's fiveDaySource stay on the card, not in the prompt.
+function coachFacts(facts) {
+  const out = {};
+  for (const [k, v] of Object.entries(facts || {})) {
+    if (v === null || typeof v === "boolean" || (typeof v === "number" && Number.isFinite(v))) out[k] = v;
+  }
+  return out;
+}
+
 function timeZone(raw) {
   if (typeof raw !== "string" || raw.length > 64) return undefined;
   try {
@@ -200,7 +211,7 @@ function patternRoutes({ BehaviorEvent, ledger, aiClient, detector }) {
         fingerprint,
         timezone: timeZone((req.body || {}).timezone),
         events: events.slice(0, 20).map((e) => ({
-          pattern_type: e.patternType, severity: e.severity, symbol: e.symbol, facts: e.facts || {},
+          pattern_type: e.patternType, severity: e.severity, symbol: e.symbol, facts: coachFacts(e.facts),
           created_at: new Date(e.createdAt || Date.now()).toISOString(),
         })),
       };

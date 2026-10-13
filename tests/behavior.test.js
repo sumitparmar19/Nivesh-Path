@@ -213,7 +213,7 @@ describe("behavior detector", () => {
     const { d, BehaviorEvent } = detector({ Purchase, momentum: async () => ({ week52High: 101, fiveDayReturn: 18 }) });
     const out = await d.detect({ userId: "u1", trade: { ...t } });
     expect(out).toHaveLength(1);
-    expect(BehaviorEvent.rows[0]).toMatchObject({ userId: "u1", patternType: "fomo_buy", severity: "high", symbol: "HYPE", tradeId: t._id, ruleVersion: 2 });
+    expect(BehaviorEvent.rows[0]).toMatchObject({ userId: "u1", patternType: "fomo_buy", severity: "high", symbol: "HYPE", tradeId: t._id, ruleVersion: rules.RULE_VERSION });
     expect(BehaviorEvent.rows[0].facts).toMatchObject({ percentFromHigh: 0.99, quantity: 3 });
     expect(Purchase.rows[0].behaviorCheckedAt).toBeInstanceOf(Date);
   });
@@ -313,7 +313,7 @@ describe("behavior rule clean-up", () => {
     const { Purchase, BehaviorEvent } = await seed();
     const counts = await migrateBehaviorEvents({ BehaviorEvent, Purchase, log: quiet });
     expect(counts).toMatchObject({ checked: 3, deleted: 1, regraded: 1, unchanged: 1 });
-    expect(BehaviorEvent.rows.map((e) => [e.symbol, e.severity, e.ruleVersion])).toEqual([["HYPE", "high", 2], ["NVDA", "low", 2]]);
+    expect(BehaviorEvent.rows.map((e) => [e.symbol, e.severity, e.ruleVersion])).toEqual([["HYPE", "high", rules.RULE_VERSION], ["NVDA", "low", rules.RULE_VERSION]]);
   });
 
   test("change 4: the trade of a deleted false alarm stays as a clean checked trade; pre-2C trades stay unchecked", async () => {
@@ -516,6 +516,20 @@ describe("/api/patterns routes", () => {
     expect(payload.events.map((e) => e.pattern_type)).toEqual(["fomo_buy"]);
     expect(payload.counts).toEqual({ panic_sell: 0, fomo_buy: 1, overconcentration: 0 });
     expect(payload.events[0].facts.percentFromHigh).toBe(0.99); // computed in code, not by the AI
+  });
+
+  test("analyze sends the coach numbers only (rule v3's fiveDaySource label stays out; the AI schema accepts numbers)", async () => {
+    const { app, deps } = setup();
+    const a = await newUser(app);
+    await trade(app, a, "FOMO", 1);
+    const stored = (await request(app).get("/api/patterns").set(auth(a))).body.patterns[0];
+    expect(stored.facts.fiveDaySource).toBe("finnhub"); // the card still gets it
+    await request(app).post("/api/patterns/analyze").set(auth(a));
+    const [, payload] = deps.aiClient.analyzeBehavior.mock.calls[0];
+    const values = Object.values(payload.events[0].facts);
+    expect(values.length).toBeGreaterThan(0);
+    for (const v of values) expect(v === null || ["number", "boolean"].includes(typeof v)).toBe(true);
+    expect(payload.events[0].facts.fiveDaySource).toBeUndefined();
   });
 
   test("AI service down: analyze answers 503 with a message, insight answers null", async () => {

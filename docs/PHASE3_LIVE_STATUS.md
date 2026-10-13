@@ -50,6 +50,10 @@
    - a second free Finnhub account for the demo (planning-chat answer Q1);
    - MFA on root, the budget, an admin user, region **us-east-1**;
    - the CloudShell bootstrap (`docs/AWS.md` §4).
+9. **Nightly job (after PR F is merged and deployed, and the bootstrap is done)** (`docs/AWS.md` §8.1):
+   - a new `AI_INTERNAL_TOKEN`, the same value on web, on ai and in Secrets Manager `nivesh-path/jobs`;
+   - GitHub → Actions → **AWS jobs: nightly job** → `apply`, then `run-now` after 4 pm New York;
+   - send me the run link.
 
 ## 5. Planning-chat decisions on PR E (recorded)
 - **Q1:** a separate free Finnhub account for the AWS demo.

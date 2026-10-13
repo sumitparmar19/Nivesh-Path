@@ -45,3 +45,17 @@ model Trade {
   @@index([userId, executedAt])
   @@map("trades")
 }
+
+// Daily closing prices saved by the nightly job (Phase 3, PR F): one row per stock per trading day. The
+// Behavioral Mirror's rule v3 takes the 5-day move from these once enough days are stored. The job reaches
+// them only through web's token-only /internal API, so AWS holds no database credentials. CHECKs in the SQL.
+model PriceSnapshot {
+  symbol      String   @db.VarChar(10)
+  tradingDate DateTime @map("trading_date") @db.Date
+  close       Decimal  @db.Decimal(14, 4)
+  source      String   @default("finnhub") @db.VarChar(16)
+  capturedAt  DateTime @default(now()) @map("captured_at") @db.Timestamptz(3)
+
+  @@id([symbol, tradingDate])
+  @@map("price_snapshots")
+}

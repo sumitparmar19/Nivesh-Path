@@ -46,8 +46,11 @@ Live: https://nivesh-path-vzeak.ondigitalocean.app (custom domain pending) · Re
       bucket, GitHub OIDC deploy + read-only plan roles, permissions boundary, empty secrets, alert topic; run in CloudShell)
       and `infra/demo` (VPC without NAT, ALB, ECS Fargate web+ai, RDS, ECR, CloudWatch dashboard + 4 alarms, autoscaling
       1-3); workflows: Infra checks + plan comment, AWS demo apply/deploy/load test/destroy
-- [ ] **Phase 3** (plan: `docs/PHASE3_REVIEW.md`) - next · F jobs ·
-      G pre-trade check + stress test (2D) · H+I agent + evals
+- [x] **Phase 3 PR F** (built; AWS apply is Sumit's step, `docs/AWS.md` §8) - nightly job: EventBridge Scheduler (weekdays
+      16:30 New York) -> Step Functions -> Lambda -> web's token-only `/internal/jobs/*` (held tickers, save daily close to
+      Postgres `price_snapshots`, concentration check for every user); Behavioral Mirror rule v3 (5-day move from 6 saved
+      closes, else Finnhub; `facts.fiveDaySource`). AWS holds only the internal token
+- [ ] **Phase 3** (plan: `docs/PHASE3_REVIEW.md`) - next · G pre-trade check + stress test (2D) · H+I agent + evals
 
 ## Layout
 ```
@@ -105,8 +108,10 @@ tests/app.test.js    # Jest + Supertest (isolation, auth, ledger, AI proxy, idem
 observability/       # grafana-dashboard.json, alert-rules.yaml (queries checked against Prometheus fed by the app)
 loadtest/            # k6 read-mix.js, trade-mix.js, report.js; docker-compose.loadtest.yml; .github/workflows/loadtest.yml
 infra/               # Terraform (docs/AWS.md): bootstrap/ (once, CloudShell: cloudshell.sh), demo/ (AWS demo stack),
+                     #   jobs/ (nightly job: Scheduler -> Step Functions -> lambda/index.js -> web /internal/jobs/*),
                      #   scripts/deploy.sh (build -> migrate task -> roll out), checkov/ (custom rule: roles need the boundary)
   lib/dbUrl.js       # (src/lib) DATABASE_URL from DB_HOST/DB_USER/DB_PASSWORD (RDS); scripts/with-db-url.js wraps a command
+  lib/priceSnapshots.js # (src/lib) daily closes: closeFromQuote (which trading day, never intraday), Postgres + memory stores
 tests/ledger.pg.test.js # real Postgres (TEST_DATABASE_URL; CI sets it): constraints, 20 parallel buys, idempotency, reset
 ai-service/tests/    # pytest
 docs/                # PHASE1_REPORT.md, PHASE2_PLAN.md, DEPLOYMENT.md
@@ -119,6 +124,8 @@ docs/                # PHASE1_REPORT.md, PHASE2_PLAN.md, DEPLOYMENT.md
   non-whole quantity; optional `Idempotency-Key` header (8-100 of `[A-Za-z0-9_-]`): the same order again returns 200
   `replayed: true`; the same key with a different order (ticker/side/shares) is 422
 - `GET /internal/trades/users` · `GET /internal/trades?userId=` - service-to-service, `X-Internal-Token` only (404 otherwise)
+- Nightly job (same token): `GET /internal/jobs/held-tickers` · `POST /internal/jobs/snapshots/:symbol` (saves that day's
+  close after 4 pm New York; skipped while the market is open) · `POST /internal/jobs/concentration-check` (all users)
 - `GET /api/transactions` · `GET /api/portfolio/holdings` · `GET /api/portfolio/cash-balance` (cash, holdings value, total P&L)
 - `POST /api/ai/analyze-portfolio` -> FastAPI with `user_id`; `POST /api/ai/transactions` (FastAPI) indexes trades per user
 - `GET /api/ai/memory` (trades in Mongo vs indexed in Chroma) · `POST /api/ai/memory/rebuild` (re-index caller's trades)
@@ -159,7 +166,8 @@ docs/                # PHASE1_REPORT.md, PHASE2_PLAN.md, DEPLOYMENT.md
 - Ledger schema change: edit `prisma/schema.prisma`, `npx prisma migrate dev --name <what>`, add CHECKs by hand in the SQL;
   CI fails if the schema and migrations disagree. Money columns are NUMERIC; quantities are whole shares
 - `/internal/*` is reachable from the internet: token-only, and every route there stays read-only unless reviewed
-  (the one exception, `GET /internal/demo-fault`, only exists with `DEMO_FAULTS=1`, set only by the AWS demo stack)
+  (reviewed exceptions: `GET /internal/demo-fault`, only with `DEMO_FAULTS=1` (AWS demo stack); the nightly job's two
+  POSTs, which write only `price_snapshots` and Behavioral Mirror events - PR B review Q1)
 - AWS: no access keys anywhere (GitHub OIDC only); every IAM role a stack creates is named `nivesh-demo-*`/`nivesh-jobs-*`
   and sets `permissions_boundary` (Checkov rule CKV2_NIVESH_1); secret VALUES never go into Terraform (empty secrets,
   typed by Sumit); every Checkov finding is fixed or skipped inline with a reason; tag everything via provider default_tags
@@ -175,6 +183,7 @@ docs/                # PHASE1_REPORT.md, PHASE2_PLAN.md, DEPLOYMENT.md
 - Market data for detectors comes from `marketData.momentum()` (basic financials: 52w high, 5-day return) plus the live
   quote (today's change, intraday high); candles are not on the free Finnhub plan
 - Changing a Behavioral Mirror rule: bump `RULE_VERSION` in `behaviorRules.js` so the start-up clean-up re-grades old events
+  (now v3: the 5-day move comes from our own `price_snapshots` once 6 recent closes exist, else Finnhub)
 - Portfolio weights shown anywhere (Advisor, Mirror, Portfolio) are shares of the WHOLE account (cash + holdings);
   Diversification = 100 - largest stock's share of the account, computed in code (Node `behaviorRules.diversification`,
   Python `portfolio_analytics.diversification_score`) - never by the LLM
