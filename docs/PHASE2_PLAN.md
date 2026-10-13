@@ -194,6 +194,17 @@ Phase 3 plan and decisions: `docs/PHASE3_REVIEW.md` (D1-D10 approved; D10 = MIT)
 - Rule v3: `fiveDayFromSnapshots` needs 6 closes, newest <= 5 days old, span <= 8 days; else Finnhub. `facts.fiveDaySource`.
   Thresholds unchanged, so the start-up clean-up only bumps v2 events to v3.
 
+### Full check of every page and feature (Oct 13, 2026) - see docs/PHASE3_LIVE_CHECK.md
+- Run on the production build locally (the live host is blocked by this session's network policy): 50/54 checks pass,
+  4 warnings explained; no sideways scroll or "undefined"/"NaN" at 375 px on 15 pages; bundle has no keys.
+- Fixed: delete account landed on /login?redirect=/account (RequireAuth race + 401 on refetch; now the home frame
+  finishes the sign-out, `beginSignOut()`); page jump while loading (CLS 0.6-0.75 -> <=0.12: full-height Suspense
+  fallback, sized logos, signed-in "/" redirects before drawing); a PR F test pinned to the real clock.
+- `frontend/e2e/live-smoke.spec.ts` + manual workflow "Live smoke test" (new user, small orders, deletes the user;
+  AI analysis and contact email opt-in). Start-up line: "Telemetry: exporting over OTLP as <service>".
+- UX list (15 items, not implemented): phone tables (transactions, holdings), trade panel position on phones, contrast,
+  Watch button name, footer headings, self-hosted fonts, CSP, ...
+
 ### Known risks to handle in later phases
 1. **Cold start** for the Behavioral Mirror (still open after 2C): new users have no history -> add a demo account with realistic
    seeded trades and **CSV import** of real broker history (Robinhood / Webull / Zerodha) in Phase 2C.

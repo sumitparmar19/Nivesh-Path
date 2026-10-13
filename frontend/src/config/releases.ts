@@ -10,9 +10,19 @@ export interface Release {
 
 export const RELEASES: Release[] = [
   {
-    title: "Daily closing prices and a nightly check",
+    title: "Steadier pages and a clean account deletion",
     tag: "Phase 3 · Oct 2026",
     isNew: true,
+    intro: "A full check of every page and feature found two problems. Both are fixed.",
+    points: [
+      ["Pages stay still while they load.", "The footer no longer jumps down as a page appears, and logos keep their size while they load. On phones, Lighthouse's layout-shift score went from about 0.7 to under 0.1."],
+      ["Deleting your account ends on the home page.", "It used to finish on the login page, even though everything had been deleted. Now you land on the home page with a confirmation."],
+    ],
+    links: [{ to: "/account", label: "Open your account" }],
+  },
+  {
+    title: "Daily closing prices and a nightly check",
+    tag: "Phase 3 · Oct 2026",
     intro: "Starting with its first run, a scheduled job saves the closing price of every stock someone holds each weekday after the US market closes, then re-checks every account for overconcentration.",
     points: [
       ["Our own price history.", "Once six daily closes are stored for a stock, the Behavioral Mirror measures its 5-day move from them (rule v3). Until then it uses Finnhub's daily figure, as before."],

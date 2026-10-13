@@ -89,7 +89,7 @@ Never paste a token into any chat.
 - New `aws-jobs.yml`: `apply` / `run-now` (starts one run, waits, summarises the output) / `destroy`. Manual, `main` only, `aws-demo` environment.
 - `infra.yml` now also validates `infra/jobs`, and runs when the jobs workflow changes.
 
-**Docs:** `docs/AWS.md` §8 (diagram, the three routes, runbook, cost), `docs/PHASE3_LIVE_STATUS.md` (step 9), `CLAUDE.md`, plan notes.
+**Docs:** `docs/AWS.md` §8 (diagram, the three routes, runbook, cost), `docs/PHASE3_LIVE_STATUS.md` (§7, item 6), `CLAUDE.md`, plan notes.
 
 **Tests (before → after)**
 
