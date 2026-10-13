@@ -3,8 +3,8 @@ import { render, screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { createMemoryRouter, RouterProvider } from "react-router-dom";
-import { AppLayout, SIDEBAR } from "../Layout";
-import { RequireAuth } from "../../App";
+import { AppLayout, PublicLayout, SIDEBAR } from "../Layout";
+import { PageFallback, RequireAuth } from "../../App";
 import { mockApi, signIn, signOut } from "../../test/utils";
 import { useStore } from "../../store/useStore";
 
@@ -60,5 +60,38 @@ describe("Layout and routing", () => {
     await userEvent.click(screen.getByRole("button", { name: /log out/i }));
     await waitFor(() => expect(router.state.location.pathname).toBe("/login"));
     expect(localStorage.getItem("token")).toBeNull();
+  });
+
+  // Lighthouse (live check, Oct 2026): CLS 0.6-0.75 on phones came from the footer jumping when a page's code arrived
+  // and from logos without a size. These keep the layout still while things load.
+  it("logos declare their size, so the header and footer don't move when the image loads", () => {
+    app("/markets");
+    const logos = document.querySelectorAll('img[src="/logo.png"]');
+    expect(logos.length).toBeGreaterThanOrEqual(2);
+    logos.forEach((img) => {
+      expect(img.getAttribute("width")).toBe("269");
+      expect(img.getAttribute("height")).toBe("189");
+    });
+  });
+
+  it("a page that is still loading holds a full screen of space, so the footer starts below the fold", () => {
+    render(<PageFallback />);
+    expect(screen.getByTestId("page-fallback")).toHaveClass("min-h-screen");
+    expect(screen.getByRole("status")).toHaveTextContent("Loading");
+  });
+
+  it("a signed-in visitor to the home page goes to the portfolio before the public frame (and its footer) draws", async () => {
+    signIn();
+    const router = createMemoryRouter(
+      [
+        { element: <PublicLayout />, children: [{ path: "/", element: <div>landing</div> }] },
+        { path: "/portfolio", element: <div>portfolio page</div> },
+      ],
+      { initialEntries: ["/"] },
+    );
+    render(<QueryClientProvider client={new QueryClient()}><RouterProvider router={router} /></QueryClientProvider>);
+    expect(await screen.findByText("portfolio page")).toBeInTheDocument();
+    expect(screen.queryByText("landing")).not.toBeInTheDocument();
+    expect(screen.queryByRole("contentinfo")).not.toBeInTheDocument();
   });
 });
