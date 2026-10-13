@@ -1,0 +1,68 @@
+# Live smoke test: runs frontend/e2e/live-smoke.spec.ts against the real site from a GitHub runner. It signs up a NEW
+# test user, checks every page and feature with small real orders (Postgres ledger), then deletes that user. Manual
+# only (Actions -> "Live smoke test" -> Run workflow). The AI analysis (Claude cost) and the contact email (a real email
+# through Resend) are opt-in boxes. No secrets are needed: it uses the site like a visitor. Results: the run summary +
+# the "live-smoke-report" artifact (Playwright HTML report; traces only for failed steps).
+name: Live smoke test
+
+on:
+  workflow_dispatch:
+    inputs:
+      base_url:
+        description: "Site to test"
+        default: "https://nivesh-path-vzeak.ondigitalocean.app"
+      ai_analysis:
+        description: "Also run ONE AI analysis (costs one Claude call)"
+        type: boolean
+        default: false
+      contact_email:
+        description: "Also send ONE contact-form message (a real email to Sumit)"
+        type: boolean
+        default: false
+
+permissions:
+  contents: read
+
+concurrency:
+  group: live-smoke
+  cancel-in-progress: false
+
+jobs:
+  live-smoke:
+    name: Live smoke test (${{ inputs.base_url }})
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    env:
+      E2E_LIVE: "1"
+      E2E_BASE_URL: ${{ inputs.base_url }}
+      E2E_LIVE_AI: ${{ inputs.ai_analysis && '1' || '0' }}
+      E2E_LIVE_CONTACT: ${{ inputs.contact_email && '1' || '0' }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+          cache-dependency-path: frontend/package-lock.json
+      - run: npm ci
+        working-directory: frontend
+      - run: npx playwright install --with-deps chromium
+        working-directory: frontend
+      - name: Run the live smoke test
+        working-directory: frontend
+        run: npx playwright test e2e/live-smoke.spec.ts
+      - name: Summary
+        if: always()
+        run: |
+          {
+            echo "### Live smoke test"
+            echo "- Site: ${E2E_BASE_URL}"
+            echo "- AI analysis: ${E2E_LIVE_AI} · contact email: ${E2E_LIVE_CONTACT}"
+            echo "- Result: ${{ job.status }} (details in the live-smoke-report artifact)"
+          } >> "$GITHUB_STEP_SUMMARY"
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: live-smoke-report
+          path: frontend/playwright-report
+          retention-days: 14
