@@ -183,14 +183,15 @@ export default function Account() {
             }}
             className="grid gap-4"
           >
-            <div className="grid gap-4 sm:grid-cols-2">
+            {/* Locked until the profile loads: typing earlier was overwritten when it arrived (live smoke test, Oct 13) */}
+            <fieldset disabled={!u} className="grid gap-4 sm:grid-cols-2">
               {FIELDS.map((f) => (
                 <label key={f.key} className={cx("grid gap-1.5 text-sm font-semibold text-ink-2", f.wide && "sm:col-span-2")}>
                   {f.label}
                   <input name={f.key} type={f.type || "text"} autoComplete={f.auto} value={form[f.key] ?? ""} onChange={(e) => setForm({ ...form, [f.key]: e.target.value })} />
                 </label>
               ))}
-            </div>
+            </fieldset>
             <Button type="submit" className="justify-self-start" disabled={saveProfile.isPending || !u}>{saveProfile.isPending ? "Saving…" : "Save profile"}</Button>
           </form>
         </Card>
