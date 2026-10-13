@@ -28,6 +28,15 @@ describe("Account", () => {
     expect(await screen.findByText(/profile is saved/i)).toBeInTheDocument();
   });
 
+  it("profile fields stay locked until the profile has loaded, so early typing can't be overwritten", async () => {
+    let release: (v: unknown) => void = () => {};
+    const loaded = new Promise((r) => (release = r));
+    open({ "GET /api/me": async () => { await loaded; return ME; } });
+    expect(screen.getByLabelText("City")).toBeDisabled();
+    release(undefined);
+    expect(await screen.findByDisplayValue("Buffalo")).toBeEnabled();
+  });
+
   it("validates the new password before calling the API", async () => {
     const { calls } = open();
     await screen.findByDisplayValue("Buffalo");

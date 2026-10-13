@@ -214,6 +214,7 @@ test("advisor: memory status (+ one analysis only with E2E_LIVE_AI=1)", async ({
 
 test("account: profile, theme, password", async ({ request }) => {
   await page.goto("/account");
+  await expect(page.getByLabel("Full name")).toHaveValue("Live Smoke"); // profile loaded (typing earlier was overwritten)
   await page.getByLabel("City").fill("Buffalo");
   await page.getByRole("button", { name: "Save profile" }).click();
   await expect.poll(async () => (await api(request, "/api/me")).json.city).toBe("Buffalo");
