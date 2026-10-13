@@ -3,7 +3,7 @@ import { api, ApiError } from "../api";
 import { tradesToCsv } from "../csv";
 import { bigMoney, initials, money, pct, signedMoney } from "../format";
 import { safeRedirect } from "../redirect";
-import { readToken, saveSession } from "../session";
+import { beginSignOut, readToken, saveSession } from "../session";
 import { errorResponse, fakeToken, mockApi } from "../../test/utils";
 
 describe("api client", () => {
@@ -30,6 +30,30 @@ describe("api client", () => {
     await expect(api.me.get()).rejects.toMatchObject({ status: 401 });
     expect(localStorage.getItem("token")).toBeNull();
     expect(assign).toHaveBeenCalledWith("/login?redirect=%2Fportfolio");
+  });
+
+  it("an expired token (removed before sending) still sends you to log in", async () => {
+    localStorage.setItem("token", `x.${btoa(JSON.stringify({ exp: 1 }))}.y`);
+    const assign = vi.fn();
+    Object.defineProperty(window, "location", { value: { ...window.location, assign, pathname: "/watchlist", search: "" }, writable: true });
+    mockApi({ "GET /api/me": errorResponse(401, "Authentication required") });
+    await expect(api.me.get()).rejects.toMatchObject({ status: 401 });
+    expect(assign).toHaveBeenCalledWith("/login?redirect=%2Fwatchlist");
+  });
+
+  it("while signing out on purpose (account deleted), a late 401 doesn't jump to the login page; logging in resets it", async () => {
+    localStorage.setItem("token", fakeToken());
+    beginSignOut();
+    expect(readToken()).toBeNull();
+    const assign = vi.fn();
+    Object.defineProperty(window, "location", { value: { ...window.location, assign, pathname: "/account", search: "" }, writable: true });
+    mockApi({ "GET /api/me": errorResponse(401, "Authentication required") });
+    await expect(api.me.get()).rejects.toMatchObject({ status: 401 });
+    expect(assign).not.toHaveBeenCalled();
+
+    saveSession(fakeToken(), { id: "u", name: "A B", email: "a@b.co", mobile: "1", nickname: "", country: "", city: "", address: "", cashBalance: 1, settings: { theme: "light", language: "English", notifications: true } });
+    await expect(api.me.get()).rejects.toMatchObject({ status: 401 });
+    expect(assign).toHaveBeenCalledWith("/login?redirect=%2Faccount");
   });
 });
 

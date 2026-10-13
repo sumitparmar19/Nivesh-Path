@@ -126,8 +126,36 @@ Create each in Grafana: **Alerting → Alert rules → + New alert rule**.
   - **AI service:** its log pipeline was already correct. `test_a_real_log_batch_reaches_the_otlp_endpoint` now proves it with a real HTTP receiver.
 - **Workaround to undo:** if `OTEL_LOGS_EXPORTER=none` was set on web, delete it after this fix is deployed. Logs then appear in Grafana → Explore → the `…-logs` (Loki) data source, `service_name="nivesh-web"`.
 
+## 5c. Troubleshooting: a joined trace shows "Services 1"
+A trade or an `/api/ai/memory` request should give one trace with **Services 2** (`nivesh-web` → `nivesh-ai`). If Tempo shows **Services 1**, both components are probably exporting under the same name.
+
+1. **Check `OTEL_SERVICE_NAME` on each component.** DigitalOcean → the app → **Settings**.
+   - Under **web** it must be `nivesh-web`.
+   - Under **ai** it must be `nivesh-ai`.
+   - Copying the `OTEL_*` variables from web to ai also copies the name. That is what happened on Oct 12, 2026: before about 22:37 PT, ai logs and `nivesh_ai_llm_*` metrics carry `service_name=nivesh-web`.
+2. **Read the start-up line.** Both services log the name they export under:
+   - `Telemetry: exporting over OTLP as nivesh-web` (web, Runtime Logs);
+   - `Telemetry: exporting over OTLP as nivesh-ai` (ai, Runtime Logs).
+
+   If ai says `as nivesh-web`, fix the variable and redeploy.
+3. **Console check 1: what does the process see?** In the ai component's Console:
+   ```
+   printenv OTEL_SERVICE_NAME
+   ```
+   This prints the name only. Don't print `OTEL_EXPORTER_OTLP_HEADERS`: it holds the token.
+4. **Console check 2: can it export at all?** One test span from the ai Console:
+   ```
+   python -c "from opentelemetry.sdk.trace import TracerProvider; from opentelemetry.sdk.trace.export import SimpleSpanProcessor; from opentelemetry.exporter.otlp.proto.http.trace_exporter import OTLPSpanExporter; p=TracerProvider(); p.add_span_processor(SimpleSpanProcessor(OTLPSpanExporter())); p.get_tracer('console-test').start_span('console-test').end(); p.shutdown()"
+   ```
+   - No error means the endpoint and token work. Search Tempo for the `console-test` span.
+   - If the span arrives but traces still show one service, the cause is the name (step 1), not the connection.
+5. **Pasted commands arrive broken (`^[[200~` at the start).** The DigitalOcean console has bracketed paste on. Type this by hand once per console session, then paste normally:
+   ```
+   bind 'set enable-bracketed-paste off'
+   ```
+
 ## 6. Limits
-- **Not tested live yet.** I couldn't reach Grafana Cloud from here. The live checks are steps 4–6 above, plus the alert test.
+- **Checked live on Oct 12, 2026.** Traces, metrics and logs arrive, the dashboard is imported, and the p95 alert test fired an email (`docs/PHASE3_LIVE_STATUS.md` §6).
 - **New counter series may read 0 on the dashboard.** Prometheus `increase()`/`rate()` ignore a brand-new counter series' first value, so the very first detection of a new type can be missing from a panel until it happens again.
 - **Prisma traces are detailed** (about 90 spans per Postgres trade). That's fine for the free tier (50 GB of traces a month). If it ever gets noisy, the Prisma instrumentation can be limited.
 - **Metrics are exported every 30 s**, so dashboard panels and alerts lag by up to about 30 s.

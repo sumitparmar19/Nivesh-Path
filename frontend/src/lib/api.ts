@@ -5,7 +5,7 @@ import type {
   CuratedSector, Holding, NewsItem, PortfolioSummary, ProfileUpdate, RawQuote, ResetResult, RiskProfile, SearchResult,
   StockMetrics, StockProfile, StockQuote, SystemStatus, Trade, TradeResult, User, UserSettings, WatchlistItem,
 } from "../types";
-import { clearSession, readToken } from "./session";
+import { clearSession, readToken, signingOut } from "./session";
 
 /** The browser's time zone (e.g. "America/Los_Angeles"), so the AI shows dates the way the user sees them. */
 export function browserTimeZone(): string | undefined {
@@ -49,7 +49,9 @@ async function request<T>(path: string, method: Method = "GET", body?: unknown, 
   } catch {
     throw new ApiError("Can't reach the server. Check your connection and try again.", 0);
   }
-  if (res.status === 401 && auth) {
+  // A 401 means the session expired: back to login. Not while signing out on purpose (account just deleted): a
+  // request still in flight then gets a 401 too, and jumping to the login page would cut the sign-out short.
+  if (res.status === 401 && auth && !signingOut()) {
     clearSession();
     const here = window.location.pathname + window.location.search;
     if (!window.location.pathname.startsWith("/login")) {

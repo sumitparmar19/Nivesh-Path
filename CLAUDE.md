@@ -50,6 +50,9 @@ Live: https://nivesh-path-vzeak.ondigitalocean.app (custom domain pending) · Re
       16:30 New York) -> Step Functions -> Lambda -> web's token-only `/internal/jobs/*` (held tickers, save daily close to
       Postgres `price_snapshots`, concentration check for every user); Behavioral Mirror rule v3 (5-day move from 6 saved
       closes, else Finnhub; `facts.fiveDaySource`). AWS holds only the internal token
+- [x] **Full check of every page and feature** (`docs/PHASE3_LIVE_CHECK.md`): fixed delete-account landing on login and
+      the page jump while loading (CLS); `frontend/e2e/live-smoke.spec.ts` + "Live smoke test" workflow for the real site
+      (E2E_LIVE=1; never in normal CI); start-up line names the OTel service; 15-item UX list for Sumit
 - [ ] **Phase 3** (plan: `docs/PHASE3_REVIEW.md`) - next · G pre-trade check + stress test (2D) · H+I agent + evals
 
 ## Layout
@@ -57,7 +60,8 @@ Live: https://nivesh-path-vzeak.ondigitalocean.app (custom domain pending) · Re
 server.js            # Node entry: refuses to start in production without JWT_SECRET; Mongo; optional Sentry
 frontend/            # React 18 + TS + Tailwind (Vite). src/pages (one per route), src/components, src/lib/api.ts (typed
                      #   client), src/types (API shapes), src/store (Zustand), src/config (FEATURED stocks, RELEASES);
-                     #   tests in __tests__ (Vitest), e2e/smoke.spec.ts (Playwright). Builds to frontend/dist
+                     #   tests in __tests__ (Vitest), e2e/smoke.spec.ts (Playwright, FAKE_MARKET_DATA), e2e/live-smoke.spec.ts
+                     #   (real site, E2E_LIVE=1: new user, small orders, deletes it). Builds to frontend/dist
 src/
   app.js             # createApp(deps) - Express app, deps injectable for tests
   spa.js             # serves frontend/dist: React routes + 301s from the legacy URLs they replace; REACT_DISABLED rollback
@@ -189,6 +193,8 @@ docs/                # PHASE1_REPORT.md, PHASE2_PLAN.md, DEPLOYMENT.md
   Python `portfolio_analytics.diversification_score`) - never by the LLM
 - AI prompts must say the account is paper trading (no taxes/fees); dates shown to users use the browser's time zone
 - Don't do arithmetic in the LLM - compute numbers in code and pass them in
+- Signing out on purpose from a signed-in page: navigate to "/" with `state: { signedOut: true }` (PublicLayout finishes
+  it) - signing out first lets RequireAuth bounce the user to /login; `beginSignOut()` stops a late 401 from redirecting
 - UI: new UI work goes in `frontend/` (React). Types in `src/types` must match the real API; API calls only through
   `src/lib/api.ts`; >= 5 Vitest tests per page; new release notes go in `frontend/src/config/releases.ts`
 - Legacy pages (rollback only): pages include fonts + `/assets/nivesh.css` in <head> and `/assets/nivesh.js` (defer) before </body>;
