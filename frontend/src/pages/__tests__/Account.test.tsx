@@ -1,7 +1,11 @@
 // Account: profile pre-fill + save, password validation, theme saved to account, reset and delete guards.
-import { screen, waitFor } from "@testing-library/react";
+import { render, screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
+import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
+import { createMemoryRouter, RouterProvider } from "react-router-dom";
 import Account from "../Account";
+import { RequireAuth } from "../../App";
+import { PublicLayout } from "../../components/Layout";
 import { mockApi, renderPage, signIn } from "../../test/utils";
 import { useStore } from "../../store/useStore";
 
@@ -70,6 +74,37 @@ describe("Account", () => {
     await userEvent.click(button);
     await waitFor(() => expect(router.state.location.pathname).toBe("/"));
     expect(calls.find((c) => c.method === "DELETE")?.body).toEqual({ password: "secret1", confirm: "DELETE" });
+    // The home page signs out on arrival (see the next test, which has the real layout and RequireAuth)
+    expect(router.state.location.state).toEqual({ signedOut: true });
+  });
+
+  // Live check (Oct 2026): on the real app, Account sits inside RequireAuth. Signing out first let RequireAuth send the
+  // just-deleted user to /login?redirect=/account before the move to the home page happened.
+  it("after deleting the account you land on the home page, not on the login page", async () => {
+    mockApi({ "GET /api/me": ME, "GET /api/me/avatar": new Response("<svg/>", { status: 200 }), "DELETE /api/me": { success: true }, "GET /search": [] });
+    const router = createMemoryRouter(
+      [
+        { element: <PublicLayout />, children: [{ path: "/", element: <div>home page</div> }] },
+        { path: "/login", element: <div>login page</div> },
+        { path: "/portfolio", element: <div>portfolio page</div> },
+        { element: <RequireAuth />, children: [{ path: "/account", element: <Account /> }] },
+      ],
+      { initialEntries: ["/account"], future: { v7_relativeSplatPath: true } },
+    );
+    render(
+      <QueryClientProvider client={new QueryClient({ defaultOptions: { queries: { retry: false } } })}>
+        <RouterProvider router={router} future={{ v7_startTransition: true }} />
+      </QueryClientProvider>,
+    );
+    await screen.findByDisplayValue("Buffalo");
+    await userEvent.click(screen.getByRole("tab", { name: /danger/i }));
+    await userEvent.type(screen.getByLabelText("Type DELETE to confirm"), "DELETE");
+    await userEvent.type(screen.getByLabelText("Password to confirm"), "secret1");
+    await userEvent.click(screen.getByRole("button", { name: /delete my account/i }));
+    expect(await screen.findByText("home page")).toBeInTheDocument();
+    await new Promise((r) => setTimeout(r, 50));
+    expect(router.state.location.pathname).toBe("/");
+    expect(screen.queryByText("login page")).not.toBeInTheDocument();
     expect(useStore.getState().isAuthenticated).toBe(false);
   });
 });
