@@ -1,8 +1,8 @@
 // Shared page frame ported from the legacy nivesh.js layout: top bar, sidebar (logged-in pages) and footer.
 // AppLayout wraps the signed-in pages; PublicLayout wraps landing/about/contact (no sidebar).
-import { useState, type ReactNode } from "react";
+import { useEffect, useState, type ReactNode } from "react";
 import { useQuery } from "@tanstack/react-query";
-import { Link, NavLink, Outlet, useNavigate } from "react-router-dom";
+import { Link, Navigate, NavLink, Outlet, useLocation, useNavigate } from "react-router-dom";
 import { Brain, Briefcase, Gift, LineChart, LogOut, Menu, Moon, Receipt, Star, Sun, UserCircle, Wand2, X } from "lucide-react";
 import { useStore } from "../store/useStore";
 import { api } from "../lib/api";
@@ -58,7 +58,7 @@ function TopBar({ withMenu }: { withMenu?: boolean }) {
     <header className="sticky top-0 z-40 border-b border-line bg-surface/90 backdrop-blur">
       <div className="flex h-16 items-center justify-between gap-4 px-4 sm:px-6">
         <Link to={isAuthenticated ? "/portfolio" : "/"} className="flex items-center gap-2" aria-label="Nivesh-Path home">
-          <img src="/logo.png" alt="" className="h-10 w-auto" />
+          <img src="/logo.png" alt="" width={269} height={189} className="h-10 w-auto" />
           <span className="hidden font-display text-lg font-extrabold text-ink sm:inline">Nivesh-Path</span>
         </Link>
         <nav aria-label="Main" className="hidden items-center gap-1 lg:flex">
@@ -156,7 +156,7 @@ export function Footer() {
     <footer className="mt-10 rounded-2xl border border-line bg-surface px-6 py-8 text-ink-2">
       <div className="mx-auto grid max-w-5xl gap-8 sm:grid-cols-[1.6fr_1fr_1fr]">
         <div>
-          <img src="/logo.png" alt="Nivesh-Path" className="h-11 w-auto" />
+          <img src="/logo.png" alt="Nivesh-Path" width={269} height={189} className="h-11 w-auto" />
           <p className="mt-3 max-w-xs text-sm leading-relaxed text-muted">
             Paper-trade US stocks with $100,000 of virtual cash and an AI coach that learns from your own trades.
           </p>
@@ -201,6 +201,21 @@ export function AppLayout() {
 }
 
 export function PublicLayout({ children }: { children?: ReactNode }) {
+  const isAuthenticated = useStore((s) => s.isAuthenticated);
+  const logout = useStore((s) => s.logout);
+  const navigate = useNavigate();
+  const { pathname, state } = useLocation();
+  const signingOut = Boolean((state as { signedOut?: boolean } | null)?.signedOut);
+  // Arriving with `signedOut` (account deleted): sign out here, after leaving the signed-in pages, then drop the flag
+  // from this history entry so going Back to it later can't sign anyone out.
+  useEffect(() => {
+    if (!signingOut) return;
+    if (isAuthenticated) logout();
+    navigate(pathname, { replace: true, state: null });
+  }, [signingOut]);
+  // Signed-in visitors to the home page go straight to their portfolio, before this frame (and its footer) draws:
+  // drawing it first made the footer jump (Lighthouse CLS 0.69 on "/" when logged in).
+  if (isAuthenticated && pathname === "/" && !signingOut) return <Navigate to="/portfolio" replace />;
   return (
     <div className="min-h-screen bg-bg text-ink">
       <TopBar withMenu={false} />

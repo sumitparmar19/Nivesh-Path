@@ -9,6 +9,9 @@ require("dotenv").config(); // runs before src/config.js, which normally loads .
 const { redactAttributes, redactString } = require("./lib/redact");
 
 const enabled = Boolean(process.env.OTEL_EXPORTER_OTLP_ENDPOINT) && process.env.OTEL_SDK_DISABLED !== "true";
+// The name Grafana groups this service under. Logged at start-up: a copied OTEL_SERVICE_NAME made the AI service
+// report as nivesh-web on live, and a joined trace then showed "Services 1".
+const serviceName = process.env.OTEL_SERVICE_NAME || "nivesh-web";
 let shutdownFns = [];
 
 /** Wraps an exporter so every span is scrubbed (attributes, event attributes, status message) before export. */
@@ -55,7 +58,7 @@ function start() {
 
   diag.setLogger(new DiagConsoleLogger(), DiagLogLevel.WARN);
   const resource = defaultResource().merge(
-    resourceFromAttributes({ "service.name": process.env.OTEL_SERVICE_NAME || "nivesh-web", "service.namespace": "nivesh-path" })
+    resourceFromAttributes({ "service.name": serviceName, "service.namespace": "nivesh-path" })
   );
 
   // Standard switches: OTEL_TRACES_EXPORTER / OTEL_METRICS_EXPORTER / OTEL_LOGS_EXPORTER = "none" turn one signal off
@@ -116,4 +119,9 @@ async function shutdown() {
   await Promise.allSettled(shutdownFns.map((fn) => fn()));
 }
 
-module.exports = { enabled, shutdown, redactingSpanExporter };
+/** The start-up line server.js logs, with the service name so a wrong OTEL_SERVICE_NAME shows in the console. */
+function startupLine(on = enabled, name = serviceName) {
+  return `Telemetry: ${on ? `exporting over OTLP as ${name}` : "off (OTEL_EXPORTER_OTLP_ENDPOINT not set)"}`;
+}
+
+module.exports = { enabled, serviceName, startupLine, shutdown, redactingSpanExporter };

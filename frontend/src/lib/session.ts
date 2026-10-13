@@ -41,7 +41,22 @@ export function readUser(): StoredUser | null {
   return safe(() => JSON.parse(localStorage.getItem(USER) || "null") as StoredUser | null, null);
 }
 
+// Set while the user is being signed out on purpose (account deleted), until the next log-in. The API client then
+// doesn't treat a 401 from a request still in flight as "session expired".
+let leaving = false;
+
+/** Drops the token now and marks the sign-out as deliberate (see `leaving`). */
+export function beginSignOut(): void {
+  leaving = true;
+  clearSession();
+}
+
+export function signingOut(): boolean {
+  return leaving;
+}
+
 export function saveSession(token: string, user: User): void {
+  leaving = false;
   safe(() => {
     localStorage.setItem(TOKEN, token);
     localStorage.setItem(USER, JSON.stringify({ isLoggedIn: true, token, id: user.id, name: user.name, email: user.email, mobile: user.mobile }));

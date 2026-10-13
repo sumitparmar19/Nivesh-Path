@@ -2,6 +2,9 @@
 // Behavioral Mirror (a flagged trade shows a note and appears on its page). Run against FAKE_MARKET_DATA=1.
 import { test, expect } from "@playwright/test";
 
+// These need the made-up FOMO ticker (FAKE_MARKET_DATA=1); live-smoke.spec.ts covers the real site.
+test.skip(process.env.E2E_LIVE === "1", "uses FAKE_MARKET_DATA tickers: not for the live site");
+
 test("new user can sign up, buy a stock, get an analysis and log out", async ({ page }) => {
   const id = Date.now().toString().slice(-8);
   const errors: string[] = [];

@@ -7,7 +7,7 @@ export default function AuthCard({ title, subtitle, children, footer }: { title:
     <div className="grid min-h-screen place-items-center bg-[radial-gradient(60%_50%_at_50%_0%,rgba(34,197,94,.18),transparent_70%)] bg-bg px-4 py-10">
       <div className="w-full max-w-md rounded-3xl border border-line bg-surface p-8 shadow-lift">
         <Link to="/" className="mx-auto mb-4 block w-fit" aria-label="Nivesh-Path home">
-          <img src="/logo.png" alt="Nivesh-Path" className="h-14 w-auto" />
+          <img src="/logo.png" alt="Nivesh-Path" width={269} height={189} className="h-14 w-auto" />
         </Link>
         <h1 className="text-center font-display text-2xl font-extrabold text-ink">{title}</h1>
         <p className="mt-1 text-center text-muted">{subtitle}</p>

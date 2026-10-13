@@ -7,7 +7,7 @@ import { AlertTriangle, IdCard, LogOut, Palette, RotateCcw, ShieldCheck } from "
 import { Button, Card, CardHeader, ErrorState, PageHeader, Skeleton, cx } from "../components/ui";
 import { api } from "../lib/api";
 import { initials } from "../lib/format";
-import { readToken } from "../lib/session";
+import { beginSignOut, readToken } from "../lib/session";
 import { useStore } from "../store/useStore";
 import type { ProfileUpdate, Theme } from "../types";
 
@@ -48,7 +48,7 @@ function Avatar({ name }: { name: string }) {
     };
   }, [name]);
   return src ? (
-    <img src={src} alt="" className="h-16 w-16 rounded-full" />
+    <img src={src} alt="" width={64} height={64} className="h-16 w-16 rounded-full" />
   ) : (
     <span className="grid h-16 w-16 place-items-center rounded-full bg-brand-600 text-xl font-bold text-white">{initials(name)}</span>
   );
@@ -132,10 +132,13 @@ export default function Account() {
   const remove = useMutation({
     mutationFn: api.me.delete,
     onSuccess: () => {
-      logout();
+      // Go home first; the home page finishes signing out once it shows (PublicLayout, `signedOut`). Signing out here,
+      // while still on /account, let RequireAuth send the just-deleted user to /login?redirect=/account instead.
+      // The token goes now, and a 401 from a request still in flight no longer jumps to the login page.
+      beginSignOut();
       client.clear();
       toast("Your account and all its data were deleted.", "info", "Account deleted");
-      navigate("/", { replace: true });
+      navigate("/", { replace: true, state: { signedOut: true } });
     },
     onError: (err: Error) => toast(err.message, "error"),
   });

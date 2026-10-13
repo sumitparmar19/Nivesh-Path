@@ -152,3 +152,14 @@ def test_a_real_log_batch_reaches_the_otlp_endpoint(monkeypatch: pytest.MonkeyPa
     batches = [body for path, body in received if path == "/v1/logs"]
     assert batches, f"no request to /v1/logs (got {[p for p, _ in received]})"
     assert any(b"ai-log-export-check 42" in body for body in batches)
+
+
+def test_the_startup_line_names_the_service(monkeypatch: pytest.MonkeyPatch) -> None:
+    """The start-up line says which service name exports, so a copied OTEL_SERVICE_NAME is visible in the console."""
+    monkeypatch.delenv("OTEL_EXPORTER_OTLP_ENDPOINT", raising=False)
+    assert telemetry.startup_line() == "Telemetry: off (OTEL_EXPORTER_OTLP_ENDPOINT not set)"
+    monkeypatch.setenv("OTEL_EXPORTER_OTLP_ENDPOINT", "http://127.0.0.1:4318")
+    monkeypatch.delenv("OTEL_SERVICE_NAME", raising=False)
+    assert telemetry.startup_line() == "Telemetry: exporting over OTLP as nivesh-ai"
+    monkeypatch.setenv("OTEL_SERVICE_NAME", "nivesh-web")
+    assert telemetry.startup_line() == "Telemetry: exporting over OTLP as nivesh-web"

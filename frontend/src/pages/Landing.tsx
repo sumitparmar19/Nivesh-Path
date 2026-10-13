@@ -1,6 +1,6 @@
 // Landing page for visitors: what Nivesh-Path is, a live price strip, the three real features, how it
 // works. Logged-in users go straight to their portfolio.
-import { Link, Navigate } from "react-router-dom";
+import { Link, Navigate, useLocation } from "react-router-dom";
 import { useQuery } from "@tanstack/react-query";
 import { ArrowRight, Fingerprint, PiggyBank, Wand2 } from "lucide-react";
 import { ButtonLink, Card, cx } from "../components/ui";
@@ -17,8 +17,9 @@ const FEATURES = [
 
 export default function Landing() {
   const isAuthenticated = useStore((s) => s.isAuthenticated);
+  const signingOut = Boolean((useLocation().state as { signedOut?: boolean } | null)?.signedOut);
   const popular = useQuery({ queryKey: ["popular"], queryFn: api.stocks.popular, refetchInterval: 60_000, enabled: !isAuthenticated });
-  if (isAuthenticated) return <Navigate to="/portfolio" replace />;
+  if (isAuthenticated && !signingOut) return <Navigate to="/portfolio" replace />;
   const strip = FEATURED.filter((s) => popular.data?.[s.symbol]).slice(0, 8);
 
   return (

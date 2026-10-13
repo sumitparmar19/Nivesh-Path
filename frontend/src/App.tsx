@@ -27,7 +27,14 @@ export const queryClient = new QueryClient({
   defaultOptions: { queries: { staleTime: 60_000, retry: 1, refetchOnWindowFocus: false } },
 });
 
-const page = (node: ReactNode) => <Suspense fallback={<Spinner />}>{node}</Suspense>;
+// While a page's code loads, hold a screen's height so the footer starts below the fold instead of jumping down
+// when the page arrives (that jump was most of the Lighthouse layout-shift score: CLS 0.6-0.75 on phones).
+export const PageFallback = () => (
+  <div data-testid="page-fallback" className="min-h-screen">
+    <Spinner />
+  </div>
+);
+const page = (node: ReactNode) => <Suspense fallback={<PageFallback />}>{node}</Suspense>;
 
 /** Signed-in pages: unauthenticated visitors go to /login and come back afterwards. */
 export function RequireAuth() {
