@@ -127,7 +127,7 @@ export function StockLogo({ src, symbol, size = "md" }: { src?: string | null; s
   }
   return (
     <span className={cx(box, "grid shrink-0 place-items-center overflow-hidden border border-line bg-white")}>
-      <img src={src} alt="" className="max-h-[70%] max-w-[70%] object-contain" />
+      <img src={src} alt="" width={64} height={64} className="max-h-[70%] max-w-[70%] object-contain" />
     </span>
   );
 }
