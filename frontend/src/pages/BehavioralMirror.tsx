@@ -230,7 +230,9 @@ export default function BehavioralMirror() {
         </ul>
         <p className="mt-4 text-xs text-muted">
           Each trade is checked when you make it, using that moment's price data. Trades from before this feature launched
-          aren't checked for panic or FOMO, because the market situation at the time wasn't recorded. Educational, not financial advice.
+          aren't checked for panic or FOMO, because the market situation at the time wasn't recorded. The 5-day move comes
+          from the closing prices this site saves every weekday once six are stored for a stock (rule v3), and from Finnhub's
+          daily figure until then. Educational, not financial advice.
         </p>
       </Card>
     </div>

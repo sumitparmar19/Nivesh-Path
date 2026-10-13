@@ -301,6 +301,8 @@ export interface PatternFacts {
   fromPriceMove?: boolean;
   price?: number;
   fiveDayReturn?: number | null;
+  /** Rule v3: where the 5-day move came from: this site's saved daily closes, or Finnhub's daily figure. */
+  fiveDaySource?: "snapshots" | "finnhub" | null;
   avgCost?: number;
   vsCostPct?: number;
   week52High?: number;

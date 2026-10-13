@@ -10,9 +10,20 @@ export interface Release {
 
 export const RELEASES: Release[] = [
   {
-    title: "A copy that runs on AWS",
+    title: "Daily closing prices and a nightly check",
     tag: "Phase 3 · Oct 2026",
     isNew: true,
+    intro: "Starting with its first run, a scheduled job saves the closing price of every stock someone holds each weekday after the US market closes, then re-checks every account for overconcentration.",
+    points: [
+      ["Our own price history.", "Once six daily closes are stored for a stock, the Behavioral Mirror measures its 5-day move from them (rule v3). Until then it uses Finnhub's daily figure, as before."],
+      ["Checked even when you're away.", "A stock that grew past 35% of your account overnight is flagged the next evening, not only when you next open the app."],
+      ["Says where the numbers came from.", "A pattern card notes when its 5-day move came from the closes saved here."],
+    ],
+    links: [{ to: "/behavioral-mirror", label: "Open the Behavioral Mirror" }],
+  },
+  {
+    title: "A copy that runs on AWS",
+    tag: "Phase 3 · Oct 2026",
     intro: "The whole app can now be started on Amazon Web Services for demos and load tests, then taken down again. This site keeps running where it is; your account and money aren't copied.",
     points: [
       ["Built from code.", "Network, load balancer, containers, database and alarms are all described in Terraform and created by an approved GitHub workflow, without any stored cloud passwords."],

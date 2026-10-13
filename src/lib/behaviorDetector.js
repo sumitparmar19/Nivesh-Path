@@ -5,26 +5,42 @@
 const rules = require("./behaviorRules");
 const { recordDetection } = require("./metrics");
 const { createMongoLedgerStore } = require("./ledgerStore.mongo");
+const { nyDate } = require("./priceSnapshots");
 
 const DETECTION_BUDGET_MS = 1500;
 const PRICE_CHECK_INTERVAL_MS = 15 * 60 * 1000; // concentration re-check from price moves, per user
 
-function createBehaviorDetector({ BehaviorEvent, ledgerStore, Purchase, marketData, ledger, log = console, now = () => Date.now() }) {
+function createBehaviorDetector({ BehaviorEvent, ledgerStore, Purchase, marketData, ledger, snapshots = null, log = console, now = () => Date.now() }) {
   // Where the "checked" mark is written: the ledger's trade store (older callers pass the Mongo model).
   const trades = ledgerStore || (ledger && ledger.store) || (Purchase ? createMongoLedgerStore({ Purchase }) : null);
   const lastPriceCheck = new Map(); // userId -> ms (single web instance; good enough for a throttle)
 
+  // Rule v3: the 5-day move from our own daily closes (price_snapshots), when enough recent ones are stored.
+  // Any problem reading them just means falling back to Finnhub's figure.
+  async function snapshotFiveDay(symbol) {
+    if (!snapshots) return null;
+    try {
+      return rules.fiveDayFromSnapshots(await snapshots.recent(symbol, rules.SNAPSHOT_CLOSES_NEEDED), nyDate(now()));
+    } catch (err) {
+      log.warn(`[behavior] price snapshots unavailable for ${symbol}, using Finnhub's 5-day move: ${err.message}`);
+      return null;
+    }
+  }
+
   // 5-day return + 52-week high (daily data) and today's move + intraday high (live quote). Either half may
   // be missing; null when neither is available, so the trade is not counted as checked.
   async function marketFacts(symbol) {
-    const [m, q] = await Promise.allSettled([marketData.momentum(symbol), marketData.quote(symbol)]);
-    if (m.status === "rejected" && q.status === "rejected") {
+    const [m, q, own] = await Promise.allSettled([marketData.momentum(symbol), marketData.quote(symbol), snapshotFiveDay(symbol)]);
+    const ownFiveDay = own.status === "fulfilled" ? own.value : null;
+    if (m.status === "rejected" && q.status === "rejected" && !ownFiveDay) {
       log.warn(`[behavior] market data unavailable for ${symbol}, panic/FOMO skipped: ${m.reason && m.reason.message}`);
       return null;
     }
     const mo = m.status === "fulfilled" ? m.value : {};
     const qu = q.status === "fulfilled" ? q.value : {};
-    return { fiveDayReturn: mo.fiveDayReturn ?? null, week52High: mo.week52High ?? null, todayChange: qu.changePercent ?? null, dayHigh: qu.high ?? null };
+    const fiveDayReturn = ownFiveDay ? ownFiveDay.fiveDayReturn : mo.fiveDayReturn ?? null;
+    const fiveDaySource = ownFiveDay ? "snapshots" : fiveDayReturn === null ? null : "finnhub";
+    return { fiveDayReturn, fiveDaySource, week52High: mo.week52High ?? null, todayChange: qu.changePercent ?? null, dayHigh: qu.high ?? null };
   }
 
   // Overconcentration: record new/worse crossings over 35%, and clear active events that fell back under it.
@@ -103,7 +119,34 @@ function createBehaviorDetector({ BehaviorEvent, ledgerStore, Purchase, marketDa
     }
   }
 
-  return { detect, detectWithin, checkPrices };
+  /**
+   * The nightly job's check (POST /internal/jobs/concentration-check): the concentration rule for every user with
+   * trades, ignoring the 15-minute throttle. Same no-duplicate / re-warn logic as after a trade. Never rejects.
+   */
+  async function checkAllUsers() {
+    const result = { users: 0, created: 0, failed: 0 };
+    let users = [];
+    try {
+      users = trades && trades.usersWithTrades ? await trades.usersWithTrades() : [];
+    } catch (err) {
+      log.warn(`[behavior] nightly check could not list users: ${err.message}`);
+      return { ...result, failed: 1 };
+    }
+    for (const userId of users) {
+      try {
+        const created = await checkConcentration(userId, null);
+        for (const e of created) recordDetection(e.patternType, e.severity);
+        result.users += 1;
+        result.created += created.length;
+      } catch (err) {
+        result.failed += 1;
+        log.warn(`[behavior] nightly concentration check skipped one user: ${err.message}`);
+      }
+    }
+    return result;
+  }
+
+  return { detect, detectWithin, checkPrices, checkAllUsers };
 }
 
 module.exports = { createBehaviorDetector, DETECTION_BUDGET_MS, PRICE_CHECK_INTERVAL_MS };
