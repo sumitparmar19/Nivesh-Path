@@ -1006,7 +1006,8 @@ describe("internal API (/internal/*, AI service -> web)", () => {
     });
 
     test("snapshot during market hours is skipped, not saved", async () => {
-      const { app, snapshots } = jobsApp({ quote: { c: 150, t: Math.floor(Date.now() / 1000) } });
+      // The quote's trade time is fixed too: built from the real clock, this test broke once the real date passed Oct 12.
+      const { app, snapshots } = jobsApp({ quote: { c: 150, t: Date.parse("2026-10-12T16:59:00Z") / 1000 } });
       const realNow = Date.now;
       Date.now = () => Date.parse("2026-10-12T17:00:00Z"); // 1 pm New York
       try {
