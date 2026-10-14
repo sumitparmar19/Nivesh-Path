@@ -42,6 +42,9 @@ data "aws_iam_policy_document" "deploy" {
       "lambda:ListFunctions",
       "lambda:GetAccountSettings",
       "states:ListStateMachines",
+      # Provider 6.x checks a state machine's definition before creating it, against stateMachine:* (no name yet),
+      # so the nivesh-jobs-* statement below can't cover it. It only validates JSON; it creates nothing.
+      "states:ValidateStateMachineDefinition",
       "scheduler:ListSchedules",
       "sns:GetTopicAttributes",
       "sns:ListTopics",

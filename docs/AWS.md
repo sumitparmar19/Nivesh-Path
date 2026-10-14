@@ -145,6 +145,8 @@ Never paste a password, key or connection string into any chat. They go only int
   - creates the resources;
   - moves its own state into the new S3 bucket, so nothing important lives only in CloudShell.
 - **To run it again later:** `cd ~/Nivesh-Path && git pull && bash infra/bootstrap/cloudshell.sh`.
+  - Each region's CloudShell has its **own home folder**. Your first run's `backend.tf` (which points Terraform at the state in S3) lives only in that CloudShell. Ours is the **US East (Ohio) CloudShell**, so there the rerun is `AWS_REGION=us-east-1 bash infra/bootstrap/cloudshell.sh`.
+  - Run from any other region's CloudShell, the script finds the state in `s3://nivesh-path-tfstate-<account>` and uses it. It never starts a second bootstrap.
 
 **B3. Confirm the alert email:** open the email "AWS Notification - Subscription Confirmation" and click **Confirm subscription**.
 
@@ -223,6 +225,7 @@ for i in $(seq 1 10); do curl -s -o /dev/null -w "%{http_code} " -H "X-Internal-
 | The Advisor answers "rule-based" | `ANTHROPIC_API_KEY` is empty or invalid |
 | Plan comment missing on a PR | `AWS_PLAN_ROLE_ARN` isn't set yet (the plan job is skipped), or the PR comes from a fork |
 | Apply (jobs or demo): "github-nivesh-deploy is not authorized to perform: SNS:ListTagsForResource on … nivesh-path-alerts" | AWS provider 6.x also reads the alert topic's tags. The deploy policy now allows it, for that one topic (statement `AlertTopicRead`). Re-run the bootstrap once (B2, "To run it again later") so the role gets the new policy, then run the workflow again |
+| Apply (jobs): "github-nivesh-deploy is not authorized to perform: states:ValidateStateMachineDefinition on … stateMachine:*" | AWS provider 6.x checks a state machine's definition before creating it, against `stateMachine:*`, because the machine has no name yet. `NightlyJobResources` (only `nivesh-jobs-*`) can't cover that, so the action is now in `DemoServicesInRegion`, limited to us-east-1. It only validates JSON. Re-run the bootstrap once, then the workflow. Resources created before the failure stay, and the next apply continues from there |
 | `cloudshell.sh` stops: "This CloudShell is in us-east-2 …" | CloudShell took the console's region. Switch the console to **US East (N. Virginia)** and open CloudShell again, or run `AWS_REGION=us-east-1 bash ~/Nivesh-Path/infra/bootstrap/cloudshell.sh` |
 | `terraform init` in CloudShell: "no space left on device" | The AWS provider doesn't fit in CloudShell's 1 GB home folder. The script now keeps it in `/tmp/tf-bootstrap` (`TF_DATA_DIR`). Free the space from an older run with `rm -rf ~/Nivesh-Path/infra/bootstrap/.terraform`, then `git pull` and run the script again |
 
