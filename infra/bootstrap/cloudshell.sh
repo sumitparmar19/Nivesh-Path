@@ -5,7 +5,7 @@
 #      (Terraform shows the plan and waits for "yes");
 #   3. moves this stack's own state into the new bucket, so nothing important lives only in CloudShell;
 #   4. prints the values for GitHub (AWS_ROLE_ARN, AWS_PLAN_ROLE_ARN, AWS_REGION).
-# Safe to run again: once backend.tf exists it just re-applies against the bucket.
+# Safe to run again, from any region's CloudShell: once the state is in its bucket it just re-applies against it.
 set -euo pipefail
 
 # Everything goes to us-east-1 (docs/AWS.md B1). CloudShell sets AWS_REGION to the console's region, so a session
@@ -42,16 +42,12 @@ terraform version
 
 cd "$(dirname "$0")"
 
-if [ ! -f backend.tf ]; then
-  read -r -p "Email address for alarm emails: " ALERT_EMAIL
-  terraform init -input=false
-  terraform apply -var "alert_email=$ALERT_EMAIL" -var "region=$REGION"
-  BUCKET=$(terraform output -raw state_bucket)
+write_backend() {
   cat > backend.tf <<BACKEND
-# Written by cloudshell.sh after the first apply: this stack's state lives in the bucket it created.
+# Written by cloudshell.sh: this stack's state lives in the bucket the first apply created.
 terraform {
   backend "s3" {
-    bucket       = "$BUCKET"
+    bucket       = "$1"
     key          = "bootstrap/terraform.tfstate"
     region       = "$REGION"
     use_lockfile = true
@@ -59,9 +55,28 @@ terraform {
   }
 }
 BACKEND
+}
+
+# backend.tf exists only in the CloudShell where the first run happened (each region's CloudShell has its own home
+# folder). If it's missing here but the bootstrap's state is already in its bucket, point at that state instead of
+# starting over, which would try to create everything a second time.
+if [ ! -f backend.tf ]; then
+  ACCOUNT=$(aws sts get-caller-identity --query Account --output text)
+  EXISTING="nivesh-path-tfstate-$ACCOUNT" # versions.tf: "${var.project}-tfstate-${account}", project = nivesh-path
+  if aws s3api head-object --bucket "$EXISTING" --key bootstrap/terraform.tfstate --region "$REGION" >/dev/null 2>&1; then
+    echo "Found the bootstrap state in s3://$EXISTING; using it."
+    write_backend "$EXISTING"
+  fi
+fi
+
+if [ ! -f backend.tf ]; then
+  read -r -p "Email address for alarm emails: " ALERT_EMAIL
+  terraform init -input=false
+  terraform apply -var "alert_email=$ALERT_EMAIL" -var "region=$REGION"
+  write_backend "$(terraform output -raw state_bucket)"
   terraform init -input=false -migrate-state -force-copy
   rm -f terraform.tfstate terraform.tfstate.backup
-  echo "Saved the bootstrap state to s3://$BUCKET/bootstrap/terraform.tfstate"
+  echo "Saved the bootstrap state to s3://$(terraform output -raw state_bucket)/bootstrap/terraform.tfstate"
 else
   terraform init -input=false
   terraform apply -var "region=$REGION"
