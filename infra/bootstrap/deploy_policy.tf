@@ -64,6 +64,14 @@ data "aws_iam_policy_document" "deploy" {
     }
   }
 
+  # The demo and jobs stacks read the alert topic with `data "aws_sns_topic"`; AWS provider 6.x also reads its tags
+  # (sns:ListTagsForResource), which the first live `apply` of the jobs stack was refused. Scoped to this one topic.
+  statement {
+    sid       = "AlertTopicRead"
+    actions   = ["sns:GetTopicAttributes", "sns:ListTagsForResource"]
+    resources = [aws_sns_topic.alerts.arn]
+  }
+
   statement {
     sid     = "NightlyJobResources"
     actions = ["lambda:*", "states:*", "scheduler:*"]

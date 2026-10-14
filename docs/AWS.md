@@ -131,6 +131,7 @@ Never paste a password, key or connection string into any chat. They go only int
 - Choose region **US East (N. Virginia) `us-east-1`** (top right).
 
 **B2. Bootstrap in CloudShell:**
+- Check the console's region (top right) says **US East (N. Virginia)**. CloudShell inherits it, and the script refuses any other region.
 - Click the CloudShell icon (`>_`, top bar) and paste:
   ```
   git clone --depth 1 https://github.com/sumitparmar19/Nivesh-Path.git ~/Nivesh-Path
@@ -139,7 +140,8 @@ Never paste a password, key or connection string into any chat. They go only int
 - **It asks for the email for alarm emails, shows the plan, and waits for you to type `yes`.**
 - At the end it prints three lines: `AWS_ROLE_ARN`, `AWS_PLAN_ROLE_ARN`, `AWS_REGION`. These are not secret.
 - What the script does:
-  - installs Terraform 1.15.9 (checksum-verified);
+  - stops unless the region is `us-east-1`;
+  - installs Terraform 1.15.9 (checksum-verified), and keeps its provider downloads in `/tmp/tf-bootstrap`, because CloudShell's home folder holds only 1 GB;
   - creates the resources;
   - moves its own state into the new S3 bucket, so nothing important lives only in CloudShell.
 - **To run it again later:** `cd ~/Nivesh-Path && git pull && bash infra/bootstrap/cloudshell.sh`.
@@ -220,6 +222,9 @@ for i in $(seq 1 10); do curl -s -o /dev/null -w "%{http_code} " -H "X-Internal-
 | The app loads but quotes fail | The Finnhub key is invalid or over its limit |
 | The Advisor answers "rule-based" | `ANTHROPIC_API_KEY` is empty or invalid |
 | Plan comment missing on a PR | `AWS_PLAN_ROLE_ARN` isn't set yet (the plan job is skipped), or the PR comes from a fork |
+| Apply (jobs or demo): "github-nivesh-deploy is not authorized to perform: SNS:ListTagsForResource on … nivesh-path-alerts" | AWS provider 6.x also reads the alert topic's tags. The deploy policy now allows it, for that one topic (statement `AlertTopicRead`). Re-run the bootstrap once (B2, "To run it again later") so the role gets the new policy, then run the workflow again |
+| `cloudshell.sh` stops: "This CloudShell is in us-east-2 …" | CloudShell took the console's region. Switch the console to **US East (N. Virginia)** and open CloudShell again, or run `AWS_REGION=us-east-1 bash ~/Nivesh-Path/infra/bootstrap/cloudshell.sh` |
+| `terraform init` in CloudShell: "no space left on device" | The AWS provider doesn't fit in CloudShell's 1 GB home folder. The script now keeps it in `/tmp/tf-bootstrap` (`TF_DATA_DIR`). Free the space from an older run with `rm -rf ~/Nivesh-Path/infra/bootstrap/.terraform`, then `git pull` and run the script again |
 
 ## 5. What's in `infra/demo`
 
