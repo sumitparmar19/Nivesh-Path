@@ -285,8 +285,12 @@ export interface SystemStatus {
   ledger?: { backend: "mongo" | "postgres"; tradingPaused: boolean };
   /** Set only on the AWS demo stack (DEPLOY_PLATFORM=aws-demo); null on the live site. */
   platform?: string | null;
+  /** How Finnhub answered the last real quote call (start-up check, then live traffic). */
+  marketData?: { status: MarketDataStatus; httpStatus: number | null; checkedAt: string | null } | null;
   checkedAt: string;
 }
+
+export type MarketDataStatus = "ok" | "key_rejected" | "rate_limited" | "unreachable" | "error" | "not_configured" | "unknown";
 
 // ---------- Behavioral Mirror (/api/patterns) ----------
 export type PatternType = "panic_sell" | "fomo_buy" | "overconcentration";

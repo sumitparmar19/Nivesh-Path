@@ -122,6 +122,8 @@ function createApp(deps = {}) {
       ledger: { backend: ledgerStore.kind, tradingPaused: maintenance() },
       // Set only by the AWS demo stack (infra/demo), so What's new can say the visitor isn't on the live site.
       platform: process.env.DEPLOY_PLATFORM || null,
+      // How Finnhub answered the last real quote call (start-up check, then live traffic); this endpoint never calls it.
+      marketData: typeof quotes.health === "function" ? quotes.health() : null,
       checkedAt: new Date().toISOString(),
     });
   });
@@ -146,6 +148,7 @@ function createApp(deps = {}) {
   app.locals.reactRoutes = mountSpa(app, deps.spa || {});
   app.locals.ledgerStore = ledgerStore;
   app.locals.aiClient = aiClient;
+  app.locals.quotes = quotes;
 
   // Old page URLs (company-name pages, removed marketing pages) keep working via permanent redirects.
   app.get("/", (req, res) => res.redirect(302, "/psk/index.html"));

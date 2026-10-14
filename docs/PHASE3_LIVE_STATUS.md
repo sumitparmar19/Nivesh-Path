@@ -1,6 +1,6 @@
 # Phase 3: live site status
 
-**As of Oct 14, 2026.** From Sumit's and the planning chat's live reports (the latest: "Phase 3: complete status so far, and a full check of the live site", Oct 12 PT).
+**As of Oct 14, 2026 (evening).** From Sumit's and the planning chat's live reports (the latest: "Phase 3: complete status so far, and a full check of the live site", Oct 12 PT).
 
 No secrets are in this file. Every value marked *secret* lives only in DigitalOcean, Neon, Atlas, Grafana or AWS. Hostnames, user names and the Grafana stack name are left out on purpose.
 
@@ -14,7 +14,9 @@ The full check of every page and feature is in `docs/PHASE3_LIVE_CHECK.md`.
 | Users, Behavioral Mirror events, AI memory, analyses | MongoDB Atlas: Sumit's own cluster, database `niveshpath` | Live |
 | **Money ledger** (cash + trades) | **PostgreSQL 18.6 on Neon** (AWS us-east-1, branch `production`, database `neondb`) | **Live since the Oct 12 cutover** (`LEDGER_BACKEND=postgres`) |
 | Monitoring | Grafana Cloud (OTLP endpoint in us-east-2) | Traces, metrics and logs all arriving. Dashboard imported; alert test fired |
-| AWS demo | Free-plan account ($100 credit, ends Apr 11, 2027) plus the AWS Builder Center student subscription | Account exists. Bootstrap not run yet |
+| AWS account | Free plan ($100 credit, ends Apr 11, 2027) plus the AWS Builder Center student subscription; us-east-1 | **Bootstrap done** (state bucket, GitHub OIDC roles, permissions boundary, alert topic). The bootstrap's `backend.tf` lives in the us-east-2 CloudShell |
+| **Nightly job** (`infra/jobs`) | EventBridge Scheduler → Step Functions → Lambda, us-east-1 | **Live since Oct 14.** Runs weekdays at 4:30 pm New York; emails only on failure (§4 step 6) |
+| AWS demo stack (`infra/demo`) | us-east-1 | Not created yet (on demand: `docs/AWS.md` §4.2) |
 
 ## 2. Accounts and services created
 
@@ -66,6 +68,17 @@ The full check of every page and feature is in `docs/PHASE3_LIVE_CHECK.md`.
    - Dashboard imported: 0.1 req/s, 0% 5xx, p95 4.93 ms, AI UP.
    - **The p95 alert test fired:** email "Nivesh-Path › Web: p95 latency above 1.5 s".
 5. **Joined trace.** He fixed the ai service name (§5 #6), then confirmed the trace (§6).
+6. **AWS bootstrap and the nightly job (Oct 13–14).**
+   - **Bootstrap:** done from CloudShell; the first run went to us-east-2 by mistake (§5 #13). It was re-run from the us-east-2 CloudShell with `AWS_REGION=us-east-1`.
+   - **`apply` of the jobs stack:** three rounds; two deploy-role permissions were missing (§5 #11–12). Each failed apply kept what it had created, and the next one carried on from there.
+   - **First `run-now`: `SomeSnapshotsFailed`, all 7 tickers.**
+     - Web's logs showed `Quote provider returned 401`: the live `FINNHUB_API_KEY` was invalid (§5 #14). It had also broken live prices.
+     - **The partial-failure email arrived, as designed.**
+     - Sumit replaced the key on DigitalOcean (web).
+   - **Second `run-now`: execution `43e37234-e198-4c0b-9d90-5e5309edfd47`, SUCCEEDED.**
+     - Held tickers: DIA, INTC, META, MSFT, QQQ, SPY, WMT.
+     - Closes: **7 saved**, 0 skipped, 0 failed.
+     - Concentration check: 1 user, 0 created, 0 failed.
 
 ## 5. Issues found on live, and how each was fixed
 
@@ -81,6 +94,10 @@ The full check of every page and feature is in `docs/PHASE3_LIVE_CHECK.md`.
 | 8 | **Live check (Oct 13): after "Delete my account", the browser landed on `/login?redirect=/account`** (the account itself was deleted) | #19 (`docs/PHASE3_LIVE_CHECK.md` §3) | ✅ |
 | 9 | **Live check: pages jumped while loading** (Lighthouse CLS 0.6–0.75 on phones) | #19 (CLS 0.12 or lower) | ✅ |
 | 10 | **Live smoke runs #1–#2: profile edits typed before the profile loaded were lost** | #20 locks the fields until it loads. Run #3 passed all 10 steps on live (Oct 14) | ✅ |
+| 11 | Jobs `apply`: deploy role lacked `sns:ListTagsForResource` on `nivesh-path-alerts` (provider 6.x reads tags) | #21: statement `AlertTopicRead`, scoped to that topic | ✅ |
+| 12 | Jobs `apply`: deploy role lacked `states:ValidateStateMachineDefinition` (checked against `stateMachine:*` before creating) | #22: added to `DemoServicesInRegion` (us-east-1 only) | ✅ |
+| 13 | CloudShell: bootstrap went to us-east-2 (CloudShell's region follows the console); 1 GB home too small for the AWS provider | #21: `cloudshell.sh` refuses any region but us-east-1 and keeps `.terraform` in `/tmp`. #22: a rerun from another region's CloudShell finds the state in S3 instead of starting over | ✅ |
+| 14 | **Invalid `FINNHUB_API_KEY` on live** (HTTP 401): live prices failed and the nightly job's first run saved 0 of 7 closes. It showed only in the logs | Key replaced by Sumit. **Now** the web service checks the key at start-up, and What's new shows "Market data (Finnhub)": working, or key rejected with the HTTP code | ✅ |
 
 ## 6. Monitoring evidence (screenshots with Sumit)
 
@@ -98,16 +115,13 @@ The full check of every page and feature is in `docs/PHASE3_LIVE_CHECK.md`.
 2. **Live check:** ✅ run #3 passed (Oct 14). Left for you: the Atlas filter for `e2e-live-` users (should be empty), plus the Grafana trace with Services 2 from that run (`docs/PHASE3_LIVE_CHECK.md` §5).
 3. **The `dhrumil` user on `niveshpathcluster`** belongs to someone else's cluster: tell its owner to delete it. It can't reach the live data.
 4. **Optional hardening:** a `nivesh-live` Atlas user with `readWrite` on `niveshpath` only, replacing the current user in `MONGO_URL` on both components.
-5. **Before AWS D1:**
+5. **Before AWS D1 (the demo stack):**
    - the `nivesh-demo` Atlas user;
    - a second free Finnhub account for the demo (planning-chat answer Q1);
-   - MFA on root, the budget, the `sumit-admin` user, region **us-east-1**;
-   - the CloudShell bootstrap (`docs/AWS.md` §4);
-   - the GitHub `aws-demo` environment, its variables, and the Secrets Manager values.
-6. **Nightly job** (after PR F is merged and deployed, and the bootstrap is done; `docs/AWS.md` §8.1):
-   - a new `AI_INTERNAL_TOKEN`, the same value on web, on ai and in Secrets Manager `nivesh-path/jobs`;
-   - GitHub → Actions → **AWS jobs: nightly job** → `apply`, then `run-now` after 4 pm New York;
-   - send me the run link.
+   - the `nivesh-path/demo` secret values (`docs/AWS.md` B6). The bootstrap and the GitHub variables are already done.
+6. **Nightly job:** ✅ live (§4 step 6).
+7. **GitHub `aws-demo` environment:** **Required reviewers** = `sumitparmar19`, and **Deployment branches and tags** = "Selected branches and tags" with `main` (`docs/AWS.md` B4), if not done yet.
+8. **After the market-data check deploys:** What's new should show **Market data (Finnhub): Working**.
 
 ## 8. Planning-chat decisions on PR E (recorded)
 - **Q1:** a separate free Finnhub account for the AWS demo.

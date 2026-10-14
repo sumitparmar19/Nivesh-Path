@@ -1,12 +1,34 @@
 # Phase 3 · PR F report: the nightly job (daily closes, overconcentration for everyone, rule v3)
 
 **Status:**
+- **Live on AWS since Oct 14, 2026** (§0): 7 of 7 closes saved on the first successful run.
 - **Built and tested** locally and in CI.
 - **On the live site:** the app part goes live when this PR is merged. The detector then starts using saved closes as soon as six exist for a stock; until then nothing changes.
 - **The AWS part runs only after your steps below** (the bootstrap from PR E must be done first).
 - **Planning-chat decisions this follows:**
   - Q1, PR B review: the job goes through token-only `/internal` endpoints on web, so AWS holds no database credentials.
   - Q3, PR E review: same deploy role and `aws-demo` environment.
+
+---
+
+## 0. Live on AWS (Oct 14, 2026)
+
+**The nightly job runs live.** Each weekday at 4:30 pm New York it saves the closes, then runs the concentration check. It emails only when something fails.
+
+1. **`apply`** took three rounds. Two permission gaps in the deploy role turned up live and were fixed:
+   - #21: `sns:ListTagsForResource` on `nivesh-path-alerts`. AWS provider 6.x reads tags in `data "aws_sns_topic"`.
+   - #22: `states:ValidateStateMachineDefinition`. The provider validates the definition against `stateMachine:*` before it creates the machine.
+
+   The bootstrap was re-run from the us-east-2 CloudShell with `AWS_REGION=us-east-1`.
+2. **First `run-now`: failed with `SomeSnapshotsFailed`, for all 7 tickers.**
+   - Web's logs showed `Quote provider returned 401`: the live `FINNHUB_API_KEY` was invalid. The same bad key had also broken live prices.
+   - **The partial-failure email arrived as designed.**
+   - Sumit replaced the key on DigitalOcean (web).
+3. **Second `run-now`: execution `43e37234-e198-4c0b-9d90-5e5309edfd47`, `SUCCEEDED`.**
+   - Held tickers: DIA, INTC, META, MSFT, QQQ, SPY, WMT.
+   - Closes: **7 saved**, 0 skipped, 0 failed.
+   - Concentration check: 1 user, 0 new events (right for the current holdings), 0 failed.
+4. **Follow-up:** a rejected Finnhub key now shows on What's new ("Market data (Finnhub)"), not only in the logs (§2, and `docs/PHASE3_LIVE_STATUS.md`).
 
 ---
 
@@ -128,16 +150,18 @@ All restored; all pass.
 | Number | Source |
 |---|---|
 | Cost: about **$0 a month**. About 27 Step Functions transitions a run, about 600 a month (4,000 free); about 260 Lambda calls (fractions of a cent); Scheduler, logs, 1 alarm and email inside free tiers. The token secret ($0.40/month) is already counted in PR E | `docs/AWS.md` §8.2, from the AWS Price List (us-east-1, fetched 2026-10-12): Step Functions $0.000025 per transition; Lambda arm64 $0.0000002 per request, $0.0000133334 per GB-second |
-| Live run (tickers saved, users checked) | **pending your step 5** |
+| Live run: **7 of 7 closes saved** (DIA, INTC, META, MSFT, QQQ, SPY, WMT), 0 skipped, 0 failed; concentration check for 1 user, 0 failed | Step Functions execution `43e37234-e198-4c0b-9d90-5e5309edfd47` (SUCCEEDED, Oct 14, 2026), §0 |
+| Failure path works live: a bad Finnhub key made all 7 snapshots fail, the run ended `SomeSnapshotsFailed`, and the email arrived | The first `run-now`, §0 |
 
 ## 5. Limits, said plainly
-- **Not run on AWS yet**, and I can't reach AWS from here. The state machine's JSONPath filter (`$.snapshots[?(@.failed == true)].symbol`) and the intrinsic functions are checked only by Terraform's JSON encoding. AWS validates the definition when you apply, and an error there names the state.
+- **Ran on AWS on Oct 14, 2026** (§0). AWS accepted the definition, including the JSONPath filter and the intrinsic functions. Both the success path and the partial-failure path ran live.
 - **Rule v3 needs 6 weekday runs per stock before it changes anything.** A stock bought today gets its first saved close tonight.
 - **The closes come from Finnhub's quote after 4 pm,** which is the regular-session last price. It's not an official exchange closing print, and on rare days it can differ by cents.
 - **A token change needs three places updated together** (web, ai, the jobs secret). DigitalOcean hides saved values, so it can't be read back.
 - **The nightly concentration check uses prices from web's 60-second quote cache** at that moment. It's the same data a user would see.
 - **The Lambda runs on arm64.** It's plain JavaScript, so there's no build difference. The planning chat's "no ARM for now" was about the Fargate images.
 
-## 6. Resume bullets (measured numbers only; add the live run's after step 5)
-- Built a serverless nightly pipeline on AWS: EventBridge Scheduler, then a Step Functions Map with bounded concurrency, retries with backoff and per-item failure capture, then Lambda. It snapshots daily closes for every held stock and re-checks portfolio concentration for all users. It costs about $0 a month and holds no database credentials in AWS: the job calls a token-protected internal API.
+## 6. Resume bullets (measured numbers only)
+- Built and deployed a serverless nightly pipeline on AWS: EventBridge Scheduler, then a Step Functions Map with bounded concurrency, retries with backoff and per-item failure capture, then Lambda. It snapshots daily closes for every held stock (7 of 7 saved on its first live run) and re-checks portfolio concentration for all users. It costs about $0 a month and holds no database credentials in AWS: the job calls a token-protected internal API.
+- Its partial-failure alerting caught a real production problem on the first live run: an invalid market-data API key that had also broken live prices. That led to a provider-health check on the app's public status page.
 - Added a versioned rule change (v3) to a behavioral-finance detector: the 5-day price move now comes from the app's own stored closes, with boundary-tested freshness and window checks and a fallback to the market-data provider. Each flag records which data source it used.

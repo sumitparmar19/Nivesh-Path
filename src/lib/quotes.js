@@ -4,7 +4,26 @@ const { logger } = require("./logger");
 
 const SYMBOL_RE = /^[A-Z.]{1,10}$/;
 
+// How Finnhub answered the last real (uncached) quote call, for GET /api/status. A rejected key (401/403 on the quote
+// endpoint, which every plan includes) used to show only in the logs, while prices and the nightly job quietly failed.
+//   ok · key_rejected · rate_limited · unreachable · error · not_configured · unknown (no call yet)
+function outcomeOf(httpStatus) {
+  if (httpStatus >= 200 && httpStatus < 300) return "ok";
+  if (httpStatus === 401 || httpStatus === 403) return "key_rejected";
+  if (httpStatus === 429) return "rate_limited";
+  return "error";
+}
+
 function createQuoteService({ cache, fetchImpl = fetch, apiKey = config.finnhubApiKey }) {
+  let health = { status: apiKey ? "unknown" : "not_configured", httpStatus: null, checkedAt: null };
+
+  function record(status, httpStatus) {
+    if (status === "key_rejected" && health.status !== "key_rejected") {
+      logger.error("Finnhub rejected the API key (HTTP %d): check FINNHUB_API_KEY", httpStatus);
+    }
+    health = { status, httpStatus, checkedAt: new Date().toISOString() };
+  }
+
   async function getQuote(rawSymbol) {
     const symbol = String(rawSymbol || "").toUpperCase();
     if (!SYMBOL_RE.test(symbol)) {
@@ -16,7 +35,15 @@ function createQuoteService({ cache, fetchImpl = fetch, apiKey = config.finnhubA
     const key = `quote:${symbol}`;
     const cached = await cache.get(key);
     if (cached) return cached;
+    const data = await fetchQuote(symbol);
+    if (data && typeof data.c === "number" && data.c > 0) {
+      await cache.set(key, data, config.quoteCacheSeconds);
+    }
+    return data;
+  }
 
+  /** One uncached call to Finnhub; records how it answered. */
+  async function fetchQuote(symbol) {
     if (!apiKey) {
       const err = new Error("FINNHUB_API_KEY is not configured");
       err.status = 503;
@@ -24,17 +51,26 @@ function createQuoteService({ cache, fetchImpl = fetch, apiKey = config.finnhubA
     }
 
     const url = `https://finnhub.io/api/v1/quote?symbol=${encodeURIComponent(symbol)}&token=${apiKey}`;
-    const response = await fetchImpl(url);
+    let response;
+    try {
+      response = await fetchImpl(url);
+    } catch (cause) {
+      record("unreachable", null);
+      throw cause;
+    }
+    record(outcomeOf(response.status), response.status);
     if (!response.ok) {
       const err = new Error(`Quote provider returned ${response.status}`);
       err.status = 502;
       throw err;
     }
-    const data = await response.json();
-    if (data && typeof data.c === "number" && data.c > 0) {
-      await cache.set(key, data, config.quoteCacheSeconds);
-    }
-    return data;
+    return response.json();
+  }
+
+  /** Start-up check (server.js): one uncached quote, so /api/status knows at once whether the key works. */
+  async function checkKey(symbol = "SPY") {
+    if (apiKey) await fetchQuote(symbol).catch(() => undefined);
+    return getHealth();
   }
 
   async function getQuotes(symbols) {
@@ -47,7 +83,12 @@ function createQuoteService({ cache, fetchImpl = fetch, apiKey = config.finnhubA
     return out;
   }
 
-  return { getQuote, getQuotes };
+  /** Last Finnhub outcome (no secrets): { status, httpStatus, checkedAt }. Never calls Finnhub itself. */
+  function getHealth() {
+    return { ...health };
+  }
+
+  return { getQuote, getQuotes, health: getHealth, checkKey };
 }
 
 module.exports = { createQuoteService };

@@ -443,6 +443,15 @@ describe("AI memory and status", () => {
     expect(JSON.stringify(res.body)).not.toContain("secret-user");
   });
 
+  test("status shows how Finnhub last answered, without calling it", async () => {
+    const getQuote = jest.fn(async () => ({ c: 1 }));
+    const health = () => ({ status: "key_rejected", httpStatus: 401, checkedAt: "2026-10-14T20:31:00.000Z" });
+    const res = await request(setup({ quotes: { getQuote, getQuotes: async () => ({}), health } }).app).get("/api/status");
+    expect(res.body.marketData).toEqual({ status: "key_rejected", httpStatus: 401, checkedAt: "2026-10-14T20:31:00.000Z" });
+    expect(getQuote).not.toHaveBeenCalled();
+    expect((await request(setup().app).get("/api/status")).body.marketData).toBeNull(); // a quote service without health
+  });
+
   test("status says the AI is unreachable instead of failing", async () => {
     const { app } = setup({ aiClient: { health: async () => Promise.reject(new Error("down")) } });
     const res = await request(app).get("/api/status");
@@ -633,6 +642,52 @@ describe("portfolio math and quotes", () => {
     await svc.getQuote("AAPL");
     expect(fetchImpl).toHaveBeenCalledTimes(1);
     await expect(svc.getQuote("not a symbol!")).rejects.toMatchObject({ status: 400 });
+  });
+
+  // Oct 2026: an invalid FINNHUB_API_KEY broke live prices and the nightly job; only the logs said so.
+  test("quote service records how Finnhub answered: working, key rejected, rate-limited, unreachable", async () => {
+    const { createQuoteService } = require("../src/lib/quotes");
+    let answer = { ok: true, status: 200, json: async () => ({ c: 50 }) };
+    const fetchImpl = jest.fn(async () => {
+      if (answer === "down") throw new Error("fetch failed");
+      return answer;
+    });
+    const svc = createQuoteService({ cache: new MemoryCache(), fetchImpl, apiKey: "SECRET-KEY-123" });
+    expect(svc.health()).toEqual({ status: "unknown", httpStatus: null, checkedAt: null });
+
+    await svc.getQuote("MSFT");
+    expect(svc.health()).toMatchObject({ status: "ok", httpStatus: 200 });
+    expect(Date.parse(svc.health().checkedAt)).not.toBeNaN();
+
+    answer = { ok: false, status: 401, json: async () => ({}) };
+    await expect(svc.getQuote("NVDA")).rejects.toMatchObject({ status: 502 });
+    expect(svc.health()).toMatchObject({ status: "key_rejected", httpStatus: 401 });
+
+    answer = { ok: false, status: 429, json: async () => ({}) };
+    await expect(svc.getQuote("AMD")).rejects.toMatchObject({ status: 502 });
+    expect(svc.health().status).toBe("rate_limited");
+
+    answer = "down";
+    await expect(svc.getQuote("INTC")).rejects.toThrow("fetch failed");
+    expect(svc.health()).toMatchObject({ status: "unreachable", httpStatus: null });
+
+    expect(JSON.stringify(svc.health())).not.toContain("SECRET-KEY-123");
+    expect(createQuoteService({ cache: new MemoryCache(), fetchImpl, apiKey: "" }).health().status).toBe("not_configured");
+  });
+
+  test("the start-up key check skips the price cache (a cached quote can't hide a bad key)", async () => {
+    const { createQuoteService } = require("../src/lib/quotes");
+    const cache = new MemoryCache();
+    await cache.set("quote:SPY", { c: 500 }, 60);
+    const fetchImpl = jest.fn(async () => ({ ok: false, status: 401, json: async () => ({}) }));
+    const svc = createQuoteService({ cache, fetchImpl, apiKey: "bad" });
+    expect((await svc.getQuote("SPY")).c).toBe(500); // served from cache: Finnhub not asked
+    expect(fetchImpl).not.toHaveBeenCalled();
+    expect(await svc.checkKey()).toMatchObject({ status: "key_rejected", httpStatus: 401 });
+    expect(fetchImpl).toHaveBeenCalledTimes(1);
+    const noKey = createQuoteService({ cache, fetchImpl, apiKey: "" });
+    expect((await noKey.checkKey()).status).toBe("not_configured");
+    expect(fetchImpl).toHaveBeenCalledTimes(1); // no key: no call
   });
 });
 
