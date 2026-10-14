@@ -4,10 +4,29 @@ import { CheckCircle2, Gift, HeartPulse } from "lucide-react";
 import { Badge, ButtonLink, Card, CardHeader } from "../components/ui";
 import { RELEASES, ROADMAP } from "../config/releases";
 import { api } from "../lib/api";
-import type { SystemStatus } from "../types";
+import type { MarketDataStatus, SystemStatus } from "../types";
 
 type Dot = "ok" | "warn" | "bad";
 const DOT: Record<Dot, string> = { ok: "bg-brand-600", warn: "bg-warn", bad: "bg-down" };
+
+// A rejected Finnhub key used to show only in the logs while prices quietly failed (Oct 2026); now it shows here.
+const MARKET_DATA: Record<MarketDataStatus, [string, Dot]> = {
+  ok: ["Working", "ok"],
+  key_rejected: ["API key rejected - prices can't load", "bad"],
+  rate_limited: ["Busy (rate limit) - prices may be slow", "warn"],
+  unreachable: ["Unreachable - prices may be missing", "warn"],
+  error: ["Errors - prices may be missing", "warn"],
+  not_configured: ["No API key set - prices can't load", "bad"],
+  unknown: ["Not checked yet", "warn"],
+};
+
+function marketDataRow(m: SystemStatus["marketData"]): [string, string, Dot][] {
+  if (!m) return [];
+  const [text, dot] = MARKET_DATA[m.status] ?? MARKET_DATA.unknown;
+  const code = m.httpStatus && m.status !== "ok" ? ` (HTTP ${m.httpStatus})` : "";
+  const when = m.checkedAt ? ` · checked ${new Date(m.checkedAt).toLocaleTimeString([], { hour: "numeric", minute: "2-digit" })}` : "";
+  return [["Market data (Finnhub)", `${text}${code}${when}`, dot]];
+}
 
 function rows(s: SystemStatus | undefined): [string, string, Dot][] {
   if (!s) return [];
@@ -37,6 +56,7 @@ function rows(s: SystemStatus | undefined): [string, string, Dot][] {
     ["Web app", "Online", "ok"],
     ["Database (MongoDB Atlas)", s.db === "connected" ? "Connected" : "Disconnected", s.db === "connected" ? "ok" : "bad"],
     ...ledger,
+    ...marketDataRow(s.marketData),
     ["AI service", ai.reachable ? "Online" : "Offline", ai.reachable ? "ok" : "bad"],
     ["Claude AI model", ai.reachable ? (ai.llmConfigured ? ai.model || "Configured" : "Rule-based fallback") : "Unavailable", ai.reachable ? (ai.llmConfigured ? "ok" : "warn") : "bad"],
     ["AI memory rebuild", ai.reachable && idx ? indexText[idx.status][0] : "Unavailable", ai.reachable && idx ? indexText[idx.status][1] : "bad"],

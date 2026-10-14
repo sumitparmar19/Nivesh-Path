@@ -53,6 +53,10 @@ async function start() {
 
   const app = createApp({ onError });
   logger.info(telemetry.startupLine());
+  // One Finnhub call at start-up, so What's new shows a rejected key right away (not only in the logs).
+  if (app.locals.quotes && app.locals.quotes.checkKey) {
+    app.locals.quotes.checkKey().then((h) => logger.info(`Market data: ${h.status}${h.httpStatus ? ` (HTTP ${h.httpStatus})` : ""}`));
+  }
   if (telemetry.enabled) require("./src/lib/metrics").watchAiService(app.locals.aiClient);
   if (mongoReady) {
     // Re-check Behavioral Mirror events saved under older rules (repeat-safe; runs in the background).

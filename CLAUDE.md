@@ -46,7 +46,7 @@ Live: https://nivesh-path-vzeak.ondigitalocean.app (custom domain pending) · Re
       bucket, GitHub OIDC deploy + read-only plan roles, permissions boundary, empty secrets, alert topic; run in CloudShell)
       and `infra/demo` (VPC without NAT, ALB, ECS Fargate web+ai, RDS, ECR, CloudWatch dashboard + 4 alarms, autoscaling
       1-3); workflows: Infra checks + plan comment, AWS demo apply/deploy/load test/destroy
-- [x] **Phase 3 PR F** (built; AWS apply is Sumit's step, `docs/AWS.md` §8) - nightly job: EventBridge Scheduler (weekdays
+- [x] **Phase 3 PR F** (**live on AWS since Oct 14**: 7/7 closes on the first run; #21/#22 fixed two deploy-role gaps) - nightly job: EventBridge Scheduler (weekdays
       16:30 New York) -> Step Functions -> Lambda -> web's token-only `/internal/jobs/*` (held tickers, save daily close to
       Postgres `price_snapshots`, concentration check for every user); Behavioral Mirror rule v3 (5-day move from 6 saved
       closes, else Finnhub; `facts.fiveDaySource`). AWS holds only the internal token
@@ -134,7 +134,8 @@ docs/                # PHASE1_REPORT.md, PHASE2_PLAN.md, DEPLOYMENT.md
 - `GET /api/transactions` · `GET /api/portfolio/holdings` · `GET /api/portfolio/cash-balance` (cash, holdings value, total P&L)
 - `POST /api/ai/analyze-portfolio` -> FastAPI with `user_id`; `POST /api/ai/transactions` (FastAPI) indexes trades per user
 - `GET /api/ai/memory` (trades in Mongo vs indexed in Chroma) · `POST /api/ai/memory/rebuild` (re-index caller's trades)
-- `GET /api/status` - public: web, db, AI service, model, memory-rebuild status (no user data)
+- `GET /api/status` - public: web, db, AI service, model, memory-rebuild status, ledger, `marketData` (how Finnhub answered
+  the last real quote call: ok / key_rejected / rate_limited / ...; seeded by a start-up `checkKey()`; never calls Finnhub itself)
 - Account: `PATCH /api/me` · `GET/PATCH /api/me/settings` · `POST /api/me/password` · `GET /api/me/avatar` · `DELETE /api/me`
   ({password, confirm:"DELETE"}) · `POST /api/portfolio/reset` ({confirm:"RESET"}) · `GET/POST/DELETE /api/watchlist`
 - `GET /api/ai/history` · `GET /api/ai/history/:id` (every analysis is saved) · `POST /api/contact` (public, rate-limited)

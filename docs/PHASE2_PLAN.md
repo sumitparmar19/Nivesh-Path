@@ -205,6 +205,12 @@ Phase 3 plan and decisions: `docs/PHASE3_REVIEW.md` (D1-D10 approved; D10 = MIT)
 - UX list (15 items, not implemented): phone tables (transactions, holdings), trade panel position on phones, contrast,
   Watch button name, footer headings, self-hosted fonts, CSP, ...
 
+### Nightly job live (Oct 14, 2026) - see docs/PHASE3_LIVE_STATUS.md §4.6
+- AWS bootstrap done; jobs `apply` needed two deploy-role permissions found live (#21 sns:ListTagsForResource, #22
+  states:ValidateStateMachineDefinition); cloudshell.sh refuses non-us-east-1, keeps .terraform in /tmp, reuses the S3 state.
+- First run-now: 0/7 closes (live FINNHUB_API_KEY was invalid, HTTP 401 - also broke live prices); key replaced; second
+  run SUCCEEDED, 7/7. Follow-up: quotes.health()/checkKey() -> /api/status `marketData` -> What's new row.
+
 ### Known risks to handle in later phases
 1. **Cold start** for the Behavioral Mirror (still open after 2C): new users have no history -> add a demo account with realistic
    seeded trades and **CSV import** of real broker history (Robinhood / Webull / Zerodha) in Phase 2C.

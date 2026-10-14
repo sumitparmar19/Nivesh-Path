@@ -79,4 +79,22 @@ describe("What's new", () => {
     const time = new Date(finishedAt).toLocaleString([], { month: "short", day: "numeric", hour: "numeric", minute: "2-digit" });
     expect(await within(list).findByText(`Done at last restart, ${time} · 5 trades for 1 user in 0.3s`)).toBeInTheDocument();
   });
+
+  // Oct 2026: an invalid FINNHUB_API_KEY broke live prices and the nightly job, and showed only in the server logs.
+  it("shows a working market data key, with when it was checked", async () => {
+    const checkedAt = "2026-10-14T20:31:00Z";
+    mockApi({ "GET /api/status": { ...OK, marketData: { status: "ok", httpStatus: 200, checkedAt } } });
+    open();
+    const list = await screen.findByTestId("status-list");
+    const time = new Date(checkedAt).toLocaleTimeString([], { hour: "numeric", minute: "2-digit" });
+    expect(await within(list).findByText(`Working · checked ${time}`)).toBeInTheDocument();
+    expect(screen.getByText("All systems go")).toBeInTheDocument();
+  });
+
+  it("flags a rejected market data key as degraded, with the HTTP code", async () => {
+    mockApi({ "GET /api/status": { ...OK, marketData: { status: "key_rejected", httpStatus: 401, checkedAt: null } } });
+    open();
+    expect(await screen.findByText("Partly degraded")).toBeInTheDocument();
+    expect(within(screen.getByTestId("status-list")).getByText("API key rejected - prices can't load (HTTP 401)")).toBeInTheDocument();
+  });
 });

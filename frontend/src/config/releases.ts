@@ -10,9 +10,19 @@ export interface Release {
 
 export const RELEASES: Release[] = [
   {
-    title: "Steadier pages and a clean account deletion",
+    title: "Market data status, and the nightly job is live",
     tag: "Phase 3 · Oct 2026",
     isNew: true,
+    intro: "The status panel below now says whether stock prices can load. And the daily-closes job runs every weekday on AWS.",
+    points: [
+      ["Market data on the status panel.", "If the price provider rejects the site's key, \"Market data (Finnhub)\" turns red here, so the problem is visible at once."],
+      ["Daily closes, saved automatically.", "Each weekday at 4:30 pm New York, the job saves the closing price of every stock someone holds, then re-checks every account for overconcentration. Its first run saved 7 of 7."],
+    ],
+    links: [{ to: "/behavioral-mirror", label: "Open the Behavioral Mirror" }],
+  },
+  {
+    title: "Steadier pages and a clean account deletion",
+    tag: "Phase 3 · Oct 2026",
     intro: "A full check of every page and feature found two problems. Both are fixed.",
     points: [
       ["Pages stay still while they load.", "The footer no longer jumps down as a page appears, and logos keep their size while they load. On phones, Lighthouse's layout-shift score went from about 0.7 to under 0.1."],
