@@ -8,6 +8,20 @@
 # Safe to run again: once backend.tf exists it just re-applies against the bucket.
 set -euo pipefail
 
+# Everything goes to us-east-1 (docs/AWS.md B1). CloudShell sets AWS_REGION to the console's region, so a session
+# opened from another region would build the bootstrap there (it happened once, in us-east-2): refuse instead.
+REGION=${AWS_REGION:-us-east-1}
+if [ "$REGION" != "us-east-1" ]; then
+  echo "This CloudShell is in $REGION, but Nivesh-Path's AWS stacks live in us-east-1." >&2
+  echo "Switch the console to US East (N. Virginia) and open CloudShell again, or run:" >&2
+  echo "  AWS_REGION=us-east-1 bash ~/Nivesh-Path/infra/bootstrap/cloudshell.sh" >&2
+  exit 1
+fi
+
+# CloudShell's home folder holds only 1 GB, and the AWS provider alone is several hundred MB: keep Terraform's
+# working data (.terraform: providers, modules) in /tmp. It is re-downloaded by `terraform init` on every run.
+export TF_DATA_DIR=${TF_DATA_DIR:-/tmp/tf-bootstrap}
+
 TF_VERSION=1.15.9
 case "$(uname -m)" in
   x86_64) ARCH=amd64 SUM=76edd0b22d2f27d3d2e097cd793209646f719cf60f02ff3af626b07361137da1 ;;
@@ -27,7 +41,6 @@ fi
 terraform version
 
 cd "$(dirname "$0")"
-REGION=${AWS_REGION:-us-east-1}
 
 if [ ! -f backend.tf ]; then
   read -r -p "Email address for alarm emails: " ALERT_EMAIL
