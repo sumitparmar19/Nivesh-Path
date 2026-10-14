@@ -52,7 +52,8 @@ Live: https://nivesh-path-vzeak.ondigitalocean.app (custom domain pending) · Re
       closes, else Finnhub; `facts.fiveDaySource`). AWS holds only the internal token
 - [x] **Full check of every page and feature** (`docs/PHASE3_LIVE_CHECK.md`): fixed delete-account landing on login and
       the page jump while loading (CLS); `frontend/e2e/live-smoke.spec.ts` + "Live smoke test" workflow for the real site
-      (E2E_LIVE=1; never in normal CI); start-up line names the OTel service; 15-item UX list for Sumit
+      (E2E_LIVE=1; never in normal CI; run #3 passed all 10 steps on live, Oct 14); start-up line names the OTel
+      service; profile fields locked until loaded (#20); 15-item UX list for Sumit
 - [ ] **Phase 3** (plan: `docs/PHASE3_REVIEW.md`) - next · G pre-trade check + stress test (2D) · H+I agent + evals
 
 ## Layout

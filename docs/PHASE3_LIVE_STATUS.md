@@ -1,6 +1,6 @@
 # Phase 3: live site status
 
-**As of Oct 13, 2026.** From Sumit's and the planning chat's live reports (the latest: "Phase 3: complete status so far, and a full check of the live site", Oct 12 PT).
+**As of Oct 14, 2026.** From Sumit's and the planning chat's live reports (the latest: "Phase 3: complete status so far, and a full check of the live site", Oct 12 PT).
 
 No secrets are in this file. Every value marked *secret* lives only in DigitalOcean, Neon, Atlas, Grafana or AWS. Hostnames, user names and the Grafana stack name are left out on purpose.
 
@@ -78,8 +78,9 @@ The full check of every page and feature is in `docs/PHASE3_LIVE_CHECK.md`.
 | 5 | Grafana tokens exposed in screenshots (×2) | Rotated to `nivesh-path-3` | ⏳ delete the old two (§7) |
 | 6 | **Joined trace showed "Services 1"** | `OTEL_SERVICE_NAME` on ai was `nivesh-web`, copied from web. A one-span export from the ai Console returned `SUCCESS`, so the token and endpoint were fine. Set to `nivesh-ai` at about 22:37 PT; ai logs and `nivesh_ai_llm_*` metrics from before then carry `service_name=nivesh-web`. **Now** both start-up lines say which name they export as, and `docs/OBSERVABILITY.md` §5c has the checklist | ✅ |
 | 7 | The DigitalOcean console breaks pasted commands (`^[[200~` prefix) | Type `bind 'set enable-bracketed-paste off'` by hand once per session (`docs/OBSERVABILITY.md` §5c) | Docs tip |
-| 8 | **Live check (Oct 13): after "Delete my account", the browser landed on `/login?redirect=/account`** (the account itself was deleted) | Fixed in the live-check PR (`docs/PHASE3_LIVE_CHECK.md` §3) | ✅ after merge |
-| 9 | **Live check: pages jumped while loading** (Lighthouse CLS 0.6–0.75 on phones) | Fixed in the live-check PR (CLS 0.12 or lower) | ✅ after merge |
+| 8 | **Live check (Oct 13): after "Delete my account", the browser landed on `/login?redirect=/account`** (the account itself was deleted) | #19 (`docs/PHASE3_LIVE_CHECK.md` §3) | ✅ |
+| 9 | **Live check: pages jumped while loading** (Lighthouse CLS 0.6–0.75 on phones) | #19 (CLS 0.12 or lower) | ✅ |
+| 10 | **Live smoke runs #1–#2: profile edits typed before the profile loaded were lost** | #20 locks the fields until it loads. Run #3 passed all 10 steps on live (Oct 14) | ✅ |
 
 ## 6. Monitoring evidence (screenshots with Sumit)
 
@@ -94,7 +95,7 @@ The full check of every page and feature is in `docs/PHASE3_LIVE_CHECK.md`.
    - delete tokens `nivesh-path` and `nivesh-path-2`;
    - set the p95 alert back to **1.5 s, pending 10m**;
    - create the 5xx-rate and AI-health alerts if not done yet.
-2. **Live check:** run the live smoke test once the live-check PR is merged and deployed (`docs/PHASE3_LIVE_CHECK.md` §5).
+2. **Live check:** ✅ run #3 passed (Oct 14). Left for you: the Atlas filter for `e2e-live-` users (should be empty), plus the Grafana trace with Services 2 from that run (`docs/PHASE3_LIVE_CHECK.md` §5).
 3. **The `dhrumil` user on `niveshpathcluster`** belongs to someone else's cluster: tell its owner to delete it. It can't reach the live data.
 4. **Optional hardening:** a `nivesh-live` Atlas user with `readWrite` on `niveshpath` only, replacing the current user in `MONGO_URL` on both components.
 5. **Before AWS D1:**
