@@ -5,6 +5,7 @@
 
 ## 0. Summary
 
+0. **Live result (Oct 14): the live smoke test passed all 10 steps on the real site** (run #3, §7), after 4 bugs were fixed (§3 and §7).
 1. **The live site itself could not be reached from this session.** The cloud environment's network policy blocks `nivesh-path-vzeak.ondigitalocean.app` (HTTP 403 at the proxy). Everything in this report was therefore run against the same code built for production on a local server:
    - Postgres ledger, as live;
    - MongoDB 7;
@@ -241,6 +242,9 @@ The steps are on https://code.claude.com/docs/en/cloud-environments#network-acce
 |---|---|---|
 | [#1](https://github.com/sumitparmar19/Nivesh-Path/actions/runs/38457449171) | Oct 13, 19:46 | 7 passed, 1 failed (account), 2 not run |
 | [#2](https://github.com/sumitparmar19/Nivesh-Path/actions/runs/38469289309) | Oct 13, 21:16 | Same as run #1 |
+| [#3](https://github.com/sumitparmar19/Nivesh-Path/actions/runs/38490977066) | Oct 14, 00:35 | **All 10 passed (38.8 s)** after the bug 4 fix (#20). AI box off; contact email on |
+
+**Run #3: the whole check passes on the live site.** Account (profile, theme, password), one real contact email, and **Delete account** all passed, and the test user was removed at the end.
 
 **Passed on the live site, both runs (tests 1–7):**
 - public pages, legacy redirects, `/api/status` (ledger `postgres`, AI configured), What's new ("All systems go");
@@ -255,12 +259,12 @@ The steps are on https://code.claude.com/docs/en/cloud-environments#network-acce
 - **Fix:** the profile fields stay locked until the profile has loaded. The live test also waits for the profile before typing.
 - **Test:** a Vitest test checks that the fields are locked while loading. It fails without the fix.
 
-**Not reached in either run:** the contact email (test 9), deleting the test user (test 10), and the theme and password steps of test 8. Each run's safety net deleted its test user at the end through `DELETE /api/me`, because the password hadn't changed yet. Sumit can confirm with the Atlas filter in §5.
+**Not reached in runs #1 and #2:** the contact email (test 9), deleting the test user (test 10), and the theme and password steps of test 8. Each run's safety net deleted its test user at the end through `DELETE /api/me`, because the password hadn't changed yet. Sumit can confirm with the Atlas filter in §5.
 
 **Claude calls used:** 2 (one per run), which is the limit the check set. The next run leaves the AI box **unticked**.
 
 ## 8. Limits
-- **Live runs reached tests 1–7** (§7). The account, contact and delete steps run on live once the bug 4 fix is deployed.
+- **Live:** run #3 passed all 10 steps (§7). Grafana, DigitalOcean logs and Neon are checked by Sumit (§5).
 - **Real Finnhub data and Claude:** covered by the live runs only (§7). The local run used made-up prices and the rule-based AI.
 - **Grafana couldn't be checked from here.**
 - **Lighthouse ran on a local server.** Live numbers will be lower on the first load, because they include network latency.
