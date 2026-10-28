@@ -1,4 +1,4 @@
-// Advisor result view (Phase 2C follow-up A1/A2): weights are shares of the whole account, the invested-money
+// Advisor result view: weights are shares of the whole account, the invested-money
 // share is labelled as such, cash is shown, and Diversification is the code-computed score.
 import { render, screen } from "@testing-library/react";
 import InsightView from "../InsightView";

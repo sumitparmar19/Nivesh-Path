@@ -1,4 +1,4 @@
-// Daily closing prices (Phase 3, PR F). The nightly job asks web to save today's close for every stock someone
+// Daily closing prices. The nightly job asks web to save today's close for every stock someone
 // holds (POST /internal/jobs/snapshots/:symbol); rule v3 of the Behavioral Mirror then reads the 5-day move from
 // these closes (behaviorRules.fiveDayFromSnapshots). Postgres table `price_snapshots`, one row per stock per
 // trading day, so re-runs and market holidays (Finnhub then returns the previous day's quote) never duplicate.

@@ -11,7 +11,7 @@ function purchaseRoutes({ ledger: sharedLedger, Purchase, User, quotes, aiClient
   const ledger = sharedLedger || createLedger({ User, Purchase, quotes });
 
   // Accepts the new shape { symbol, quantity, price, type: "BUY"|"SELL" }
-  // and the Phase 1 shape { name, quantity, price, transactionType: "buy"|"sell" }.
+  // and the original shape { name, quantity, price, transactionType: "buy"|"sell" }.
   async function trade(req, res, next) {
     try {
       const body = req.body || {};

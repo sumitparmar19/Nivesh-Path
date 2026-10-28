@@ -17,7 +17,7 @@ const userSchema = new mongoose.Schema(
       language: { type: String, default: "English", maxlength: 40 },
       notifications: { type: Boolean, default: true },
     },
-    // Virtual paper-trading wallet (Phase 2A): buys debit it, sells credit it.
+    // Virtual paper-trading wallet: buys debit it, sells credit it.
     cashBalance: { type: Number, default: 100000, min: 0 },
     totalDeposited: { type: Number, default: 100000 },
   },

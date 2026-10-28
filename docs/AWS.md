@@ -1,12 +1,12 @@
-# AWS: the demo stack and how to run it
+# AWS: the demo stack and the nightly job
 
-Phase 3, Part 2 (PR E). The whole app can be created on AWS with Terraform for a demo or a load test, and then destroyed. **DigitalOcean stays the always-on live site.** Nothing here touches it.
+The whole app can be created on AWS with Terraform for a demo or a load test, and then destroyed. **DigitalOcean stays the always-on live site.** Nothing here touches it.
 
 | Folder | What | Lifetime |
 |---|---|---|
-| `infra/bootstrap/` | State bucket, GitHub sign-in (OIDC) + two roles, the permissions boundary, two empty secrets, the alert email topic | Created once by Sumit in CloudShell; never destroyed by the workflows |
+| `infra/bootstrap/` | State bucket, GitHub sign-in (OIDC) + two roles, the permissions boundary, two empty secrets, the alert email topic | Created once from AWS CloudShell; never destroyed by the workflows |
 | `infra/demo/` | VPC, load balancer, ECS Fargate (web + ai), RDS Postgres, ECR, CloudWatch dashboard + 4 alarms | Created for a demo, then destroyed |
-| `infra/jobs/` | The nightly job (PR F) | Always on, costs cents |
+| `infra/jobs/` | The nightly job (§8) | Always on, costs cents |
 
 The workflows are under GitHub → **Actions**:
 - **Infra:** automatic on PRs: checks plus a plan comment.
@@ -14,6 +14,9 @@ The workflows are under GitHub → **Actions**:
 - **AWS demo: deploy**
 - **AWS demo: load test**
 - **AWS demo: destroy**
+- **AWS jobs: nightly job** (apply, run now, destroy)
+
+All of them use GitHub OIDC; no AWS access keys exist anywhere (§3).
 
 ---
 
@@ -47,7 +50,7 @@ flowchart LR
   sm["Secrets Manager<br/>nivesh-path/demo + RDS password"] -.->|"read by ECS at task start"| web
   sm -.-> ai
   cw["CloudWatch<br/>dashboard + 4 alarms"] --> sns["SNS → email"]
-  gh["GitHub Actions<br/>OIDC, no AWS keys"] -->|"deploy role<br/>(aws-demo env, Sumit approves)"| ecr["ECR<br/>web + ai images"]
+  gh["GitHub Actions<br/>OIDC, no AWS keys"] -->|"deploy role<br/>(aws-demo env, owner approves)"| ecr["ECR<br/>web + ai images"]
 ```
 
 **How a request flows:**
@@ -79,7 +82,7 @@ flowchart LR
 
 **The production answer** is private subnets for tasks, plus a NAT gateway or VPC endpoints for ECR, logs and Secrets Manager (about $7/month each), plus egress rules. For a stack that exists for a few hours per demo, that's about $1 a day spent on nothing.
 
-**Interview version:** *"I traded network-level isolation of the tasks for about $32/month, kept the database fully private, and made security groups the inbound boundary. In production I'd move tasks to private subnets behind a NAT or endpoints."*
+**In short:** network-level isolation of the tasks is traded for about $32/month; the database stays fully private, and security groups are the inbound boundary. In production, tasks would move to private subnets behind a NAT or VPC endpoints.
 
 ## 3. Security model
 
@@ -89,7 +92,7 @@ flowchart LR
 
 | Role | Who can use it | Can do |
 |---|---|---|
-| `github-nivesh-deploy` | Only jobs in the `aws-demo` environment (`repo:sumitparmar19/Nivesh-Path:environment:aws-demo`). GitHub restricts that environment to `main` and requires Sumit's approval | Create, change and delete the demo and jobs stacks |
+| `github-nivesh-deploy` | Only jobs in the `aws-demo` environment (`repo:sumitparmar19/Nivesh-Path:environment:aws-demo`). GitHub restricts that environment to `main` and requires the owner's approval | Create, change and delete the demo and jobs stacks |
 | `github-nivesh-plan` | Pull request jobs of this repository (`…:pull_request`; forks get no token) | Read-only (`ReadOnlyAccess`). Explicitly **denied** secret values, parameters, decrypt, Lambda code, log contents, and objects outside the state bucket |
 
 **The deploy role is fenced in three ways** (`infra/bootstrap/deploy_policy.tf`):
@@ -101,7 +104,7 @@ flowchart LR
 3. **It never reads secret values.** The ECS *execution role* does that when a task starts, and only for the demo secret and the RDS password.
 
 **Secrets:**
-- `nivesh-path/demo` and `nivesh-path/jobs` are created **empty** by Terraform, and Sumit types the values in the console. So the values are never in Terraform state, Git or a workflow log.
+- `nivesh-path/demo` and `nivesh-path/jobs` are created **empty** by Terraform, and the values are typed in the AWS console. So the values are never in Terraform state, Git or a workflow log.
 - **Nobody types the RDS password.** RDS generates it and keeps it in Secrets Manager (`manage_master_user_password`).
 - ECS passes it to the containers as `DB_USER`/`DB_PASSWORD`, and `src/lib/dbUrl.js` builds the connection URL with every part percent-encoded.
 - The database connection uses TLS (`sslmode=require`; RDS refuses unencrypted connections).
@@ -117,117 +120,14 @@ flowchart LR
 - ShellCheck on the scripts;
 - `terraform plan` posted as a PR comment, made with the read-only role and no state lock.
 
-## 4. Runbook (Sumit, all in a browser)
+## 4. Operating it
 
-Never paste a password, key or connection string into any chat. They go only into the AWS, Atlas or GitHub screens named below.
+Every step (the one-time bootstrap, GitHub settings, filling the secrets, each demo, the alarm test, HTTPS, and
+what to do when something fails) is in [`RUNBOOK.md`](RUNBOOK.md) §5–§7.
 
-### 4.1 Once: account and bootstrap
-
-**B1. AWS account:**
-- Sign up on the **Free plan**.
-- Turn on **MFA for the root user** (IAM → Security credentials).
-- Create **budgets at $10 and $25** (Billing → Budgets → Create → "Monthly cost budget", with your email).
-- Create an admin user for daily use: IAM Identity Center, or IAM → Users with `AdministratorAccess`. Sign in with that, not root.
-- Choose region **US East (N. Virginia) `us-east-1`** (top right).
-
-**B2. Bootstrap in CloudShell:**
-- Check the console's region (top right) says **US East (N. Virginia)**. CloudShell inherits it, and the script refuses any other region.
-- Click the CloudShell icon (`>_`, top bar) and paste:
-  ```
-  git clone --depth 1 https://github.com/sumitparmar19/Nivesh-Path.git ~/Nivesh-Path
-  bash ~/Nivesh-Path/infra/bootstrap/cloudshell.sh
-  ```
-- **It asks for the email for alarm emails, shows the plan, and waits for you to type `yes`.**
-- At the end it prints three lines: `AWS_ROLE_ARN`, `AWS_PLAN_ROLE_ARN`, `AWS_REGION`. These are not secret.
-- What the script does:
-  - stops unless the region is `us-east-1`;
-  - installs Terraform 1.15.9 (checksum-verified), and keeps its provider downloads in `/tmp/tf-bootstrap`, because CloudShell's home folder holds only 1 GB;
-  - creates the resources;
-  - moves its own state into the new S3 bucket, so nothing important lives only in CloudShell.
-- **To run it again later:** `cd ~/Nivesh-Path && git pull && bash infra/bootstrap/cloudshell.sh`.
-  - Each region's CloudShell has its **own home folder**. Your first run's `backend.tf` (which points Terraform at the state in S3) lives only in that CloudShell. Ours is the **US East (Ohio) CloudShell**, so there the rerun is `AWS_REGION=us-east-1 bash infra/bootstrap/cloudshell.sh`.
-  - Run from any other region's CloudShell, the script finds the state in `s3://nivesh-path-tfstate-<account>` and uses it. It never starts a second bootstrap.
-
-**B3. Confirm the alert email:** open the email "AWS Notification - Subscription Confirmation" and click **Confirm subscription**.
-
-**B4. GitHub settings** (repo → Settings):
-- **Environments → New environment** `aws-demo`:
-  - **Required reviewers:** yourself;
-  - **Deployment branches and tags:** "Selected branches and tags" → add `main`.
-- **Secrets and variables → Actions → Variables tab → New repository variable**, three times: `AWS_ROLE_ARN`, `AWS_PLAN_ROLE_ARN` and `AWS_REGION`, with the values from B2.
-
-**B5. MongoDB Atlas:**
-- **Network Access:** make sure `0.0.0.0/0` is allowed. Fargate tasks have changing public IPs. DigitalOcean's are not fixed either, so it's probably there already.
-- The **`nivesh-demo`** database user (`readWrite` on `niveshpath_demo`) comes from PR A's Step 1b.7. Build its connection string like the live one, with `/niveshpath_demo` after `.net`.
-
-**B6. Fill the demo secret:**
-- AWS console → **Secrets Manager** → `nivesh-path/demo` → **Retrieve secret value** → **Set secret value** → Key/value. Add five rows:
-
-| Key | Value, and where it comes from |
-|---|---|
-| `MONGO_URL` | The `nivesh-demo` Atlas connection string (B5) |
-| `JWT_SECRET` | A **new** random value. In CloudShell: `openssl rand -hex 32` |
-| `FINNHUB_API_KEY` | **Recommended:** a second free Finnhub key from a separate sign-up, so a load test can't use up the live site's 60 calls/minute. Your live key also works |
-| `ANTHROPIC_API_KEY` | From console.anthropic.com → API keys. Leave the value empty to run the Advisor on its rule-based fallback |
-| `AI_INTERNAL_TOKEN` | A **new** random value, **not** the live site's: `openssl rand -hex 32` |
-
-- Save. All five keys must exist, or a task fails to start with "did not contain json key".
-
-### 4.2 Each demo
-
-**D1. Create and deploy:**
-- Actions → **AWS demo: apply + deploy** → Run workflow (branch `main`) → **Review deployments → Approve**.
-- About 15–20 minutes the first time; RDS takes most of it.
-- The run summary shows the **app URL** and the **dashboard** link.
-
-**D2. Check it works:**
-- Open the URL, sign up and buy a share. The Behavioral Mirror note appears.
-- What's new shows **Hosted on: AWS (demo stack, temporary)** and **Money ledger: PostgreSQL (AWS RDS)**.
-
-**D3. Load test and autoscaling:**
-- Actions → **AWS demo: load test** → Run (defaults: 50 users, 8 minutes, 4 tickers) → Approve.
-- The run summary has the latency table and a timeline of web tasks every 20 s. Scaling shows as `1 1` → `2 2`/`3 3`.
-- Meanwhile, open the dashboard. **Take two screenshots:** the "Web tasks serving" panel going above 1, and the ECS CPU panel.
-
-**D4. Fire one alarm:** CloudShell:
-```
-URL=http://$(aws elbv2 describe-load-balancers --names nivesh-demo --query 'LoadBalancers[0].DNSName' --output text)
-TOKEN=$(aws secretsmanager get-secret-value --secret-id nivesh-path/demo --query SecretString --output text | python3 -c 'import json,sys; print(json.load(sys.stdin)["AI_INTERNAL_TOKEN"])')
-for i in $(seq 1 10); do curl -s -o /dev/null -w "%{http_code} " -H "X-Internal-Token: $TOKEN" "$URL/internal/demo-fault"; done; echo
-```
-- It prints ten `500`s.
-- Within about 2 minutes, the email **"ALARM: nivesh-demo-5xx"** arrives. About 2 minutes later, "OK: nivesh-demo-5xx" arrives.
-- **Screenshot the alarm email** and the alarm in CloudWatch → Alarms.
-- The route exists only on the demo stack (`DEMO_FAULTS=1`) and only with the token.
-
-**D5. Destroy:**
-- Actions → **AWS demo: destroy** → type `destroy` → Run → Approve. About 10–15 minutes.
-- The summary lists remaining `Stack=demo` resources; it should be empty.
-- What stays is listed in the table at the top: the bootstrap stack (and, later, the jobs stack).
-
-**D6. Send the screenshots and the two run links** (apply and load test). I'll add them to `docs/aws/` and `docs/PERFORMANCE.md`.
-
-### 4.3 HTTPS (optional, once the domain exists)
-1. AWS → Certificate Manager → **Request** → public → `aws.<your domain>` → DNS validation.
-2. Copy the CNAME name and value into Namecheap → Advanced DNS. Wait until the status is **Issued**.
-3. GitHub → Variables → add `AWS_DEMO_CERTIFICATE_ARN` (the certificate's ARN), then run **apply + deploy**.
-   - Port 443 serves HTTPS (TLS 1.2+), and port 80 redirects to it.
-4. In Namecheap, add a CNAME from `aws` to the load balancer's DNS name.
-
-### 4.4 If something fails
-
-| Symptom | Cause, and what to do |
-|---|---|
-| Apply: "AccessDenied … AssumeRoleWithWebIdentity" | The `aws-demo` environment or the `AWS_ROLE_ARN` variable is missing or misspelled (B4), or the workflow ran on a branch other than `main` |
-| A task stops with "ResourceInitializationError … did not contain json key X" | Key X is missing from `nivesh-path/demo` (B6). Add it, then run **AWS demo: deploy** |
-| The deploy stops at "Migration failed" | The services were not changed. The log lines above it are from `prisma migrate deploy` (they contain no secrets); send them to me |
-| The app loads but quotes fail | The Finnhub key is invalid or over its limit |
-| The Advisor answers "rule-based" | `ANTHROPIC_API_KEY` is empty or invalid |
-| Plan comment missing on a PR | `AWS_PLAN_ROLE_ARN` isn't set yet (the plan job is skipped), or the PR comes from a fork |
-| Apply (jobs or demo): "github-nivesh-deploy is not authorized to perform: SNS:ListTagsForResource on … nivesh-path-alerts" | AWS provider 6.x also reads the alert topic's tags. The deploy policy now allows it, for that one topic (statement `AlertTopicRead`). Re-run the bootstrap once (B2, "To run it again later") so the role gets the new policy, then run the workflow again |
-| Apply (jobs): "github-nivesh-deploy is not authorized to perform: states:ValidateStateMachineDefinition on … stateMachine:*" | AWS provider 6.x checks a state machine's definition before creating it, against `stateMachine:*`, because the machine has no name yet. `NightlyJobResources` (only `nivesh-jobs-*`) can't cover that, so the action is now in `DemoServicesInRegion`, limited to us-east-1. It only validates JSON. Re-run the bootstrap once, then the workflow. Resources created before the failure stay, and the next apply continues from there |
-| `cloudshell.sh` stops: "This CloudShell is in us-east-2 …" | CloudShell took the console's region. Switch the console to **US East (N. Virginia)** and open CloudShell again, or run `AWS_REGION=us-east-1 bash ~/Nivesh-Path/infra/bootstrap/cloudshell.sh` |
-| `terraform init` in CloudShell: "no space left on device" | The AWS provider doesn't fit in CloudShell's 1 GB home folder. The script now keeps it in `/tmp/tf-bootstrap` (`TF_DATA_DIR`). Free the space from an older run with `rm -rf ~/Nivesh-Path/infra/bootstrap/.terraform`, then `git pull` and run the script again |
+**Result:** the demo stack was created, load-tested and destroyed on Oct 14, 2026. Under a 50-user k6 test through
+the load balancer it served 95,964 requests at 180.3 requests/s and scaled web from 1 to 3 tasks
+([`aws/LOADTEST_RESULTS.md`](aws/LOADTEST_RESULTS.md)).
 
 ## 5. What's in `infra/demo`
 
@@ -278,21 +178,19 @@ Unit prices are from the **AWS Price List** (us-east-1, on-demand, fetched 2026-
   - log ingestion at **$0.50/GB** and storage at $0.03/GB-month.
 - The S3 state bucket: cents.
 
-**Always on** (bootstrap, plus the jobs stack after PR F): about **$1/month**.
-
-Correction to my review: it estimated $1.5–2 a day. The price list gives about $2.56 a day, mostly because each public IPv4 address now costs $0.005/hour.
+**Always on** (bootstrap, plus the jobs stack): about **$1/month**.
 
 ## 7. Limits, said plainly
-- **Not run on AWS yet.** I can't reach AWS from here. Locally, the following all passed: `terraform validate`, Checkov (0 failed, every skip explained), ShellCheck, actionlint, and the RDS-style connection (TLS, a password full of special characters, migrations, `db-check`, the server's start-up). The first real apply is D1.
+- **Checked before the first apply:** `terraform validate`, Checkov (0 failed, every skip explained), ShellCheck, actionlint, and the RDS-style connection (TLS, a password full of special characters, migrations, `db-check`, the server's start-up). The stack was then applied, load-tested and destroyed on AWS on Oct 14, 2026 (§4).
 - **The first apply's tasks fail to pull for a few minutes.** Terraform creates the services before any image exists, then the deploy step pushes images and rolls them out. ECS retries by itself. It's only noise in the ECS events.
 - **No NAT** (§2). Tasks have public IPs, and egress is open.
-- **HTTP only until there's a domain** (§4.3).
+- **HTTP only until a certificate is set** (`AWS_DEMO_CERTIFICATE_ARN`; [`RUNBOOK.md`](RUNBOOK.md) §6).
 - **The deploy role is broad within its services** (for example `ec2:*`, `rds:*` in `us-east-1`). Per-action least privilege isn't practical for a Terraform runner. IAM, the escalation path, is fenced by the boundary.
-- **The AWS Free plan:** I can't confirm from here that every service used is open to Free-plan accounts. If one isn't, apply fails with a clear AccessDenied/SubscriptionRequired message, and upgrading to the Paid plan keeps the credits.
+- **The AWS Free plan:** the stacks ran on a Free-plan account. If a service is ever closed to Free-plan accounts, apply fails with a clear AccessDenied/SubscriptionRequired message, and upgrading to the Paid plan keeps the credits.
 - **The in-memory cache is per task.** With 3 web tasks, Finnhub sees up to 3× the calls of one. The load test therefore reads only 4 tickers by default.
-- **Load numbers from AWS will reflect 0.25 vCPU web tasks.** They aren't comparable 1:1 with the CI runner numbers in `PERFORMANCE.md`.
+- **AWS load numbers reflect 0.25 vCPU web tasks behind a load balancer.** They aren't comparable 1:1 with the CI runner numbers in [`PERFORMANCE.md`](PERFORMANCE.md).
 
-## 8. The nightly job (`infra/jobs`, PR F)
+## 8. The nightly job (`infra/jobs`)
 
 **What it does**, every weekday at 4:30 pm New York, half an hour after the US close (EventBridge Scheduler handles daylight saving):
 1. **List held tickers.** It asks the live web service which stocks anyone holds now.
@@ -329,7 +227,7 @@ flowchart LR
   secret["Secrets Manager<br/>nivesh-path/jobs: AI_INTERNAL_TOKEN only"] -.-> list
 ```
 
-**Why it goes through web and not straight to the databases** (PR B review, Q1):
+**Why it goes through web and not straight to the databases:**
 - AWS holds **no database credentials and no Finnhub key**, only the internal token.
 - The web service's own code does the work: the same ledger, the same quote cache, the same detector.
 - The Lambda is a small HTTP client (one file) with no dependencies.
@@ -344,21 +242,13 @@ flowchart LR
 
 The snapshot route refuses to save while the market is open (before 4:00 pm New York on the quote's own day), so a manual daytime run can't store an intraday price as a close.
 
-### 8.1 Runbook (Sumit)
-Prerequisites: the bootstrap is done (§4.1), and the live site runs the PR F code (merged and deployed).
-1. **Choose the token.** DigitalOcean doesn't show an encrypted value again, so make a new one and put it in three places:
-   - CloudShell: `openssl rand -hex 32` → copy the output.
-   - DigitalOcean → web → `AI_INTERNAL_TOKEN` → paste → Save.
-   - DigitalOcean → ai → `AI_INTERNAL_TOKEN` → the **same** value → Save. Both redeploy.
-   - AWS → Secrets Manager → `nivesh-path/jobs` → Retrieve secret value → **Set secret value** → key `AI_INTERNAL_TOKEN`, the same value → Save.
+### 8.1 Operating it
+Steps (token, apply, a manual run, turning it off) are in [`RUNBOOK.md`](RUNBOOK.md) §7.
 
-   No `FINNHUB_API_KEY` is needed here; web fetches the quotes. Leave that key out, or delete it if you added it.
-2. **Apply:** GitHub → Actions → **AWS jobs: nightly job** → Run workflow → action `apply` → **Approve**.
-3. **Run it once now:** the same workflow → action `run-now` → Approve.
-   - The summary shows the held tickers, the closes saved, skipped and failed, and the concentration check's counts.
-   - Run it after 4:00 pm New York. During market hours every close is "skipped", by design.
-4. **Check** (send me the run link and a screenshot): the Behavioral Mirror's pattern list (any new overconcentration note), and the email on a failure.
-5. **Turn it off:** action `destroy` + type `destroy`. The saved closes stay in Neon.
+**Live since Oct 14, 2026.** The first manual run ended `SomeSnapshotsFailed` for all 7 tickers, because the live
+Finnhub key was invalid (it had also broken live prices); the failure email arrived as designed. After the key was
+replaced, execution `43e37234-e198-4c0b-9d90-5e5309edfd47` succeeded: 7 of 7 closes saved (DIA, INTC, META, MSFT,
+QQQ, SPY, WMT), 0 skipped, 0 failed, and the concentration check ran for every user.
 
 ### 8.2 Cost (AWS Price List, us-east-1)
 

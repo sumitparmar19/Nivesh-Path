@@ -1,6 +1,6 @@
-# AWS demo: create or update the whole demo stack, then build, migrate and deploy this commit (Phase 3, PR E).
+# AWS demo: create or update the whole demo stack, then build, migrate and deploy this commit.
 # Manual only (Actions -> "AWS demo: apply + deploy" -> Run workflow, on main). The job runs in the aws-demo
-# environment, so GitHub waits for Sumit's approval, and only then can it sign in to AWS (OIDC, deploy role).
+# environment, so GitHub waits for the owner's approval, and only then can it sign in to AWS (OIDC, deploy role).
 # Takes about 15-20 minutes the first time (RDS). Ends with the app URL in the run summary.
 name: "AWS demo: apply + deploy"
 

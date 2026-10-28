@@ -1,8 +1,8 @@
-# Nightly job stack (Phase 3, PR F): EventBridge Scheduler (weekdays 4:30 pm New York) -> Step Functions ->
+# Nightly job stack: EventBridge Scheduler (weekdays 4:30 pm New York) -> Step Functions ->
 # one small Lambda that calls the LIVE web service's token-only /internal/jobs API:
 #   list held tickers -> save each one's daily close (2 at a time, paced, retried) -> overconcentration check
 # for every user. Failures email the alert topic. AWS holds no database credentials and no Finnhub key: only
-# the internal token, in the nivesh-path/jobs secret (created empty by infra/bootstrap, filled by Sumit).
+# the internal token, in the nivesh-path/jobs secret (created empty by infra/bootstrap, filled in by hand).
 # Always on, unlike infra/demo; costs cents a month. Applied by the "AWS jobs" workflow (aws-demo environment).
 # State: s3://nivesh-path-tfstate-<account>/jobs/terraform.tfstate (bucket passed with -backend-config).
 terraform {

@@ -17,7 +17,7 @@ const config = {
   mailFrom: process.env.MAIL_FROM || "Nivesh-Path <onboarding@resend.dev>",
   contactToEmail: process.env.CONTACT_TO_EMAIL || "",
   quoteCacheSeconds: Number(process.env.QUOTE_CACHE_SECONDS) || 60,
-  // Phase 3 ledger: "mongo" (default) or "postgres" (needs DATABASE_URL). See docs/LEDGER.md.
+  // Ledger store: "mongo" (default) or "postgres" (needs DATABASE_URL; production). See docs/LEDGER.md.
   ledgerBackend: (process.env.LEDGER_BACKEND || "mongo").trim().toLowerCase(),
   databaseUrl: process.env.DATABASE_URL || "",
 };

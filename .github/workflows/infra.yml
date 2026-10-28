@@ -1,8 +1,8 @@
-# Infrastructure checks (Phase 3, PR E) on every push/PR that touches infra/ or the AWS workflows:
+# Infrastructure checks on every push/PR that touches infra/ or the AWS workflows:
 #   terraform fmt + validate for every stack, Checkov (every finding fixed or skipped in the code with a reason),
 #   ShellCheck on the deploy script; and on pull requests, `terraform plan` for the demo stack posted as a comment.
-# The plan job signs in with the READ-ONLY plan role (OIDC, no keys) and is skipped until Sumit has run the
-# bootstrap and set the AWS_PLAN_ROLE_ARN variable (docs/AWS.md), so CI stays green before AWS exists.
+# The plan job signs in with the READ-ONLY plan role (OIDC, no keys) and is skipped until the
+# bootstrap has run and the AWS_PLAN_ROLE_ARN variable is set (docs/RUNBOOK.md §5), so CI stays green before AWS exists.
 name: Infra
 
 on:
@@ -98,8 +98,6 @@ jobs:
               `### Terraform plan · infra/demo · ${status}`,
               `\`${summary}\` · commit ${context.sha.slice(0, 7)} · read-only plan role, no state lock`,
               "<details><summary>Full plan</summary>\n\n```\n" + plan + "\n```\n</details>",
-              "",
-              "---",
             ].join("\n");
             const { owner, repo } = context.repo;
             const issue_number = context.issue.number;

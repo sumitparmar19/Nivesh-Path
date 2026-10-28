@@ -5,9 +5,9 @@
 // so the routes can't be told apart from missing ones.
 // DEMO_FAULTS=1 (set only in the AWS demo stack, infra/demo) adds GET /internal/demo-fault, which answers 500 on
 // purpose so the CloudWatch 5xx alarm can be tested once; it is behind the same token as everything else here.
-// /internal/jobs/* (PR F) is the nightly job's whole interface, so AWS needs no database credentials: list held
+// /internal/jobs/* is the nightly job's whole interface, so AWS needs no database credentials: list held
 // tickers (read), save one stock's daily close (writes only `price_snapshots`), and run the concentration check
-// for every user (writes only Behavioral Mirror events, exactly as after a trade). Reviewed in the PR B review, Q1.
+// for every user (writes only Behavioral Mirror events, exactly as after a trade). These two are the only writing routes here.
 const crypto = require("crypto");
 const express = require("express");
 const rateLimit = require("express-rate-limit");

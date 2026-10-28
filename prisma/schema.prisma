@@ -1,4 +1,4 @@
-// Postgres schema for the money ledger (Phase 3, PR A): each user's cash account and their trades.
+// Postgres schema for the money ledger: each user's cash account and their trades.
 // Users, auth, AI memory, behavioral events, watchlist and messages stay in MongoDB; rows here refer to a user by
 // the MongoDB user id (24-character hex string). CHECK constraints live in the migration SQL (Prisma can't
 // express them): cash >= 0, quantity > 0, price > 0, total > 0, side in ('buy','sell').
@@ -27,7 +27,7 @@ model Account {
 
 model Trade {
   // Same 24-character ObjectId string as the MongoDB trade it came from (or a fresh one), so behavioral_events,
-  // analyses and AI memory keep pointing at the right trade (blocking issue 1).
+  // analyses and AI memory keep pointing at the right trade.
   id                String    @id @db.Char(24)
   userId            String    @map("user_id") @db.VarChar(24)
   account           Account   @relation(fields: [userId], references: [userId], onDelete: Cascade)
@@ -46,7 +46,7 @@ model Trade {
   @@map("trades")
 }
 
-// Daily closing prices saved by the nightly job (Phase 3, PR F): one row per stock per trading day. The
+// Daily closing prices saved by the nightly job: one row per stock per trading day. The
 // Behavioral Mirror's rule v3 takes the 5-day move from these once enough days are stored. The job reaches
 // them only through web's token-only /internal API, so AWS holds no database credentials. CHECKs in the SQL.
 model PriceSnapshot {

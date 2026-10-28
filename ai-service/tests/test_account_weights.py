@@ -1,4 +1,4 @@
-"""Phase 2C follow-up: the Advisor measures weights against the whole account (cash included), uses the
+"""The Advisor measures weights against the whole account (cash included), uses the
 same Diversification formula as the Behavioral Mirror, lists history in time order in the user's time
 zone, never talks about taxes, and accepts calls only with the internal token when one is configured."""
 

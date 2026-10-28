@@ -1,5 +1,5 @@
-# Long-lived pieces the demo and jobs stacks look up by name: two secrets (created EMPTY: Sumit types the values in
-# the console, so they never reach Terraform state or Git) and the alert topic with Sumit's email subscribed once.
+# Long-lived pieces the demo and jobs stacks look up by name: two secrets (created EMPTY: the values are typed in
+# the console, so they never reach Terraform state or Git) and the alert topic with the owner's email subscribed once.
 
 resource "aws_secretsmanager_secret" "demo" {
   #checkov:skip=CKV_AWS_149:The AWS-managed key (aws/secretsmanager) encrypts it; a customer-managed key adds cost and nothing here needs one.
@@ -13,7 +13,7 @@ resource "aws_secretsmanager_secret" "jobs" {
   #checkov:skip=CKV_AWS_149:The AWS-managed key (aws/secretsmanager) encrypts it; a customer-managed key adds cost and nothing here needs one.
   #checkov:skip=CKV2_AWS_57:Values are typed by hand; rotation would need a Lambda per key.
   name                    = "${var.project}/jobs"
-  description             = "Nightly job (infra/jobs, PR F). JSON keys: AI_INTERNAL_TOKEN (the live site's), FINNHUB_API_KEY. No database credentials. Filled in by hand."
+  description             = "Nightly job (infra/jobs). JSON keys: AI_INTERNAL_TOKEN (the live site's), FINNHUB_API_KEY. No database credentials. Filled in by hand."
   recovery_window_in_days = 7
 }
 

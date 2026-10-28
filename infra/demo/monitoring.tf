@@ -1,4 +1,4 @@
-# CloudWatch for the demo: one dashboard and four alarms that email Sumit (SNS topic from infra/bootstrap).
+# CloudWatch for the demo: one dashboard and four alarms that email the alert address (SNS topic from infra/bootstrap).
 # Only free, built-in metrics are used (ALB, ECS service CPU/memory, RDS); Container Insights stays off.
 # The ALB's HealthyHostCount doubles as "how many web tasks are serving", which is how scaling shows up.
 

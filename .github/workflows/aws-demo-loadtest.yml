@@ -1,5 +1,5 @@
-# AWS demo: k6 against the load balancer, recording how many web tasks the autoscaler runs (Phase 3, PR E).
-# Manual only, main only, aws-demo environment (Sumit approves; it reads the stack's outputs and ECS service
+# AWS demo: k6 against the load balancer, recording how many web tasks the autoscaler runs.
+# Manual only, main only, aws-demo environment (the owner approves; it reads the stack's outputs and ECS service
 # counts with the deploy role). Uses the read mix from loadtest/ with a few tickers only (real Finnhub data on AWS).
 # Results: the run summary (latency table + scaling timeline) and the "aws-loadtest" artifact; docs/PERFORMANCE.md
 # quotes a run and links it.

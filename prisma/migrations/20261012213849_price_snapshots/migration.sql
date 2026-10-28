@@ -1,4 +1,4 @@
--- Phase 3 PR F: daily closing prices saved by the nightly job (one row per stock per trading day; repeat runs
+-- Daily closing prices saved by the nightly job (one row per stock per trading day; repeat runs
 -- update the same row). Rule v3 of the Behavioral Mirror reads the 5-day move from here.
 -- CreateTable
 CREATE TABLE "price_snapshots" (

@@ -1,5 +1,5 @@
-// Picks the ledger store for LEDGER_BACKEND: "mongo" (default, today's ledger on the User document and the
-// `purchases` collection) or "postgres" (Phase 3: `accounts` + `trades` via Prisma). A user's first Postgres
+// Picks the ledger store for LEDGER_BACKEND: "mongo" (default, the original ledger on the User document and the
+// `purchases` collection) or "postgres" (production: `accounts` + `trades` via Prisma). A user's first Postgres
 // account is opened with their MongoDB balance, so a user missed by the cutover script keeps their cash.
 const { createMongoLedgerStore, STARTING_CASH } = require("./ledgerStore.mongo");
 

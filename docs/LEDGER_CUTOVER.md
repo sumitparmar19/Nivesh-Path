@@ -2,7 +2,9 @@
 
 Moves every user's cash and trades from MongoDB to Postgres (Neon) with about 5 minutes of paused trading. Everything happens in a browser, in DigitalOcean.
 
-**Before you start:** PR A and PR B are merged and deployed, the `migrate` pre-deploy job has run (Step 4 of the PR A report), and `node scripts/db-check.js` in the web Console prints `"ok":true`.
+**Done on Oct 12, 2026.** The outputs of that run are in [`LEDGER.md`](LEDGER.md) §5; design and tests are there too. This page is the procedure, kept for a re-run or a rollback.
+
+**Before you start:** the Postgres ledger code is deployed with `LEDGER_BACKEND=mongo`, the `migrate` pre-deploy job has applied the migrations (`DATABASE_URL` on web and the job, `DIRECT_URL` on the job), and `node scripts/db-check.js` in the web Console prints `"ok":true`.
 
 ## 0. Dry run (any time, changes nothing)
 1. DigitalOcean → your app → **Console** → **web**, then run:
@@ -11,8 +13,8 @@ Moves every user's cash and trades from MongoDB to Postgres (Neon) with about 5 
    ```
 2. Read the end of the output:
    - `No blocking problems.` means you can do the cutover.
-   - `BLOCKING problems` means stop and send the output to Claude. Examples are a fractional share count from the old API or a broken row.
-3. `Rounding changes` lists every value that changes when stored with fixed decimals (cash and totals to cents, prices to 4 places), and any trade with no timestamp (it gets the creation time built into its id instead of 1970). Send that part to Claude too, so it goes into the PR B report.
+   - `BLOCKING problems` means stop and fix the data handling first. Examples are a fractional share count from the old API or a broken row.
+3. `Rounding changes` lists every value that changes when stored with fixed decimals (cash and totals to cents, prices to 4 places), and any trade with no timestamp (it gets the creation time built into its id instead of 1970). Review it before continuing.
 
 The output shows user ids and amounts only, never emails, passwords or keys.
 
@@ -33,11 +35,11 @@ The output shows user ids and amounts only, never emails, passwords or keys.
    node scripts/migrate-ledger.js --verify
    ```
    It must end with `All users match (N). Safe to set LEDGER_BACKEND=postgres.`
-3. **Copy the whole verify output.** It gets attached to the PR as the proof, and it has no secrets.
+3. **Keep the whole verify output.** It is the proof that the money matches, and it has no secrets.
 4. **If either command says `MISMATCH` or `conflict`:**
    - don't switch;
    - remove `LEDGER_MAINTENANCE` to reopen trading on MongoDB (nothing was lost: MongoDB was only read);
-   - send the output to Claude.
+   - investigate with the output before retrying.
 
 ## 3. Switch (1 save)
 1. In **web** → Environment Variables:
@@ -58,13 +60,13 @@ The output shows user ids and amounts only, never emails, passwords or keys.
    ```
    node scripts/migrate-ledger.js --export-since <switch time, e.g. 2026-10-20T14:00:00Z>
    ```
-   Send the list to Claude. Those users' MongoDB cash and holdings don't include those trades.
+   Those users' MongoDB cash and holdings don't include those trades; they have to be redone by hand.
 3. To retry the cutover later, start again at step 1.
    - `--migrate` refuses users who already traded on Postgres (it reports a `conflict`), so newer Postgres balances are never overwritten by older MongoDB ones.
    - It also refuses to run at all while `LEDGER_BACKEND=postgres` (unless `--force`).
 
 ## What the script guarantees
-- **MongoDB is never written.** It stays as the backup, and the D-cleanup PR leaves the data in place.
+- **MongoDB is never written.** It stays as the backup.
 - **Re-running is safe:**
   - rows are keyed by the MongoDB ids, so nothing is duplicated;
   - a re-run copies trades added since the last run and refreshes cash and the Mirror's "checked" marks;
@@ -78,7 +80,7 @@ The output shows user ids and amounts only, never emails, passwords or keys.
 
   Any difference fails the run (exit code 1).
 - **Rows that can't be copied block `--migrate`** before anything is written:
-  - fractional shares (decision D1);
+  - fractional shares (the ledger stores whole shares only);
   - non-positive price or quantity;
   - unknown side;
   - negative cash.

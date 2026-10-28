@@ -1,7 +1,7 @@
-# Load test (Phase 3, PR D): starts the whole stack with docker compose (made-up market data, Postgres ledger), runs
+# Load test: starts the whole stack with docker compose (made-up market data, Postgres ledger), runs
 # the k6 read mix and trade mix with the cache ON, then again with the cache OFF (CACHE_DISABLED=1), and publishes
 # requests/s, p50/p95/p99, error rate and cache hit rate. Manual (Actions -> "Load test" -> Run workflow), and on PRs
-# that change the load test itself. Claude is never called. Results: the run summary + the "loadtest-results"
+# that change the load test itself. The LLM is never called. Results: the run summary + the "loadtest-results"
 # artifact; docs/PERFORMANCE.md quotes a run and links it.
 name: Load test
 

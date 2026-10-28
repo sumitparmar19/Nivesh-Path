@@ -328,7 +328,7 @@ describe("virtual cash ledger", () => {
     expect((await buy(app, u, "GS", 2, 0)).status).toBe(503);
   });
 
-  test("legacy Phase 1 request shape still works", async () => {
+  test("legacy request shape (name, transactionType) still works", async () => {
     const { app } = setup();
     const u = await newUser(app);
     const res = await request(app).post("/store-purchase").set(auth(u))
@@ -841,7 +841,7 @@ describe("React app serving and staged rollout", () => {
   });
 });
 
-// ================= Phase 3 PR A: ledger store, idempotency, maintenance, internal API (MongoDB store) =================
+// ================= Ledger store, idempotency, maintenance, internal API (MongoDB store) =================
 describe("ledger (MongoDB store): idempotency, whole shares, maintenance", () => {
   const order = (app, u, key, quantity = 2) =>
     request(app).post("/api/trades").set({ ...auth(u), "Idempotency-Key": key }).send({ symbol: "AAPL", quantity, type: "BUY" });
@@ -961,7 +961,7 @@ describe("internal API (/internal/*, AI service -> web)", () => {
     expect((await request(noToken).get("/internal/demo-fault")).status).toBe(404);
   });
 
-  describe("nightly job routes (/internal/jobs/*, PR F)", () => {
+  describe("nightly job routes (/internal/jobs/*)", () => {
     const { createMemorySnapshotStore } = require("../src/lib/priceSnapshots");
     const afterClose = Date.parse("2026-10-12T20:30:00Z"); // 4:30 pm New York
     const tradedAt = Math.floor(Date.parse("2026-10-12T20:00:00Z") / 1000);

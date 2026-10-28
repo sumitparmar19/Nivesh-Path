@@ -1,12 +1,12 @@
 // Virtual cash ledger: validates and prices buys and sells for one user against their $100k paper-trading balance,
-// then hands them to the ledger store (MongoDB today, Postgres after the Phase 3 cutover; see ledgerStore.*.js),
+// then hands them to the ledger store (Postgres in production, MongoDB as the rollback path; see ledgerStore.*.js),
 // which applies them atomically. LEDGER_MAINTENANCE pauses every money-moving action during the cutover.
 const { toSymbol } = require("../config");
 const { buildHoldings } = require("./portfolio");
 const { createMongoLedgerStore, STARTING_CASH } = require("./ledgerStore.mongo");
 
 const SYMBOL_RE = /^[A-Z.]{1,10}$/;
-const MAX_QUANTITY = 1000000; // whole shares only (decision D1); also keeps the Postgres INTEGER column safe
+const MAX_QUANTITY = 1000000; // whole shares only; also keeps the Postgres INTEGER column safe
 const IDEMPOTENCY_KEY_RE = /^[A-Za-z0-9_-]{8,100}$/;
 const REUSED_KEY_MESSAGE = "This order key was already used for a different order.";
 const MAINTENANCE_MESSAGE = "Trading is paused for a few minutes while we upgrade the ledger. Please try again shortly.";

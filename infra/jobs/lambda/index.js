@@ -1,4 +1,4 @@
-// The nightly job's only Lambda (Phase 3, PR F). Step Functions calls it with { action } and it calls the LIVE web
+// The nightly job's only Lambda. Step Functions calls it with { action } and it calls the LIVE web
 // service's token-only /internal/jobs API; it holds no database credentials and no Finnhub key (web fetches the
 // quote itself). The token comes from Secrets Manager (nivesh-path/jobs, key AI_INTERNAL_TOKEN), read once per
 // container. Errors are thrown with a name Step Functions can match: WebUnavailable (retried with backoff) or

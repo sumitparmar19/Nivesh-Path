@@ -1,4 +1,4 @@
-// Observability tests (Phase 3, PR C): telemetry is off by default, nothing secret or personal leaves in spans,
+// Observability tests: telemetry is off by default, nothing secret or personal leaves in spans,
 // the cache switch used by the load test works, and real requests produce the dashboard's metrics.
 process.env.JWT_SECRET = "test-secret";
 delete process.env.OTEL_EXPORTER_OTLP_ENDPOINT;

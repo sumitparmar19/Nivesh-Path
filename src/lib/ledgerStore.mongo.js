@@ -1,5 +1,5 @@
 // MongoDB implementation of the ledger store: cash on the User document, trades in the `purchases` collection.
-// This is today's (pre-Phase 3) ledger, unchanged in behaviour, behind the same interface as the Postgres store
+// This is the original ledger, unchanged in behaviour, behind the same interface as the Postgres store
 // so LEDGER_BACKEND can switch between them. It stays as the rollback path until the Mongo ledger is retired.
 const { buildHoldings } = require("./portfolio");
 

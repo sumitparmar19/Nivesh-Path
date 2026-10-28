@@ -41,7 +41,7 @@ describe("What's new", () => {
   it("shows the roadmap", () => {
     mockApi({ "GET /api/status": OK });
     open();
-    expect(screen.getByText("Pre-trade check")).toBeInTheDocument(); // 2C shipped; 2D is next on the roadmap
+    expect(screen.getByText("Pre-trade check")).toBeInTheDocument(); // next on the roadmap
   });
 
   it("shows which ledger holds the money, and a paused-trading warning during the cutover", async () => {

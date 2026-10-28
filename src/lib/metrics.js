@@ -1,4 +1,4 @@
-// Application metrics for the web service (Phase 3 observability), shown on observability/grafana-dashboard.json.
+// Application metrics for the web service, shown on observability/grafana-dashboard.json.
 // Built on the OpenTelemetry API: until src/telemetry.js registers a MeterProvider (only when
 // OTEL_EXPORTER_OTLP_ENDPOINT is set) every instrument here is a no-op, so tests and local runs pay nothing.
 // Attribute values are kept low-cardinality (route templates, never raw URLs or user ids).

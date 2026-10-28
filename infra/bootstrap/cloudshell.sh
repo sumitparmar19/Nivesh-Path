@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# One-time AWS bootstrap, run by Sumit in AWS CloudShell (browser only; docs/AWS.md, step B2):
+# One-time AWS bootstrap, run in AWS CloudShell (browser only; docs/RUNBOOK.md §5):
 #   1. installs Terraform 1.15.9 into ~/bin (HashiCorp's zip, checked against the SHA-256 below; CloudShell has none);
 #   2. applies infra/bootstrap: state bucket, GitHub OIDC + two roles, permissions boundary, 2 empty secrets, alert topic
 #      (Terraform shows the plan and waits for "yes");
@@ -8,7 +8,7 @@
 # Safe to run again, from any region's CloudShell: once the state is in its bucket it just re-applies against it.
 set -euo pipefail
 
-# Everything goes to us-east-1 (docs/AWS.md B1). CloudShell sets AWS_REGION to the console's region, so a session
+# Everything goes to us-east-1 (docs/RUNBOOK.md §5). CloudShell sets AWS_REGION to the console's region, so a session
 # opened from another region would build the bootstrap there (it happened once, in us-east-2): refuse instead.
 REGION=${AWS_REGION:-us-east-1}
 if [ "$REGION" != "us-east-1" ]; then

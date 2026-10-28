@@ -1,4 +1,4 @@
-// Phase 2C Behavioral Mirror tests: the pure rules (every severity boundary), the detector (dedup, fail-safe,
+// Behavioral Mirror tests: the pure rules (every severity boundary), the detector (dedup, fail-safe,
 // time budget) and the /api/patterns routes (auth, user isolation, scores, AI insight), using in-memory models
 // and the fake market data mode, so nothing calls Finnhub, MongoDB or the AI service.
 process.env.JWT_SECRET = "test-secret";
@@ -6,7 +6,7 @@ const request = require("supertest");
 const { createApp } = require("../src/app");
 const rules = require("../src/lib/behaviorRules");
 const { createBehaviorDetector } = require("../src/lib/behaviorDetector");
-const { migrateBehaviorEvents, PHASE_2C_LAUNCH, RULE_V2_LAUNCH } = require("../src/lib/behaviorMigration");
+const { migrateBehaviorEvents, DETECTION_LAUNCH, RULE_V2_LAUNCH } = require("../src/lib/behaviorMigration");
 const { cashForAnalysis } = require("../src/routes/ai");
 
 // --- In-memory model: the Mongo operators these features use ---
@@ -87,13 +87,13 @@ describe("behavior rules: panic sell (rule v2: only when selling at a loss)", ()
     expect(sell(-20).severity).toBe("high");
   });
 
-  test("B2: selling at or above average cost is not a panic sell; one cent below is", () => {
+  test("selling at or above average cost is not a panic sell; one cent below is", () => {
     expect(sell(-12, { price: 100 })).toBeNull(); // at cost
     expect(sell(-12, { price: 120 })).toBeNull(); // profit
     expect(sell(-5, { price: 99.99 }).severity).toBe("low");
   });
 
-  test("B1: today's drop counts, taking the larger of the 5-day and today's drop", () => {
+  test("today's drop counts, taking the larger of the 5-day and today's drop", () => {
     expect(sell(0, { todayChange: -7 }).facts).toMatchObject({ drop: 7, fiveDayReturn: 0, todayChange: -7 });
     expect(sell(-12, { todayChange: -3 }).facts.drop).toBe(12);
     expect(sell(null, { todayChange: -4 })).toBeNull();
@@ -107,7 +107,7 @@ describe("behavior rules: panic sell (rule v2: only when selling at a loss)", ()
 describe("behavior rules: FOMO buy (rule v2: needs a real run-up)", () => {
   const buy = (price, fiveDayReturn, extra = {}) => rules.fomoBuy({ side: "buy", symbol: "NVDA", price, week52High: 100, fiveDayReturn, ...extra });
 
-  test("A3: the live-test SPY buy (1.0% under the high, +1.7% in 5 days) is not flagged", () => {
+  test("the live-test SPY buy (1.0% under the high, +1.7% in 5 days) is not flagged", () => {
     expect(rules.fomoBuy({ side: "buy", symbol: "SPY", price: 773.93, week52High: 781.62, fiveDayReturn: 1.7 })).toBeNull();
   });
 
@@ -126,13 +126,13 @@ describe("behavior rules: FOMO buy (rule v2: needs a real run-up)", () => {
     expect(buy(97.99, 20).severity).toBe("medium"); // 2.01% away
   });
 
-  test("change 3: a 15%+ run-up is at least low even far from the high; under 15% it is not flagged there", () => {
+  test("a 15%+ run-up is at least low even far from the high; under 15% it is not flagged there", () => {
     expect(buy(90, 20)).toMatchObject({ severity: "low", facts: { percentFromHigh: 10, runUp: 20 } });
     expect(buy(90, 14.99)).toBeNull();
     expect(rules.fomoBuy({ side: "buy", symbol: "X", price: 50, week52High: null, fiveDayReturn: 16 }).severity).toBe("low");
   });
 
-  test("B1: today's rise and today's intraday high are used", () => {
+  test("today's rise and today's intraday high are used", () => {
     expect(buy(99, 1, { todayChange: 6 }).facts).toMatchObject({ runUp: 6, todayChange: 6 });
     expect(buy(105, 16, { dayHigh: 106 }).facts).toMatchObject({ week52High: 106, percentFromHigh: 0.94 });
   });
@@ -166,7 +166,7 @@ describe("behavior rules: overconcentration (share of cash + holdings)", () => {
 });
 
 describe("behavior rules: scores", () => {
-  test("change 1: impulse control = UNFLAGGED checked trades / checked trades (4 checked, 1 flagged -> 75)", () => {
+  test("impulse control = UNFLAGGED checked trades / checked trades (4 checked, 1 flagged -> 75)", () => {
     expect(rules.scores({ checkedTrades: 4, flaggedTrades: 1, largestPercent: 0 }).impulseControl).toBe(75);
     expect(rules.scores({ checkedTrades: 10, flaggedTrades: 0, largestPercent: 0 }).impulseControl).toBe(100);
     expect(rules.scores({ checkedTrades: 3, flaggedTrades: 3, largestPercent: 0 }).impulseControl).toBe(0);
@@ -263,7 +263,7 @@ describe("behavior detector", () => {
     expect(BehaviorEvent.rows[0].clearedAt).toBeInstanceOf(Date);
   });
 
-  test("B4: price moves alone create and clear warnings, at most once per 15 minutes", async () => {
+  test("price moves alone create and clear warnings, at most once per 15 minutes", async () => {
     const { d, BehaviorEvent, state } = detector({ positions: [{ symbol: "NVDA", market_value: 30000 }], cash: 70000 });
     expect(await d.checkPrices("u1")).toEqual([]); // 30%: nothing
     state.positions = [{ symbol: "NVDA", market_value: 45000 }]; state.cash = 55000; // grew to 45%
@@ -298,8 +298,8 @@ describe("behavior rule clean-up", () => {
     const Purchase = model();
     const BehaviorEvent = eventModel();
     const before = new Date("2026-09-01T00:00:00Z");
-    const after = new Date(PHASE_2C_LAUNCH.getTime() + 3600 * 1000);
-    // Dated before launch so only change 4 (not the post-launch bulk marking) can mark it as checked.
+    const after = new Date(DETECTION_LAUNCH.getTime() + 3600 * 1000);
+    // Dated before launch so only the false-alarm path (not the post-launch bulk marking) can mark it as checked.
     const spy = await Purchase.create({ userId: "u1", name: "SPY", price: 773.93, quantity: 4, transactionType: "buy", timestamp: before });
     const hype = await Purchase.create({ userId: "u1", name: "HYPE", price: 99, quantity: 1, transactionType: "buy", timestamp: after });
     const old = await Purchase.create({ userId: "u1", name: "AAPL", price: 150, quantity: 1, transactionType: "buy", timestamp: before });
@@ -316,7 +316,7 @@ describe("behavior rule clean-up", () => {
     expect(BehaviorEvent.rows.map((e) => [e.symbol, e.severity, e.ruleVersion])).toEqual([["HYPE", "high", rules.RULE_VERSION], ["NVDA", "low", rules.RULE_VERSION]]);
   });
 
-  test("change 4: the trade of a deleted false alarm stays as a clean checked trade; pre-2C trades stay unchecked", async () => {
+  test("the trade of a deleted false alarm stays as a clean checked trade; trades from before detection stay unchecked", async () => {
     const { Purchase, BehaviorEvent, spy, old } = await seed();
     await migrateBehaviorEvents({ BehaviorEvent, Purchase, log: quiet });
     expect(Purchase.rows.find((t) => t._id === spy._id).behaviorCheckedAt).toBeInstanceOf(Date);
@@ -342,7 +342,7 @@ describe("behavior rule clean-up", () => {
   });
 });
 
-// ================= Advisor cash (A1, change 2) =================
+// ================= Advisor cash (whole account, what-if holdings) =================
 describe("advisor cash for analysis", () => {
   const live = [
     { symbol: "SPY", quantity: 11, avg_price: 773.93, current_price: 773.93 },
@@ -354,7 +354,7 @@ describe("advisor cash for analysis", () => {
     expect(cashForAnalysis({ realCash: 78298.38, realTotal: 100000, holdings: live, isWhatIf: false })).toBe(78298.38);
   });
 
-  test("change 2: a what-if holding spends cash, so the account stays at its real value", () => {
+  test("a what-if holding spends cash, so the account stays at its real value", () => {
     const whatIf = [...live, { symbol: "NVDA", quantity: 10, avg_price: 180, current_price: 180 }];
     expect(cashForAnalysis({ realCash: 78298.38, realTotal: 100000, holdings: whatIf, isWhatIf: true })).toBe(76498.38);
   });
@@ -394,7 +394,7 @@ async function newUser(app) {
 }
 const auth = (u) => ({ Authorization: `Bearer ${u.token}` });
 const trade = (app, u, symbol, quantity, type = "BUY") => request(app).post("/api/store-purchase").set(auth(u)).send({ symbol, quantity, type });
-// Fake prices never move, so a panic sell needs an earlier purchase at a higher price (B2: only losses count).
+// Fake prices never move, so a panic sell needs an earlier purchase at a higher price (only losses count).
 const seedBuy = (deps, u, symbol, quantity, price) =>
   deps.Purchase.create({ userId: u.id, name: symbol, price, quantity, total: price * quantity, transactionType: "buy" });
 
@@ -432,7 +432,7 @@ describe("/api/patterns routes", () => {
     const { app, deps } = setup();
     const u = await newUser(app);
     expect((await trade(app, u, "DROP", 5)).body.behavior).toEqual([]);
-    expect((await trade(app, u, "DROP", 5, "SELL")).body.behavior).toEqual([]); // sold at cost: not panic (B2)
+    expect((await trade(app, u, "DROP", 5, "SELL")).body.behavior).toEqual([]); // sold at cost: not panic
     await seedBuy(deps, u, "DROP", 5, 100);
     const res = await trade(app, u, "DROP", 5, "SELL"); // $80 vs $100 average cost
     expect(res.body.behavior).toEqual([expect.objectContaining({ patternType: "panic_sell", severity: "medium" })]);
@@ -450,7 +450,7 @@ describe("/api/patterns routes", () => {
   test("summary counts patterns and computes scores from the user's trades", async () => {
     const { app, deps } = setup();
     const u = await newUser(app);
-    await seedBuy(deps, u, "DROP", 1, 100); // made before checks existed: not counted in the score (B3)
+    await seedBuy(deps, u, "DROP", 1, 100); // made before checks existed: not counted in the score
     await trade(app, u, "FOMO", 1);
     await trade(app, u, "DROP", 1);
     await trade(app, u, "DROP", 1, "SELL");
@@ -577,7 +577,7 @@ describe("/api/patterns routes", () => {
     expect(deps.BehaviorEvent.rows).toHaveLength(0);
   });
 
-  test("A7: each pattern carries its trade's share count and time", async () => {
+  test("each pattern carries its trade's share count and time", async () => {
     const { app } = setup();
     const u = await newUser(app);
     await trade(app, u, "FOMO", 4);
@@ -586,7 +586,7 @@ describe("/api/patterns routes", () => {
     expect(new Date(p.trade.timestamp).getTime()).toBeGreaterThan(0);
   });
 
-  test("B5: an unchanged insight is reused without calling the AI; fresh calls are limited to 5 per hour", async () => {
+  test("an unchanged insight is reused without calling the AI; fresh calls are limited to 5 per hour", async () => {
     let saved = null;
     const analyzeBehavior = jest.fn(async (userId, payload) => (saved = { insight: "fresh", fingerprint: payload.fingerprint, ai_generated: true, created_at: "2026-10-09T00:00:00Z" }));
     const { app, deps } = setup();
@@ -610,7 +610,7 @@ describe("/api/patterns routes", () => {
     expect(analyzeBehavior).toHaveBeenCalledTimes(5);
   });
 
-  test("A4: a valid browser time zone is passed to the AI coach, a bad one is dropped", async () => {
+  test("a valid browser time zone is passed to the AI coach, a bad one is dropped", async () => {
     const { app, deps } = setup();
     const u = await newUser(app);
     await trade(app, u, "FOMO", 1);
@@ -622,7 +622,7 @@ describe("/api/patterns routes", () => {
   });
 });
 
-describe("AI Advisor gets the whole account (A1)", () => {
+describe("AI Advisor gets the whole account", () => {
   test("the advisor request includes the cash balance and the time zone", async () => {
     const analyzePortfolio = jest.fn(async () => ({ insight: {} }));
     const { app, deps } = setup();
@@ -636,7 +636,7 @@ describe("AI Advisor gets the whole account (A1)", () => {
     expect(sent.timezone).toBe("America/Los_Angeles");
   });
 
-  test("what-if holdings: the account keeps its real total (change 2)", async () => {
+  test("what-if holdings: the account keeps its real total", async () => {
     const analyzePortfolio = jest.fn(async () => ({ insight: {} }));
     const { app, deps } = setup();
     deps.aiClient.analyzePortfolio = analyzePortfolio;
@@ -648,7 +648,7 @@ describe("AI Advisor gets the whole account (A1)", () => {
   });
 });
 
-describe("AI internal token (B5)", () => {
+describe("AI internal token", () => {
   test("the backend sends X-Internal-Token when AI_INTERNAL_TOKEN is set, and nothing otherwise", async () => {
     const { createAiClient } = require("../src/lib/aiClient");
     const fetchImpl = jest.fn(async () => ({ ok: true, json: async () => ({}) }));

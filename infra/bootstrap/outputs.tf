@@ -32,6 +32,6 @@ output "demo_secret_name" {
 }
 
 output "jobs_secret_name" {
-  description = "Fill its values before the nightly job (PR F) is applied."
+  description = "Fill its values before the nightly job (infra/jobs) is applied."
   value       = aws_secretsmanager_secret.jobs.name
 }

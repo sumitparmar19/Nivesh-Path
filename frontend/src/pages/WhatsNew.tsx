@@ -101,7 +101,7 @@ export default function WhatsNew() {
             <h2 className="mt-2 font-display text-lg font-bold text-ink">On the roadmap</h2>
             <div className="mt-3 grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
               {ROADMAP.map(([tag, title, text]) => (
-                <div key={tag} className="rounded-xl border border-dashed border-line bg-surface-2 p-4">
+                <div key={title} className="rounded-xl border border-dashed border-line bg-surface-2 p-4">
                   <Badge tone="muted">{tag}</Badge>
                   <strong className="mt-2 block text-ink">{title}</strong>
                   <span className="text-sm text-muted">{text}</span>

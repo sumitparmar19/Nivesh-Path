@@ -1,6 +1,6 @@
-"""Trade history read from the Node web service's internal API (Phase 3).
+"""Trade history read from the Node web service's internal API.
 
-The money ledger moves from MongoDB to Postgres, which only the Node service talks to. So instead of reading
+The money ledger lives in Postgres (or MongoDB, the rollback path), which only the Node service talks to. So instead of reading
 the `purchases` collection directly, the AI service asks Node for each user's trades
 (`GET /internal/trades/users`, `GET /internal/trades?userId=`), authenticated with the shared
 AI_INTERNAL_TOKEN. The answer is the same whichever store holds the trades. `TradeSource` is the small

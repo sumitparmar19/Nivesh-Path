@@ -1,5 +1,5 @@
-# AWS nightly job (Phase 3, PR F): apply the infra/jobs stack, run the job once now, or remove it.
-# Manual only, main only, in the aws-demo environment (Sumit approves), with the same OIDC deploy role as the
+# AWS nightly job: apply the infra/jobs stack, run the job once now, or remove it.
+# Manual only, main only, in the aws-demo environment (the owner approves), with the same OIDC deploy role as the
 # demo. The job itself then runs on its own schedule: weekdays 4:30 pm New York.
 name: "AWS jobs: nightly job"
 

@@ -1,7 +1,7 @@
 # GitHub Actions signs in to AWS with short-lived OIDC tokens: no AWS access keys exist anywhere. Two roles, because
 # GitHub's token for an environment job ("...:environment:aws-demo") doesn't say which branch it ran on, and a pull
 # request job can't use the environment at all ("...:pull_request"):
-#   github-nivesh-deploy  - only jobs in the aws-demo environment (GitHub limits it to main + Sumit's approval);
+#   github-nivesh-deploy  - only jobs in the aws-demo environment (GitHub limits it to main + the owner's approval);
 #                           can change the demo/jobs stacks, but every role it creates is capped by the boundary below.
 #   github-nivesh-plan    - pull request jobs; read-only, for `terraform plan` comments. Cannot read secret values.
 # Neither name starts with "nivesh-demo-"/"nivesh-jobs-", so the deploy role can't edit itself or its sibling.
@@ -62,7 +62,7 @@ data "aws_iam_policy_document" "trust_plan" {
 }
 
 resource "aws_iam_role" "deploy" {
-  #checkov:skip=CKV2_NIVESH_1:Created once by Sumit (admin) in CloudShell; the boundary is for roles the deploy role creates.
+  #checkov:skip=CKV2_NIVESH_1:Created once by an admin in CloudShell; the boundary is for roles the deploy role creates.
   name                 = "github-nivesh-deploy"
   description          = "GitHub Actions, aws-demo environment only: apply/deploy/destroy the demo and jobs stacks."
   assume_role_policy   = data.aws_iam_policy_document.trust_deploy.json
@@ -76,7 +76,7 @@ resource "aws_iam_role_policy" "deploy" {
 }
 
 resource "aws_iam_role" "plan" {
-  #checkov:skip=CKV2_NIVESH_1:Created once by Sumit (admin) in CloudShell; the boundary is for roles the deploy role creates.
+  #checkov:skip=CKV2_NIVESH_1:Created once by an admin in CloudShell; the boundary is for roles the deploy role creates.
   name               = "github-nivesh-plan"
   description        = "GitHub Actions, pull requests only: read-only, for terraform plan comments."
   assume_role_policy = data.aws_iam_policy_document.trust_plan.json

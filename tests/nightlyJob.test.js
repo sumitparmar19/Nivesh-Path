@@ -1,4 +1,4 @@
-// Phase 3 PR F (nightly job): rule v3 boundaries (when our own daily closes are used for the 5-day move), which
+// Nightly job: rule v3 boundaries (when our own daily closes are used for the 5-day move), which
 // trading day a quote's price closes, the detector's data source and its fallback to Finnhub, and the nightly
 // all-users concentration check. In-memory stores only; the Postgres table is covered in ledger.pg.test.js.
 const rules = require("../src/lib/behaviorRules");

@@ -16,7 +16,7 @@ on:
         type: boolean
         default: false
       contact_email:
-        description: "Also send ONE contact-form message (a real email to Sumit)"
+        description: "Also send ONE contact-form message (a real email to the site owner)"
         type: boolean
         default: false
 

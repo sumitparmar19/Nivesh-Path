@@ -1,5 +1,5 @@
 # AWS demo: build, migrate and deploy this commit to an existing demo stack (no infrastructure change).
-# Manual only, main only, aws-demo environment (Sumit approves). Use after "AWS demo: apply + deploy" has run once.
+# Manual only, main only, aws-demo environment (the owner approves). Use after "AWS demo: apply + deploy" has run once.
 name: "AWS demo: deploy"
 
 on:

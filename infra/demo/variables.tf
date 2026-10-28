@@ -14,7 +14,7 @@ variable "project" {
 }
 
 variable "app_secret_name" {
-  description = "Secrets Manager secret with the app keys (created empty by infra/bootstrap, filled by Sumit)."
+  description = "Secrets Manager secret with the app keys (created empty by infra/bootstrap, filled in by hand)."
   type        = string
   default     = "nivesh-path/demo"
 }

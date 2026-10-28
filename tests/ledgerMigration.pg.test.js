@@ -1,4 +1,4 @@
-// Ledger move MongoDB -> Postgres (Phase 3, PR B): the plan (pure; always runs) and the copy/verify/re-run against
+// Ledger move MongoDB -> Postgres: the plan (pure; always runs) and the copy/verify/re-run against
 // a real Postgres (needs TEST_DATABASE_URL with the Prisma migrations applied; CI sets it, see ledger.pg.test.js).
 process.env.JWT_SECRET = "test-secret";
 const TEST_DB = process.env.TEST_DATABASE_URL;

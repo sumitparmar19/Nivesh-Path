@@ -281,7 +281,7 @@ export interface SystemStatus {
     /** The AI memory rebuild at the AI service's last start; finishedAt (ISO, UTC) says when the counts were taken. */
     vectorIndex?: { status: IndexStatus; users: number; transactions: number; seconds: number; finishedAt?: string } | null;
   };
-  /** Where cash and trades live (Phase 3 cutover), and whether trading is paused for it. */
+  /** Where cash and trades live (ledger backend), and whether trading is paused. */
   ledger?: { backend: "mongo" | "postgres"; tradingPaused: boolean };
   /** Set only on the AWS demo stack (DEPLOY_PLATFORM=aws-demo); null on the live site. */
   platform?: string | null;

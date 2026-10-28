@@ -1,6 +1,6 @@
-# Demo stack (Phase 3, PR E): the whole app on AWS - VPC, ALB, ECS Fargate (web + ai), RDS Postgres, ECR,
+# Demo stack: the whole app on AWS - VPC, ALB, ECS Fargate (web + ai), RDS Postgres, ECR,
 # CloudWatch dashboard and alarms. Created for demos and load tests, then destroyed; DigitalOcean stays the live site.
-# Applied only by GitHub Actions (aws-demo environment, Sumit approves), with OIDC: see docs/AWS.md.
+# Applied only by GitHub Actions (aws-demo environment, the owner approves), with OIDC: see docs/AWS.md.
 # State: s3://nivesh-path-tfstate-<account>/demo/terraform.tfstate (bucket passed with -backend-config).
 terraform {
   required_version = ">= 1.10"

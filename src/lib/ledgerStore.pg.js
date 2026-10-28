@@ -1,4 +1,4 @@
-// Postgres implementation of the ledger store (Phase 3): cash in `accounts`, trades in `trades`, through Prisma.
+// Postgres implementation of the ledger store: cash in `accounts`, trades in `trades`, through Prisma.
 // Same interface as the MongoDB store, selected with LEDGER_BACKEND=postgres. Every trade runs in one database
 // transaction that first locks the user's account row (SELECT ... FOR UPDATE), so concurrent orders for the same
 // user queue up even across several web instances, and the CHECK constraints refuse negative cash or quantities.

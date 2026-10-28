@@ -135,10 +135,10 @@ class MemoryStatus(BaseModel):
     indexed_trades: int = Field(..., description="Trades currently embedded in the user's ChromaDB collection")
     durable_storage: bool = Field(..., description="True when MongoDB is configured, so memory survives deploys")
     index: IndexStatus
-    patterns: list[dict] = Field(default_factory=list, description="Stored behavioral-pattern results (Phase 2C)")
+    patterns: list[dict] = Field(default_factory=list, description="Stored behavioral-pattern results")
 
 
-# ---------- Behavioral Mirror (Phase 2C) ----------
+# ---------- Behavioral Mirror ----------
 PatternType = Literal["panic_sell", "fomo_buy", "overconcentration"]
 Severity = Literal["low", "medium", "high"]
 

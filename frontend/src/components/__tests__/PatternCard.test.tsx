@@ -65,7 +65,7 @@ describe("BehaviorNote (trade panel)", () => {
   });
 });
 
-describe("PatternCard follow-up (A7, B1, B6)", () => {
+describe("PatternCard: trade details, today's move, read state", () => {
   it("shows the trade's time and share count so similar cards can be told apart", () => {
     card({ ...FOMO, trade: { quantity: 7, timestamp: "2026-10-09T05:36:00Z", side: "buy" } });
     expect(screen.getByTestId("pattern-when")).toHaveTextContent(/bought 7 shares/);

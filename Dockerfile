@@ -20,7 +20,7 @@ COPY package.json package-lock.json ./
 COPY prisma ./prisma
 RUN npm ci --omit=dev && npm cache clean --force
 
-COPY server.js demo.js ./
+COPY server.js ./
 COPY scripts/db-check.js scripts/migrate-ledger.js scripts/with-db-url.js ./scripts/
 COPY src ./src
 COPY models ./models

@@ -76,7 +76,7 @@ def get_trade_store() -> TradeSource | None:
 
 
 def get_pattern_store() -> PatternStore | None:
-    """Durable store for behavioral-pattern results (Phase 2C detectors write here)."""
+    """Durable store for behavioral-pattern results (coach insight and per-type summaries)."""
     db = get_mongo_db()
     return PatternStore(db) if db is not None else None
 

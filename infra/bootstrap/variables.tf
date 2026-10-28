@@ -19,7 +19,7 @@ variable "github_repository" {
 }
 
 variable "deploy_environment" {
-  description = "GitHub environment whose jobs may use the deploy role (restricted to main + Sumit's approval in GitHub)."
+  description = "GitHub environment whose jobs may use the deploy role (restricted to main + the owner's approval in GitHub)."
   type        = string
   default     = "aws-demo"
 }

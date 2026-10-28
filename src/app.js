@@ -73,7 +73,7 @@ function createApp(deps = {}) {
   const ledgerStore = deps.ledgerStore || createLedgerStore({ backend: ledgerBackend, User, Purchase });
   const maintenance = () => (deps.ledgerMaintenance !== undefined ? Boolean(deps.ledgerMaintenance) : process.env.LEDGER_MAINTENANCE === "1");
   const ledger = createLedger({ store: ledgerStore, quotes, maintenance });
-  // Daily closes (PR F) live next to the Postgres ledger; with the MongoDB ledger there are none (rule v3 then
+  // Daily closes live next to the Postgres ledger; with the MongoDB ledger there are none (rule v3 then
   // always falls back to Finnhub's 5-day move, exactly like v2).
   const snapshots = deps.snapshots !== undefined
     ? deps.snapshots
@@ -128,7 +128,7 @@ function createApp(deps = {}) {
 
   // Service-to-service (AI service -> web): token-only, never a user JWT; 404 unless AI_INTERNAL_TOKEN is set.
   const demoFaults = deps.demoFaults !== undefined ? Boolean(deps.demoFaults) : process.env.DEMO_FAULTS === "1"; // AWS demo only
-  // The nightly job's routes (/internal/jobs/*, PR F) use the same token.
+  // The nightly job's routes (/internal/jobs/*) use the same token.
   const jobs = detector ? { ledger, quotes, snapshots, detector, log: logger } : null;
   app.use(internalRoutes({ ledgerStore, token: internalToken, demoFaults, jobs }));
 

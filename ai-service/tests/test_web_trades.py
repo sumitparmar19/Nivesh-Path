@@ -1,4 +1,4 @@
-"""Phase 3: the AI service reads trade history through the Node web service's /internal API.
+"""The AI service reads trade history through the Node web service's /internal API.
 
 The web service is simulated with httpx.MockTransport; Chroma runs in-memory.
 """

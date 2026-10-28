@@ -102,7 +102,7 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        ledger: [mongo, postgres] # today's ledger and the Phase 3 cutover target
+        ledger: [mongo, postgres] # the rollback ledger and the production ledger
     services:
       mongo:
         image: mongo:7

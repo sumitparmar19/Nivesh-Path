@@ -11,7 +11,7 @@ export interface Release {
 export const RELEASES: Release[] = [
   {
     title: "Steadier pages and a clean account deletion",
-    tag: "Phase 3 · Oct 2026",
+    tag: "Quality · Oct 2026",
     isNew: true,
     intro: "A full check of every page and feature found two problems. Both are fixed.",
     points: [
@@ -22,7 +22,7 @@ export const RELEASES: Release[] = [
   },
   {
     title: "Daily closing prices and a nightly check",
-    tag: "Phase 3 · Oct 2026",
+    tag: "Nightly job · Oct 2026",
     intro: "Starting with its first run, a scheduled job saves the closing price of every stock someone holds each weekday after the US market closes, then re-checks every account for overconcentration.",
     points: [
       ["Our own price history.", "Once six daily closes are stored for a stock, the Behavioral Mirror measures its 5-day move from them (rule v3). Until then it uses Finnhub's daily figure, as before."],
@@ -33,7 +33,7 @@ export const RELEASES: Release[] = [
   },
   {
     title: "A copy that runs on AWS",
-    tag: "Phase 3 · Oct 2026",
+    tag: "AWS · Oct 2026",
     intro: "The whole app can now be started on Amazon Web Services for demos and load tests, then taken down again. This site keeps running where it is; your account and money aren't copied.",
     points: [
       ["Built from code.", "Network, load balancer, containers, database and alarms are all described in Terraform and created by an approved GitHub workflow, without any stored cloud passwords."],
@@ -44,7 +44,7 @@ export const RELEASES: Release[] = [
   },
   {
     title: "Watched and load-tested",
-    tag: "Phase 3 · Oct 2026",
+    tag: "Monitoring · Oct 2026",
     intro: "The site now reports how it's doing, and its speed was measured under load. Nothing about your data is shared.",
     points: [
       ["Live monitoring.", "Every request, trade, Behavioral Mirror check and AI call is measured and traced across both services, with alerts if errors, slowness or an AI outage last more than a few minutes."],
@@ -55,7 +55,7 @@ export const RELEASES: Release[] = [
   },
   {
     title: "See where your money lives",
-    tag: "Phase 3 · Oct 2026",
+    tag: "Ledger · Oct 2026",
     intro: "Your cash and trades are moving from MongoDB to a PostgreSQL ledger, where the database itself enforces the rules.",
     points: [
       ["Live ledger status.", "The status panel below shows which database holds your cash and trades right now."],
@@ -66,7 +66,7 @@ export const RELEASES: Release[] = [
   },
   {
     title: "Orders that can't go through twice",
-    tag: "Phase 3 · Oct 2026",
+    tag: "Ledger · Oct 2026",
     intro: "Groundwork for moving your cash and trades to a Postgres ledger. Nothing changes in how you trade; orders just got safer.",
     points: [
       ["Retry-safe orders.", "Every order carries a one-time key. If your connection drops and you press Buy again, you get the original order back instead of buying twice."],
@@ -77,7 +77,7 @@ export const RELEASES: Release[] = [
   },
   {
     title: "Fairer Behavioral Mirror, and an Advisor that counts your cash",
-    tag: "Phase 2C update · Oct 2026",
+    tag: "Behavioral Mirror update · Oct 2026",
     intro: "Fixes from live testing: fewer false alarms, the same numbers on every page, and dates in your own time zone.",
     points: [
       ["FOMO needs a real run-up.", "Buying near a high is only flagged after a 5%+ rise (or any 15%+ jump), so ordinary index-fund buys aren't flagged."],
@@ -89,7 +89,7 @@ export const RELEASES: Release[] = [
   },
   {
     title: "Behavioral Mirror: see your own trading habits",
-    tag: "Phase 2C · Oct 2026",
+    tag: "Behavioral Mirror · Oct 2026",
     intro: "Every trade is now checked for the habits that cost investors the most, using the price data at the moment you trade.",
     points: [
       ["Panic sells and FOMO buys.", "Selling after a sharp 5-day drop, or buying right under a 52-week high, is flagged, with the numbers that triggered it."],
@@ -101,7 +101,7 @@ export const RELEASES: Release[] = [
   },
   {
     title: "A faster app: rebuilt in React",
-    tag: "Phase 2B · Oct 2026",
+    tag: "React app · Oct 2026",
     intro: "Every page now runs in one fast React app: pages switch instantly, data refreshes in the background, and every stock has its own page at /stock/TICKER.",
     points: [
       ["One page for every stock.", "Open any NYSE or NASDAQ ticker at /stock/TICKER with live price, chart, key stats, profile and news."],
@@ -113,7 +113,7 @@ export const RELEASES: Release[] = [
   },
   {
     title: "50+ stocks, real stock data, and everything saved to your account",
-    tag: "Audit sprints · Oct 2026",
+    tag: "Markets and accounts · Oct 2026",
     intro: "Every page does something real: more stocks, real company data, a watchlist, and settings that follow you to any device.",
     points: [
       ["50 stocks and ETFs, plus any US ticker.", "Browse by sector on Markets or search any NYSE/NASDAQ ticker and trade it."],
@@ -136,7 +136,7 @@ export const RELEASES: Release[] = [
   },
   {
     title: "Your own account with $100,000 of virtual cash",
-    tag: "Phase 2A · Oct 2026",
+    tag: "Accounts · Oct 2026",
     intro: "Every user has a private account and a cash balance that moves with each trade.",
     points: [
       ["Secure sign-in.", "Passwords are hashed and every request carries a signed token; you only ever see your own trades."],
@@ -146,7 +146,7 @@ export const RELEASES: Release[] = [
   },
   {
     title: "AI Portfolio Advisor, powered by Claude",
-    tag: "Phase 1 · Oct 2026",
+    tag: "AI Advisor · Oct 2026",
     intro: "A plain-English read on your portfolio: risk, diversification, strengths, risks and next steps.",
     points: [
       ["Grounded in your history.", "The advisor looks up your most relevant past trades before answering."],
@@ -158,8 +158,7 @@ export const RELEASES: Release[] = [
 ];
 
 export const ROADMAP: [string, string, string][] = [
-  ["2D", "Pre-trade check", "A quick gut-check before you buy or sell, plus portfolio stress tests."],
-  ["2E", "News + AI chat", "Market news linked to your holdings and a chat that knows your portfolio."],
-  ["3", "Postgres ledger + monitoring", "Cash and trades move to Postgres with database-enforced rules; tracing and alerts across both services."],
-  ["2F", "Cloud + observability", "Email sign-in recovery, photo upload, monitoring and alerts."],
+  ["Next", "Pre-trade check", "A quick gut-check before you buy or sell, plus portfolio stress tests."],
+  ["Planned", "News + AI chat", "Market news linked to your holdings and a chat that knows your portfolio."],
+  ["Planned", "Account recovery", "Email sign-in recovery and profile photo upload."],
 ];

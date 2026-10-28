@@ -1,5 +1,5 @@
 // Buy/Sell panel for a stock page: integer quantity, live total, cash or shares available, server-priced
-// order via /api/store-purchase. Refreshes portfolio data on success. (Phase 2D pre-trade check goes here.)
+// order via /api/store-purchase. Refreshes portfolio data on success.
 // Each order carries an Idempotency-Key; if it fails without a clear answer (network error, 5xx) and the user
 // tries the same order again, the same key is reused, so an order that did go through is never placed twice.
 import { useRef, useState, type FormEvent } from "react";

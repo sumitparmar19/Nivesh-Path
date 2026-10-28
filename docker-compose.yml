@@ -10,7 +10,7 @@ services:
       REDIS_URL: redis://redis:6379
       AI_SERVICE_URL: http://ai-service:8001
       PUBLIC_BASE_URL: http://localhost:3000
-      # Postgres ledger (Phase 3). LEDGER_BACKEND comes from .env (mongo by default).
+      # Postgres ledger. LEDGER_BACKEND comes from .env (mongo by default).
       DATABASE_URL: postgresql://nivesh:nivesh@postgres:5432/nivesh
       DIRECT_URL: postgresql://nivesh:nivesh@postgres:5432/nivesh
     # Apply any new ledger migrations, then start (on DigitalOcean a pre-deploy job does the migrate step).

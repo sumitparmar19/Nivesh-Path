@@ -1,4 +1,4 @@
-// Postgres ledger integration tests (Phase 3, PR A): run against a real Postgres with the Prisma migrations
+// Postgres ledger integration tests: run against a real Postgres with the Prisma migrations
 // applied. Skipped unless TEST_DATABASE_URL is set (CI sets it; locally:
 //   TEST_DATABASE_URL=postgresql://postgres@localhost:5432/nivesh_test npx prisma migrate deploy && npm test).
 // MongoDB (users) and Finnhub are in-memory fakes; the money goes through the real database.

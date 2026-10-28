@@ -1,5 +1,5 @@
-# Grafana-managed alert rules for Nivesh-Path (Phase 3, PR C), in Grafana's alerting provisioning format.
-# Easiest path: create the three rules by hand in Grafana Cloud with these queries (docs/OBSERVABILITY.md, "Alerts").
+# Grafana-managed alert rules for Nivesh-Path, in Grafana's alerting provisioning format.
+# Easiest path: create the three rules by hand in Grafana Cloud with these queries (docs/RUNBOOK.md §3.1; definitions in docs/OBSERVABILITY.md §4).
 # This file is the exact definition, for the Grafana provisioning API or Terraform. Replace
 # PROMETHEUS_DATASOURCE_UID with your stack's Prometheus data source uid (Connections -> Data sources).
 # Every query was checked against Prometheus 3.5 fed by the app's own OTLP metrics (same names as Grafana Cloud).

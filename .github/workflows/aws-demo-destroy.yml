@@ -1,6 +1,6 @@
 # AWS demo: delete the whole demo stack (VPC, ALB, ECS, RDS and its data, ECR images, logs, dashboard, alarms),
 # then deregister the task-definition revisions the deploys created. What stays: infra/bootstrap (state bucket,
-# GitHub roles, secrets, alert topic) and infra/jobs. Manual only; type "destroy" to confirm; Sumit approves.
+# GitHub roles, secrets, alert topic) and infra/jobs. Manual only; type "destroy" to confirm; the owner approves.
 name: "AWS demo: destroy"
 
 on:

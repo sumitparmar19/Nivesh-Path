@@ -1,4 +1,4 @@
-// One-time move of the money ledger from MongoDB to Postgres (Phase 3, PR B), as plain functions the CLI
+// One-time move of the money ledger from MongoDB to Postgres, as plain functions the CLI
 // (scripts/migrate-ledger.js) and the tests share:
 //   plan(users, purchases)   -> what would be copied, per user, with every rounding change and every blocking problem
 //   apply(prisma, plan)      -> copies it (per user, in one transaction; repeat-safe: upserts keyed by the Mongo ids)
@@ -33,7 +33,7 @@ function convertTrade(doc, userId) {
   if (!SYMBOL_RE.test(symbol)) problems.push(`symbol "${doc.name}" can't be stored as a ticker`);
   if (!["buy", "sell"].includes(side)) problems.push(`side "${doc.transactionType}" is not buy/sell`);
   if (!(quantity > 0)) problems.push(`quantity ${doc.quantity} is not positive`);
-  else if (!Number.isInteger(quantity)) problems.push(`fractional quantity ${quantity} (decision D1: whole shares only)`);
+  else if (!Number.isInteger(quantity)) problems.push(`fractional quantity ${quantity} (the ledger stores whole shares only)`);
   if (!(rawPrice > 0)) problems.push(`price ${doc.price} is not positive`);
   if (problems.length) return { id, problems };
 

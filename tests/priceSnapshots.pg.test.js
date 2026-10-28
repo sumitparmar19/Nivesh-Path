@@ -1,4 +1,4 @@
-// price_snapshots against a real Postgres (Phase 3, PR F): the database refuses bad rows, a repeat run for the
+// price_snapshots against a real Postgres: the database refuses bad rows, a repeat run for the
 // same stock and day keeps one row, and recent() returns the newest closes oldest-first, which is what rule v3
 // reads. Skipped unless TEST_DATABASE_URL is set (CI sets it and REQUIRE_PG_TESTS=1, so it can't silently skip).
 const TEST_DB = process.env.TEST_DATABASE_URL;

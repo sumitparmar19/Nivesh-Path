@@ -1,4 +1,4 @@
-"""Observability tests (Phase 3, PR C): telemetry is off by default, spans and logs are scrubbed before they leave
+"""Observability tests: telemetry is off by default, spans and logs are scrubbed before they leave
 the service, and every Claude call records its latency and token counts."""
 
 from __future__ import annotations

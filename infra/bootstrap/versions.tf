@@ -1,5 +1,5 @@
-# Bootstrap stack (Phase 3, PR E): the few AWS resources everything else depends on. Sumit runs it once in AWS
-# CloudShell (docs/AWS.md, "Bootstrap"); its state starts local and is then moved into the bucket it creates.
+# Bootstrap stack: the few AWS resources everything else depends on. It is run once from AWS
+# CloudShell (docs/RUNBOOK.md §5); its state starts local and is then moved into the bucket it creates.
 # It is never destroyed by the demo workflows: the state bucket, GitHub's sign-in (OIDC) and two roles, the
 # permissions boundary for every role the stacks create, two empty secrets and the alert topic.
 terraform {

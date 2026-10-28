@@ -1,4 +1,4 @@
-// Moves the money ledger (cash + trades) from MongoDB to Postgres - the Phase 3 cutover tool.
+// Moves the money ledger (cash + trades) from MongoDB to Postgres - the cutover tool (docs/LEDGER_CUTOVER.md).
 // Run it in the DigitalOcean Console of the web component (it already has MONGO_URL and DATABASE_URL):
 //   node scripts/migrate-ledger.js --dry-run              what would be copied, rounding changes, blocking problems
 //   node scripts/migrate-ledger.js --migrate              copy (repeat-safe; refuses while LEDGER_BACKEND=postgres)
@@ -90,7 +90,7 @@ async function main() {
     if (opts.json) log(JSON.stringify(v));
     else {
       v.results.forEach((r) => log(`  user ${r.userId}: ${r.ok ? "match" : "MISMATCH"} · cash ${r.cash} · ${r.trades} trade(s) · ${r.holdings}${r.ok ? "" : `\n      ${r.mismatches.join("\n      ")}`}`));
-      log(v.ok ? `All users match (${v.results.length}). Safe to set LEDGER_BACKEND=postgres.` : "MISMATCH: do NOT switch LEDGER_BACKEND. Send this output to Claude.");
+      log(v.ok ? `All users match (${v.results.length}). Safe to set LEDGER_BACKEND=postgres.` : "MISMATCH: do NOT switch LEDGER_BACKEND. Investigate the users above before retrying.");
     }
     return v.ok ? 0 : 1;
   } finally {

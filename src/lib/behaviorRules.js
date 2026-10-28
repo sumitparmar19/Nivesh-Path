@@ -1,5 +1,5 @@
 // Behavioral Mirror rules: pure functions that decide whether a trade (or the portfolio after it) shows a
-// panic sell, a FOMO buy or overconcentration. No I/O here, so Phase 2D's pre-trade check can run the same
+// panic sell, a FOMO buy or overconcentration. No I/O here, so a pre-trade check can run the same
 // rules before a trade, and tests can cover every severity boundary directly.
 
 const SEVERITY_RANK = { low: 1, medium: 2, high: 3 };
@@ -9,7 +9,7 @@ const round2 = (n) => Math.round(n * 100) / 100;
 const isNum = (v) => typeof v === "number" && Number.isFinite(v);
 
 // Rule version stored on every event; the start-up clean-up re-checks older events with these rules.
-// v3 (PR F): the 5-day move comes from our own daily closes once enough are stored (fiveDayFromSnapshots),
+// v3: the 5-day move comes from our own daily closes once enough are stored (fiveDayFromSnapshots),
 // else from Finnhub as before. Thresholds are unchanged, so re-grading v2 events changes nothing.
 const RULE_VERSION = 3;
 
@@ -151,7 +151,7 @@ function shouldRecordConcentration(latestActive, severity) {
 /**
  * Behavioral scores (0-100, higher is healthier), computed in code so the AI never does arithmetic.
  * impulseControl: share of CHECKED trades with no panic/FOMO flag (unflagged / checked); needs 3 checked
- *   trades. Trades that were never checked (before 2C, or market data down) don't count either way.
+ *   trades. Trades that were never checked (made before detection existed, or market data down) don't count either way.
  * diversification: 100 minus the largest single stock's share of the whole account (cash included). The
  *   Advisor uses the same definition (ai-service portfolio_analytics.diversification_score).
  */
