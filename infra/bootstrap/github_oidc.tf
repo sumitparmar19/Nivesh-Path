@@ -1,6 +1,7 @@
 # GitHub Actions signs in to AWS with short-lived OIDC tokens: no AWS access keys exist anywhere. Two roles, because
 # GitHub's token for an environment job ("...:environment:aws-demo") doesn't say which branch it ran on, and a pull
-# request job can't use the environment at all ("...:pull_request"):
+# request job can't use the environment at all ("...:pull_request"). The subject names the repository by owner and
+# repository ID as well as by name ("repo:sumitparmar19@159940528/Nivesh-Path@1440470058:..."; var.github_repository):
 #   github-nivesh-deploy  - only jobs in the aws-demo environment (GitHub limits it to main + the owner's approval);
 #                           can change the demo/jobs stacks, but every role it creates is capped by the boundary below.
 #   github-nivesh-plan    - pull request jobs; read-only, for `terraform plan` comments. Cannot read secret values.

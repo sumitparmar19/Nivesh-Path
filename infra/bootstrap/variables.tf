@@ -13,9 +13,9 @@ variable "project" {
 }
 
 variable "github_repository" {
-  description = "owner/name of the only repository whose workflows may sign in (case-sensitive, as GitHub sends it)."
+  description = "The only repository whose workflows may sign in, as GitHub writes it in the OIDC subject (case-sensitive). The repository sends the ID-based form owner@owner_id/name@repo_id, so a deleted and re-created repository with the same name can't sign in."
   type        = string
-  default     = "sumitparmar19/Nivesh-Path"
+  default     = "sumitparmar19@159940528/Nivesh-Path@1440470058"
 }
 
 variable "deploy_environment" {

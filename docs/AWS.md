@@ -92,7 +92,7 @@ flowchart LR
 
 | Role | Who can use it | Can do |
 |---|---|---|
-| `github-nivesh-deploy` | Only jobs in the `aws-demo` environment (`repo:sumitparmar19/Nivesh-Path:environment:aws-demo`). GitHub restricts that environment to `main` and requires the owner's approval | Create, change and delete the demo and jobs stacks |
+| `github-nivesh-deploy` | Only jobs in the `aws-demo` environment (subject `repo:sumitparmar19@159940528/Nivesh-Path@1440470058:environment:aws-demo`: owner and repository IDs, not just the name, so a re-created repository with the same name can't sign in). GitHub restricts that environment to `main` and requires the owner's approval | Create, change and delete the demo and jobs stacks |
 | `github-nivesh-plan` | Pull request jobs of this repository (`…:pull_request`; forks get no token) | Read-only (`ReadOnlyAccess`). Explicitly **denied** secret values, parameters, decrypt, Lambda code, log contents, and objects outside the state bucket |
 
 **The deploy role is fenced in three ways** (`infra/bootstrap/deploy_policy.tf`):
