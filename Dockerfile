@@ -11,6 +11,8 @@ RUN npm run build
 
 # --- Stage 2: the server ---
 FROM node:22-alpine
+# Links the image published to GHCR (by CI) to this repository.
+LABEL org.opencontainers.image.source="https://github.com/sumitparmar19/Nivesh-Path"
 
 ENV NODE_ENV=production
 WORKDIR /app

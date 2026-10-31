@@ -1,5 +1,7 @@
 # Container image for the Nivesh-Path AI advisor (FastAPI + Claude + ChromaDB).
 FROM python:3.11-slim
+# Links the image published to GHCR (by CI) to this repository.
+LABEL org.opencontainers.image.source="https://github.com/sumitparmar19/Nivesh-Path"
 
 ENV PYTHONDONTWRITEBYTECODE=1 \
     PYTHONUNBUFFERED=1 \
